@@ -12,12 +12,12 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -Wl,--gc-sections -fdata-sections -ff
 find_package(Vulkan REQUIRED) # 3d
 include_directories(${Vulkan_INCLUDE_DIRS})
 
-#file(GLOB_RECURSE SOURCES "src/*.cpp")
-#file(GLOB_RECURSE PRIVATE_HEADERS "src/Headers/luna/*.h")
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE PRIVATE_HEADERS "src/headers/luna/*.hpp")
+file(GLOB_RECURSE PRIVATE_IMPLEMENTATIONS "src/headers/luna/*.tpp")
 file(GLOB_RECURSE PUBLIC_HEADERS "include/luna/*.h")
-#file(GLOB_RECURSE PRIVATE_HEADERS "src/Headers/luna/helpers/LockingList.h")
 
-#add_library(Luna STATIC ${SOURCES} ${PRIVATE_HEADERS} ${PUBLIC_HEADERS})
-add_executable(Luna src/luna.cpp src/Headers/luna/helpers/LockingList.h src/Headers/luna/implementations/LockingList.tpp ${PUBLIC_HEADERS})
+add_library(Luna STATIC ${SOURCES} ${PRIVATE_HEADERS} ${PRIVATE_IMPLEMENTATIONS} ${PUBLIC_HEADERS})
+#add_executable(Luna ${SOURCES} ${PRIVATE_HEADERS} ${PRIVATE_IMPLEMENTATIONS} ${PUBLIC_HEADERS})
 include_directories(Luna PUBLIC "${CMAKE_SOURCE_DIR}/include")
-include_directories(Luna PUBLIC "${CMAKE_SOURCE_DIR}/src/Headers")
+include_directories(Luna PUBLIC "${CMAKE_SOURCE_DIR}/src/headers")

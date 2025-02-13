@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include "Error.h"
 
-/// The length of the longest value passed to the type argument of the LogInternal function (including the nullptr) plus 7
+/// The length of the longest value passed to the type argument of the LogInternal function (including the null) plus 7
 #define bufferLength 14
 
-FILE *LogFile = nullptr;
+FILE *LogFile = NULL;
 
 void LogInit()
 {
@@ -24,7 +24,7 @@ void LogInit()
 
 	LogFile = fopen(filePath, "w");
 	free(filePath);
-	if (LogFile == nullptr)
+	if (LogFile == NULL)
 	{
 		Error("Failed to open log file");
 	}
@@ -32,7 +32,7 @@ void LogInit()
 
 void LogDestroy()
 {
-	if (LogFile != nullptr)
+	if (LogFile != NULL)
 	{
 		fclose(LogFile);
 	}

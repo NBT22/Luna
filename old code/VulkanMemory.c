@@ -14,11 +14,11 @@ bool AllocateMemory(MemoryInfo *memoryInfo, const uint32_t memoryTypeBits)
 		{
 			const VkMemoryAllocateInfo allocInfo = {
 				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				.pNext = nullptr,
+				.pNext = NULL,
 				.allocationSize = memoryInfo->size,
 				.memoryTypeIndex = i,
 			};
-			VulkanTest(vkAllocateMemory(device, &allocInfo, nullptr, &memoryInfo->memory),
+			VulkanTest(vkAllocateMemory(device, &allocInfo, NULL, &memoryInfo->memory),
 					   "Failed to allocate buffer memory!");
 
 			return true;

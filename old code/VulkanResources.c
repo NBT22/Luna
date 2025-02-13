@@ -166,10 +166,10 @@ void SetSharedBufferAliasingInfo()
 // TODO: lossless
 bool ResizeBuffer(Buffer *buffer, bool /*lossy*/)
 {
-	vkDestroyBuffer(device, buffer->buffer, nullptr);
+	vkDestroyBuffer(device, buffer->buffer, NULL);
 	buffer->buffer = VK_NULL_HANDLE;
 
-	vkFreeMemory(device, buffer->memoryAllocationInfo.memoryInfo->memory, nullptr);
+	vkFreeMemory(device, buffer->memoryAllocationInfo.memoryInfo->memory, NULL);
 	buffer->memoryAllocationInfo.memoryInfo->memory = VK_NULL_HANDLE;
 
 	if (!CreateBuffer(buffer, false))
@@ -229,8 +229,8 @@ bool ResizeBufferRegion(Buffer *buffer,
 						const bool lossy)
 {
 	const VkDeviceSize bufferSize = buffer->size;
-	void *resizedBufferData = nullptr;
-	void *otherBufferData = nullptr;
+	void *resizedBufferData = NULL;
+	void *otherBufferData = NULL;
 	Buffer stagingBuffer = {.buffer = VK_NULL_HANDLE};
 	if (buffer->memoryAllocationInfo.memoryInfo->mappedMemory)
 	{
@@ -562,7 +562,7 @@ bool LoadTexture(const char *textureName)
 	};
 	texture->mipmapLevels = GetState()->options.mipmaps ? (uint8_t)log2(max(extent.width, extent.height)) + 1 : 1;
 	if (!CreateImage(&texture->image,
-					 nullptr,
+					 NULL,
 					 VK_FORMAT_R8G8B8A8_UNORM,
 					 extent,
 					 texture->mipmapLevels,
@@ -640,9 +640,9 @@ bool LoadTexture(const char *textureName)
 						 VK_PIPELINE_STAGE_TRANSFER_BIT,
 						 0,
 						 0,
-						 nullptr,
+						 NULL,
 						 0,
-						 nullptr,
+						 NULL,
 						 1,
 						 &transferBarrier);
 
@@ -702,7 +702,7 @@ bool LoadTexture(const char *textureName)
 		};
 		const VkImageMemoryBarrier blitBarrier = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
 			.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
 			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -718,9 +718,9 @@ bool LoadTexture(const char *textureName)
 							 VK_PIPELINE_STAGE_TRANSFER_BIT,
 							 0,
 							 0,
-							 nullptr,
+							 NULL,
 							 0,
-							 nullptr,
+							 NULL,
 							 1,
 							 &blitBarrier);
 
@@ -773,7 +773,7 @@ bool LoadTexture(const char *textureName)
 		};
 		const VkImageMemoryBarrier mipmapBarrier = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
 			.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -790,9 +790,9 @@ bool LoadTexture(const char *textureName)
 							 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 							 0,
 							 0,
-							 nullptr,
+							 NULL,
 							 0,
-							 nullptr,
+							 NULL,
 							 1,
 							 &mipmapBarrier);
 
@@ -815,7 +815,7 @@ bool LoadTexture(const char *textureName)
 	};
 	const VkImageMemoryBarrier mipmapBarrier = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
 		.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 		.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -831,9 +831,9 @@ bool LoadTexture(const char *textureName)
 						 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 						 0,
 						 0,
-						 nullptr,
+						 NULL,
 						 0,
-						 nullptr,
+						 NULL,
 						 1,
 						 &mipmapBarrier);
 
@@ -870,17 +870,17 @@ bool LoadTexture(const char *textureName)
 
 		const VkWriteDescriptorSet writeDescriptor = {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.dstSet = descriptorSets[i],
 			.dstBinding = 0,
 			.dstArrayElement = textures.length - 1,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.pImageInfo = &imageInfo,
-			.pBufferInfo = nullptr,
-			.pTexelBufferView = nullptr,
+			.pBufferInfo = NULL,
+			.pTexelBufferView = NULL,
 		};
-		vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, nullptr);
+		vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, NULL);
 	}
 
 	return true;

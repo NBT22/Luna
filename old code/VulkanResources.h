@@ -24,7 +24,7 @@ void SetLocalBufferAliasingInfo();
  *
  * @return @c false if any part of the function fails; otherwise @c true
  *
- * @note This function is NOT for recreating or resizing buffers. That functionality can instead be found in the @c ResizeBuffer function. This means that this function expects that @c buffers.shared.buffer is @c nullptr, and will do nothing if this is not the case.
+ * @note This function is NOT for recreating or resizing buffers. That functionality can instead be found in the @c ResizeBuffer function. This means that this function expects that @c buffers.shared.buffer is @c NULL, and will do nothing if this is not the case.
  */
 bool CreateSharedBuffer();
 

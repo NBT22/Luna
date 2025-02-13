@@ -2,14 +2,19 @@
 // Created by NBT22 on 7/5/2024.
 //
 
-#include <luna/core.h>
-#include <string>
-#include <luna/coreHelpers.h>
-#include <luna/coreInternal.h>
-#include <luna/coreMemory.h>
-#include <luna/coreResources.h>
+#include "Vulkan.h"
+#include <string.h>
+#include "../../../Structs/GlobalState.h"
+#include "../../CommonAssets.h"
+#include "../../Core/Error.h"
+#include "../../Core/Logging.h"
+#include "../../Core/MathEx.h"
+#include "VulkanHelpers.h"
+#include "VulkanInternal.h"
+#include "VulkanMemory.h"
+#include "VulkanResources.h"
 
-const Level *loadedLevel = nullptr;
+const Level *loadedLevel = NULL;
 
 bool VK_Init(SDL_Window *window)
 {
@@ -127,7 +132,7 @@ VkResult VK_FrameStart()
 							1,
 							&descriptorSets[currentFrame],
 							0,
-							nullptr);
+							NULL);
 
 	if (!BeginCommandBuffer(&transferCommandBuffer, transferCommandPool))
 	{
@@ -217,7 +222,7 @@ VkResult VK_FrameEnd()
 
 	const VkSubmitInfo submitInfo = {
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.waitSemaphoreCount = 1,
 		.pWaitSemaphores = &imageAvailableSemaphores[currentFrame],
 		.pWaitDstStageMask = (VkPipelineStageFlags[]){VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
@@ -232,13 +237,13 @@ VkResult VK_FrameEnd()
 	const VkSwapchainKHR swapChains[] = {swapChain};
 	const VkPresentInfoKHR presentInfo = {
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.waitSemaphoreCount = 1,
 		.pWaitSemaphores = &renderFinishedSemaphores[currentFrame],
 		.swapchainCount = 1,
 		.pSwapchains = swapChains,
 		.pImageIndices = &swapchainImageIndex,
-		.pResults = nullptr,
+		.pResults = NULL,
 	};
 	const VkResult queuePresentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
 	if (queuePresentResult == VK_ERROR_OUT_OF_DATE_KHR || queuePresentResult == VK_SUBOPTIMAL_KHR)
@@ -371,29 +376,29 @@ bool VK_Cleanup()
 
 		CleanupSwapChain();
 
-		vkDestroySampler(device, textureSamplers.linearRepeat, nullptr);
-		vkDestroySampler(device, textureSamplers.nearestRepeat, nullptr);
-		vkDestroySampler(device, textureSamplers.linearNoRepeat, nullptr);
-		vkDestroySampler(device, textureSamplers.nearestNoRepeat, nullptr);
+		vkDestroySampler(device, textureSamplers.linearRepeat, NULL);
+		vkDestroySampler(device, textureSamplers.nearestRepeat, NULL);
+		vkDestroySampler(device, textureSamplers.linearNoRepeat, NULL);
+		vkDestroySampler(device, textureSamplers.nearestNoRepeat, NULL);
 		for (size_t textureIndex = 0; textureIndex < textures.length; textureIndex++)
 		{
-			vkDestroyImageView(device, *(VkImageView *)ListGet(texturesImageView, textureIndex), nullptr);
-			vkDestroyImage(device, ((Texture *)ListGet(textures, textureIndex))->image, nullptr);
+			vkDestroyImageView(device, *(VkImageView *)ListGet(texturesImageView, textureIndex), NULL);
+			vkDestroyImage(device, ((Texture *)ListGet(textures, textureIndex))->image, NULL);
 		}
 		ListAndContentsFree(&texturesImageView, false);
 		ListAndContentsFree(&textures, false);
-		vkFreeMemory(device, textureMemory.memory, nullptr);
+		vkFreeMemory(device, textureMemory.memory, NULL);
 
 		CleanupColorImage();
 		CleanupDepthImage();
 
-		vkDestroyPipelineCache(device, pipelineCache, nullptr);
+		vkDestroyPipelineCache(device, pipelineCache, NULL);
 		CleanupPipeline();
 
-		vkDestroyRenderPass(device, renderPass, nullptr);
+		vkDestroyRenderPass(device, renderPass, NULL);
 
-		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(device, descriptorPool, NULL);
+		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
 
 		if (!DestroyBuffer(&buffers.local))
 		{
@@ -406,18 +411,18 @@ bool VK_Cleanup()
 
 		CleanupSyncObjects();
 
-		vkDestroyCommandPool(device, graphicsCommandPool, nullptr);
-		vkDestroyCommandPool(device, transferCommandPool, nullptr);
+		vkDestroyCommandPool(device, graphicsCommandPool, NULL);
+		vkDestroyCommandPool(device, transferCommandPool, NULL);
 	}
 
-	vkDestroyDevice(device, nullptr);
+	vkDestroyDevice(device, NULL);
 
 	if (instance)
 	{
-		vkDestroySurfaceKHR(instance, surface, nullptr);
+		vkDestroySurfaceKHR(instance, surface, NULL);
 	}
 
-	vkDestroyInstance(instance, nullptr);
+	vkDestroyInstance(instance, NULL);
 
 	return true;
 }
@@ -1035,16 +1040,16 @@ void VK_SetTexParams(const char *texture, const bool linear, const bool repeat)
 
 		const VkWriteDescriptorSet writeDescriptor = {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.dstSet = descriptorSets[i],
 			.dstBinding = 0,
 			.dstArrayElement = textureIndex,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.pImageInfo = &imageInfo,
-			.pBufferInfo = nullptr,
-			.pTexelBufferView = nullptr,
+			.pBufferInfo = NULL,
+			.pTexelBufferView = NULL,
 		};
-		vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, nullptr);
+		vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, NULL);
 	}
 }

@@ -5,8 +5,11 @@
 #include "VulkanInternal.h"
 #include <dirent.h>
 #include <SDL_vulkan.h>
-#include <stdint.h>
 #include <string.h>
+#include "../../../Structs/GlobalState.h"
+#include "../../Core/Error.h"
+#include "../../Core/Logging.h"
+#include "../../Core/MathEx.h"
 #include "VulkanHelpers.h"
 #include "VulkanMemory.h"
 #include "VulkanResources.h"
@@ -14,7 +17,7 @@
 bool CreateInstance()
 {
 	uint32_t extensionCount;
-	if (SDL_Vulkan_GetInstanceExtensions(vk_window, &extensionCount, nullptr) == SDL_FALSE)
+	if (SDL_Vulkan_GetInstanceExtensions(vk_window, &extensionCount, NULL) == SDL_FALSE)
 	{
 		VulkanLogError("Failed to acquire Vulkan extensions required for SDL window!\n");
 		return false;
@@ -27,7 +30,7 @@ bool CreateInstance()
 	}
 	VkApplicationInfo applicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.pApplicationName = GAME_TITLE,
 		.applicationVersion = VULKAN_VERSION,
 		.pEngineName = GAME_TITLE,
@@ -36,18 +39,18 @@ bool CreateInstance()
 	};
 	VkInstanceCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.pApplicationInfo = &applicationInfo,
 		.enabledLayerCount = 0,
-		.ppEnabledLayerNames = nullptr,
+		.ppEnabledLayerNames = NULL,
 		.enabledExtensionCount = extensionCount,
 		.ppEnabledExtensionNames = extensionNames,
 	};
 
 #if defined(VK_ENABLE_VALIDATION_LAYER) || defined(VK_ENABLE_MESA_FPS_OVERLAY)
 	uint32_t layerCount;
-	VulkanTest(vkEnumerateInstanceLayerProperties(&layerCount, nullptr), "Failed to enumerate Vulkan instance layers!");
+	VulkanTest(vkEnumerateInstanceLayerProperties(&layerCount, NULL), "Failed to enumerate Vulkan instance layers!");
 	VkLayerProperties availableLayers[layerCount];
 	VulkanTest(vkEnumerateInstanceLayerProperties(&layerCount, availableLayers),
 			   "Failed to enumerate Vulkan instance layers!");
@@ -129,7 +132,7 @@ bool CreateInstance()
 	createInfo.ppEnabledLayerNames = (const char *const[1]){"VK_LAYER_MESA_overlay"};
 #endif
 
-	VulkanTest(vkCreateInstance(&createInfo, nullptr, &instance), "Failed to create Vulkan instance!");
+	VulkanTest(vkCreateInstance(&createInfo, NULL, &instance), "Failed to create Vulkan instance!");
 
 	return true;
 }
@@ -148,7 +151,7 @@ bool CreateSurface()
 bool PickPhysicalDevice()
 {
 	uint32_t deviceCount = 0;
-	VulkanTest(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr), "Failed to enumerate physical devices!");
+	VulkanTest(vkEnumeratePhysicalDevices(instance, &deviceCount, NULL), "Failed to enumerate physical devices!");
 	if (deviceCount == 0)
 	{
 		VulkanLogError("Failed to find any GPUs with Vulkan support!\n");
@@ -178,7 +181,7 @@ bool PickPhysicalDevice()
 		}
 
 		uint32_t familyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(pDevice, &familyCount, nullptr);
+		vkGetPhysicalDeviceQueueFamilyProperties(pDevice, &familyCount, NULL);
 		VkQueueFamilyProperties families[familyCount];
 		vkGetPhysicalDeviceQueueFamilyProperties(pDevice, &familyCount, families);
 		for (uint32_t index = 0; index < familyCount;
@@ -238,14 +241,14 @@ bool PickPhysicalDevice()
 		}
 
 		uint32_t extensionCount;
-		VulkanTest(vkEnumerateDeviceExtensionProperties(pDevice, nullptr, &extensionCount, nullptr),
+		VulkanTest(vkEnumerateDeviceExtensionProperties(pDevice, NULL, &extensionCount, NULL),
 				   "Failed to enumerate device extensions!");
 		if (extensionCount == 0)
 		{
 			continue;
 		}
 		VkExtensionProperties availableExtensions[extensionCount];
-		VulkanTest(vkEnumerateDeviceExtensionProperties(pDevice, nullptr, &extensionCount, availableExtensions),
+		VulkanTest(vkEnumerateDeviceExtensionProperties(pDevice, NULL, &extensionCount, availableExtensions),
 				   "Failed to enumerate Vulkan device extensions!");
 		for (uint32_t j = 0; j < extensionCount; j++)
 		{
@@ -303,7 +306,7 @@ bool CreateLogicalDevice()
 		case 3:
 			queueCreateInfos[2] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-				.pNext = nullptr,
+				.pNext = NULL,
 				.flags = 0,
 				.queueFamilyIndex = queueFamilyIndices.presentFamily,
 				.queueCount = 1,
@@ -312,7 +315,7 @@ bool CreateLogicalDevice()
 		case 2:
 			queueCreateInfos[1] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-				.pNext = nullptr,
+				.pNext = NULL,
 				.flags = 0,
 				.queueFamilyIndex = queueFamilyIndices.families & QUEUE_FAMILY_TRANSFER
 											? queueFamilyIndices.transferFamily
@@ -323,7 +326,7 @@ bool CreateLogicalDevice()
 		case 1:
 			queueCreateInfos[0] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-				.pNext = nullptr,
+				.pNext = NULL,
 				.flags = 0,
 				.queueFamilyIndex = queueFamilyIndices.graphicsFamily,
 				.queueCount = 1,
@@ -343,7 +346,7 @@ bool CreateLogicalDevice()
 	};
 	VkPhysicalDeviceVulkan12Features vulkan12Features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.runtimeDescriptorArray = VK_TRUE,
 		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
 	};
@@ -354,7 +357,7 @@ bool CreateLogicalDevice()
 		.queueCreateInfoCount = queueFamilyIndices.familyCount,
 		.pQueueCreateInfos = queueCreateInfos,
 		.enabledLayerCount = 0,
-		.ppEnabledLayerNames = nullptr,
+		.ppEnabledLayerNames = NULL,
 		.enabledExtensionCount = 1,
 		.ppEnabledExtensionNames = (const char *const[1]){VK_KHR_SWAPCHAIN_EXTENSION_NAME},
 		.pEnabledFeatures = &deviceFeatures,
@@ -365,7 +368,7 @@ bool CreateLogicalDevice()
 	createInfo.ppEnabledLayerNames = (const char *const[1]){"VK_LAYER_KHRONOS_validation"};
 #endif
 
-	VulkanTest(vkCreateDevice(physicalDevice.device, &createInfo, nullptr, &device), "Failed to create Vulkan device!");
+	VulkanTest(vkCreateDevice(physicalDevice.device, &createInfo, NULL, &device), "Failed to create Vulkan device!");
 
 	vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily, 0, &graphicsQueue);
 	vkGetDeviceQueue(device, queueFamilyIndices.transferFamily, 0, &transferQueue);
@@ -482,7 +485,7 @@ bool CreateSwapChain()
 
 	const VkSwapchainCreateInfoKHR createInfo = {
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.surface = surface,
 		.minImageCount = imageCount,
@@ -501,9 +504,9 @@ bool CreateSwapChain()
 		.clipped = VK_TRUE,
 		.oldSwapchain = VK_NULL_HANDLE,
 	};
-	VulkanTest(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain), "Failed to create Vulkan swap chain!");
+	VulkanTest(vkCreateSwapchainKHR(device, &createInfo, NULL, &swapChain), "Failed to create Vulkan swap chain!");
 
-	VulkanTest(vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr), "Failed to get Vulkan swapchain images!");
+	VulkanTest(vkGetSwapchainImagesKHR(device, swapChain, &imageCount, NULL), "Failed to get Vulkan swapchain images!");
 	swapChainImages = malloc(sizeof(*swapChainImages) * imageCount);
 	CheckAlloc(swapChainImages);
 	swapChainCount = imageCount;
@@ -647,30 +650,30 @@ bool CreateRenderPass()
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
+			.pInputAttachments = NULL,
 			.colorAttachmentCount = 1,
 			.pColorAttachments = &colorAttachmentRef,
-			.pResolveAttachments = nullptr,
+			.pResolveAttachments = NULL,
 			.pDepthStencilAttachment = &depthAttachmentReference,
 			.preserveAttachmentCount = 0,
-			.pPreserveAttachments = nullptr,
+			.pPreserveAttachments = NULL,
 		};
 		const VkSubpassDescription uiSubpass = {
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
+			.pInputAttachments = NULL,
 			.colorAttachmentCount = 1,
 			.pColorAttachments = &colorAttachmentRef,
-			.pResolveAttachments = nullptr,
-			.pDepthStencilAttachment = nullptr,
+			.pResolveAttachments = NULL,
+			.pDepthStencilAttachment = NULL,
 			.preserveAttachmentCount = 0,
-			.pPreserveAttachments = nullptr,
+			.pPreserveAttachments = NULL,
 		};
 
 		const VkRenderPassCreateInfo renderPassInfo = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.attachmentCount = 2,
 			.pAttachments = (VkAttachmentDescription[]){colorAttachment, depthAttachment},
@@ -680,7 +683,7 @@ bool CreateRenderPass()
 			.pDependencies = dependencies,
 		};
 
-		VulkanTest(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass),
+		VulkanTest(vkCreateRenderPass(device, &renderPassInfo, NULL, &renderPass),
 				   "Failed to create Vulkan render pass!");
 	} else
 	{
@@ -726,30 +729,30 @@ bool CreateRenderPass()
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
+			.pInputAttachments = NULL,
 			.colorAttachmentCount = 1,
 			.pColorAttachments = &colorAttachmentRef,
 			.pResolveAttachments = &colorAttachmentResolveRef,
 			.pDepthStencilAttachment = &depthAttachmentReference,
 			.preserveAttachmentCount = 0,
-			.pPreserveAttachments = nullptr,
+			.pPreserveAttachments = NULL,
 		};
 		const VkSubpassDescription uiSubpass = {
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
+			.pInputAttachments = NULL,
 			.colorAttachmentCount = 1,
 			.pColorAttachments = &colorAttachmentRef,
 			.pResolveAttachments = &colorAttachmentResolveRef,
-			.pDepthStencilAttachment = nullptr,
+			.pDepthStencilAttachment = NULL,
 			.preserveAttachmentCount = 0,
-			.pPreserveAttachments = nullptr,
+			.pPreserveAttachments = NULL,
 		};
 
 		const VkRenderPassCreateInfo renderPassInfo = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.attachmentCount = 3,
 			.pAttachments = (VkAttachmentDescription[]){colorAttachment, depthAttachment, colorResolveAttachment},
@@ -759,7 +762,7 @@ bool CreateRenderPass()
 			.pDependencies = dependencies,
 		};
 
-		VulkanTest(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass),
+		VulkanTest(vkCreateRenderPass(device, &renderPassInfo, NULL, &renderPass),
 				   "Failed to create Vulkan render pass!");
 	}
 
@@ -781,7 +784,7 @@ bool CreateDescriptorSetLayouts()
 		.pBindings = &binding,
 	};
 
-	VulkanTest(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout),
+	VulkanTest(vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorSetLayout),
 			   "Failed to create pipeline descriptor set layout!");
 
 	return true;
@@ -791,12 +794,12 @@ bool CreateGraphicsPipelineCache()
 {
 	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.initialDataSize = 0,
-		.pInitialData = nullptr,
+		.pInitialData = NULL,
 	};
-	VulkanTest(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache),
+	VulkanTest(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, NULL, &pipelineCache),
 			   "Failed to create graphics pipeline cache!");
 
 	return true;
@@ -819,7 +822,7 @@ bool CreateGraphicsPipelines()
 	};
 	const VkPipelineViewportStateCreateInfo viewportState = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.viewportCount = 1,
 		.pViewports = &viewport,
@@ -829,7 +832,7 @@ bool CreateGraphicsPipelines()
 
 	const VkPipelineRasterizationStateCreateInfo rasterizer = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.depthClampEnable = VK_FALSE,
 		.rasterizerDiscardEnable = VK_FALSE,
@@ -845,19 +848,19 @@ bool CreateGraphicsPipelines()
 
 	const VkPipelineMultisampleStateCreateInfo multisampling = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.rasterizationSamples = msaaSamples,
 		.sampleShadingEnable = VK_FALSE,
 		.minSampleShading = 1,
-		.pSampleMask = nullptr,
+		.pSampleMask = NULL,
 		.alphaToCoverageEnable = VK_FALSE,
 		.alphaToOneEnable = VK_FALSE,
 	};
 
 	const VkPipelineDepthStencilStateCreateInfo depthStencil = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.depthTestEnable = VK_TRUE,
 		.depthWriteEnable = VK_TRUE,
@@ -885,7 +888,7 @@ bool CreateGraphicsPipelines()
 	};
 	const VkPipelineColorBlendStateCreateInfo colorBlending = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.logicOpEnable = VK_FALSE,
 		.logicOp = VK_LOGIC_OP_COPY,
@@ -896,10 +899,10 @@ bool CreateGraphicsPipelines()
 
 	const VkPipelineDynamicStateCreateInfo dynamicState = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.dynamicStateCount = 0,
-		.pDynamicStates = nullptr,
+		.pDynamicStates = NULL,
 	};
 
 	if (sizeof(PushConstants) > physicalDevice.properties.limits.maxPushConstantsSize)
@@ -912,14 +915,14 @@ bool CreateGraphicsPipelines()
 	};
 	const VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.setLayoutCount = 1,
 		.pSetLayouts = &descriptorSetLayout,
 		.pushConstantRangeCount = 1,
 		.pPushConstantRanges = &pushConstantRange,
 	};
-	VulkanTest(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout),
+	VulkanTest(vkCreatePipelineLayout(device, &pipelineLayoutInfo, NULL, &pipelineLayout),
 			   "Failed to create graphics pipeline layout!");
 #pragma endregion shared
 
@@ -935,21 +938,21 @@ bool CreateGraphicsPipelines()
 	const VkPipelineShaderStageCreateInfo wallShaderStages[2] = {
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.stage = VK_SHADER_STAGE_VERTEX_BIT,
 			.module = wallVertShaderModule,
 			.pName = "main",
-			.pSpecializationInfo = nullptr,
+			.pSpecializationInfo = NULL,
 		},
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.module = wallFragShaderModule,
 			.pName = "main",
-			.pSpecializationInfo = nullptr,
+			.pSpecializationInfo = NULL,
 		},
 	};
 
@@ -999,7 +1002,7 @@ bool CreateGraphicsPipelines()
 	};
 	const VkPipelineVertexInputStateCreateInfo wallVertexInputInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.vertexBindingDescriptionCount = 2,
 		.pVertexBindingDescriptions = wallBindingDescriptions,
@@ -1009,7 +1012,7 @@ bool CreateGraphicsPipelines()
 
 	const VkPipelineInputAssemblyStateCreateInfo wallInputAssembly = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 		.primitiveRestartEnable = VK_FALSE,
@@ -1017,13 +1020,13 @@ bool CreateGraphicsPipelines()
 
 	VkGraphicsPipelineCreateInfo wallPipelineInfo = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.stageCount = 2,
 		.pStages = wallShaderStages,
 		.pVertexInputState = &wallVertexInputInfo,
 		.pInputAssemblyState = &wallInputAssembly,
-		.pTessellationState = nullptr,
+		.pTessellationState = NULL,
 		.pViewportState = &viewportState,
 		.pRasterizationState = &rasterizer,
 		.pMultisampleState = &multisampling,
@@ -1050,21 +1053,21 @@ bool CreateGraphicsPipelines()
 	const VkPipelineShaderStageCreateInfo actorShaderStages[2] = {
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.stage = VK_SHADER_STAGE_VERTEX_BIT,
 			.module = actorVertShaderModule,
 			.pName = "main",
-			.pSpecializationInfo = nullptr,
+			.pSpecializationInfo = NULL,
 		},
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.module = actorFragShaderModule,
 			.pName = "main",
-			.pSpecializationInfo = nullptr,
+			.pSpecializationInfo = NULL,
 		},
 	};
 
@@ -1138,7 +1141,7 @@ bool CreateGraphicsPipelines()
 	};
 	const VkPipelineVertexInputStateCreateInfo actorVertexInputInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.vertexBindingDescriptionCount = 2,
 		.pVertexBindingDescriptions = actorBindingDescriptions,
@@ -1148,7 +1151,7 @@ bool CreateGraphicsPipelines()
 
 	const VkPipelineInputAssemblyStateCreateInfo actorInputAssembly = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 		.primitiveRestartEnable = VK_FALSE,
@@ -1156,13 +1159,13 @@ bool CreateGraphicsPipelines()
 
 	VkGraphicsPipelineCreateInfo actorPipelineInfo = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.stageCount = 2,
 		.pStages = actorShaderStages,
 		.pVertexInputState = &actorVertexInputInfo,
 		.pInputAssemblyState = &actorInputAssembly,
-		.pTessellationState = nullptr,
+		.pTessellationState = NULL,
 		.pViewportState = &viewportState,
 		.pRasterizationState = &rasterizer,
 		.pMultisampleState = &multisampling,
@@ -1189,21 +1192,21 @@ bool CreateGraphicsPipelines()
 	const VkPipelineShaderStageCreateInfo uiShaderStages[2] = {
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.stage = VK_SHADER_STAGE_VERTEX_BIT,
 			.module = uiVertShaderModule,
 			.pName = "main",
-			.pSpecializationInfo = nullptr,
+			.pSpecializationInfo = NULL,
 		},
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.module = uiFragShaderModule,
 			.pName = "main",
-			.pSpecializationInfo = nullptr,
+			.pSpecializationInfo = NULL,
 		},
 	};
 
@@ -1240,7 +1243,7 @@ bool CreateGraphicsPipelines()
 	};
 	const VkPipelineVertexInputStateCreateInfo uiVertexInputInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.vertexBindingDescriptionCount = 1,
 		.pVertexBindingDescriptions = &uiBindingDescription,
@@ -1250,7 +1253,7 @@ bool CreateGraphicsPipelines()
 
 	const VkPipelineInputAssemblyStateCreateInfo uiInputAssembly = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 		.primitiveRestartEnable = VK_FALSE,
@@ -1258,17 +1261,17 @@ bool CreateGraphicsPipelines()
 
 	VkGraphicsPipelineCreateInfo uiPipelineInfo = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.stageCount = 2,
 		.pStages = uiShaderStages,
 		.pVertexInputState = &uiVertexInputInfo,
 		.pInputAssemblyState = &uiInputAssembly,
-		.pTessellationState = nullptr,
+		.pTessellationState = NULL,
 		.pViewportState = &viewportState,
 		.pRasterizationState = &rasterizer,
 		.pMultisampleState = &multisampling,
-		.pDepthStencilState = nullptr,
+		.pDepthStencilState = NULL,
 		.pColorBlendState = &colorBlending,
 		.pDynamicState = &dynamicState,
 		.layout = pipelineLayout,
@@ -1287,7 +1290,7 @@ bool CreateGraphicsPipelines()
 	};
 	VkPipeline pipelineList[3] = {0};
 
-	VulkanTest(vkCreateGraphicsPipelines(device, pipelineCache, 3, pipelinesCreateInfo, nullptr, pipelineList),
+	VulkanTest(vkCreateGraphicsPipelines(device, pipelineCache, 3, pipelinesCreateInfo, NULL, pipelineList),
 			   "Failed to create graphics pipelines!");
 
 	pipelines.walls = pipelineList[0];
@@ -1295,14 +1298,14 @@ bool CreateGraphicsPipelines()
 	pipelines.ui = pipelineList[2];
 
 
-	vkDestroyShaderModule(device, wallVertShaderModule, nullptr);
-	vkDestroyShaderModule(device, wallFragShaderModule, nullptr);
+	vkDestroyShaderModule(device, wallVertShaderModule, NULL);
+	vkDestroyShaderModule(device, wallFragShaderModule, NULL);
 
-	vkDestroyShaderModule(device, actorVertShaderModule, nullptr);
-	vkDestroyShaderModule(device, actorFragShaderModule, nullptr);
+	vkDestroyShaderModule(device, actorVertShaderModule, NULL);
+	vkDestroyShaderModule(device, actorFragShaderModule, NULL);
 
-	vkDestroyShaderModule(device, uiVertShaderModule, nullptr);
-	vkDestroyShaderModule(device, uiFragShaderModule, nullptr);
+	vkDestroyShaderModule(device, uiVertShaderModule, NULL);
+	vkDestroyShaderModule(device, uiFragShaderModule, NULL);
 
 	return true;
 }
@@ -1311,22 +1314,22 @@ bool CreateCommandPools()
 {
 	const VkCommandPoolCreateInfo graphicsPoolInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		.queueFamilyIndex = queueFamilyIndices.graphicsFamily,
 	};
 
-	VulkanTest(vkCreateCommandPool(device, &graphicsPoolInfo, nullptr, &graphicsCommandPool),
+	VulkanTest(vkCreateCommandPool(device, &graphicsPoolInfo, NULL, &graphicsCommandPool),
 			   "Failed to create graphics command pool!");
 
 	const VkCommandPoolCreateInfo transferPoolInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		.queueFamilyIndex = queueFamilyIndices.transferFamily,
 	};
 
-	VulkanTest(vkCreateCommandPool(device, &transferPoolInfo, nullptr, &transferCommandPool),
+	VulkanTest(vkCreateCommandPool(device, &transferPoolInfo, NULL, &transferCommandPool),
 			   "Failed to create transfer command pool!");
 
 	return true;
@@ -1398,7 +1401,7 @@ bool CreateDepthImage()
 	};
 	const VkImageMemoryBarrier transferBarrier = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.srcAccessMask = 0,
 		.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1414,9 +1417,9 @@ bool CreateDepthImage()
 						 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 						 0,
 						 0,
-						 nullptr,
+						 NULL,
 						 0,
-						 nullptr,
+						 NULL,
 						 1,
 						 &transferBarrier);
 
@@ -1437,7 +1440,7 @@ bool CreateFramebuffers()
 	{
 		VkFramebufferCreateInfo framebufferInfo = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.flags = 0,
 			.renderPass = renderPass,
 			.attachmentCount = msaaSamples == VK_SAMPLE_COUNT_1_BIT ? 2 : 3,
@@ -1449,7 +1452,7 @@ bool CreateFramebuffers()
 			.layers = 1,
 		};
 
-		VulkanTest(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]),
+		VulkanTest(vkCreateFramebuffer(device, &framebufferInfo, NULL, &swapChainFramebuffers[i]),
 				   "Failed to create Vulkan framebuffer!");
 	}
 
@@ -1473,16 +1476,16 @@ bool InitTextures()
 	char texturesPath[300];
 	sprintf(texturesPath, "%sassets/texture/", GetState()->executableFolder);
 	DIR *dir = opendir(texturesPath);
-	if (dir == nullptr)
+	if (dir == NULL)
 	{
 		VulkanLogError("Failed to open texture directory: %s\n", texturesPath);
 		textureCount = 1;
 	} else
 	{
 		const struct dirent *ent = readdir(dir);
-		while (ent != nullptr)
+		while (ent != NULL)
 		{
-			if (strstr(ent->d_name, ".gtex") != nullptr)
+			if (strstr(ent->d_name, ".gtex") != NULL)
 			{
 				textureCount++;
 			}
@@ -1498,7 +1501,7 @@ bool InitTextures()
 
 	VkImage image;
 	if (!CreateImage(&image,
-					 nullptr,
+					 NULL,
 					 format,
 					 (VkExtent3D){1, 1, 1},
 					 1,
@@ -1525,13 +1528,13 @@ bool InitTextures()
 				.memoryTypeIndex = i,
 			};
 
-			VulkanTest(vkAllocateMemory(device, &allocateInfo, nullptr, &textureMemory.memory),
+			VulkanTest(vkAllocateMemory(device, &allocateInfo, NULL, &textureMemory.memory),
 					   "Failed to allocate Vulkan texture memory!");
 			break;
 		}
 	}
 
-	vkDestroyImage(device, image, nullptr);
+	vkDestroyImage(device, image, NULL);
 
 	return true;
 }
@@ -1563,7 +1566,7 @@ bool CreateTextureSampler()
 {
 	const VkSamplerCreateInfo linearRepeatSamplerCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.magFilter = VK_FILTER_LINEAR,
 		.minFilter = VK_FILTER_LINEAR,
@@ -1583,7 +1586,7 @@ bool CreateTextureSampler()
 	};
 	const VkSamplerCreateInfo nearestRepeatSamplerCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.magFilter = VK_FILTER_NEAREST,
 		.minFilter = VK_FILTER_NEAREST,
@@ -1603,7 +1606,7 @@ bool CreateTextureSampler()
 	};
 	const VkSamplerCreateInfo linearNoRepeatSamplerCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.magFilter = VK_FILTER_LINEAR,
 		.minFilter = VK_FILTER_LINEAR,
@@ -1623,7 +1626,7 @@ bool CreateTextureSampler()
 	};
 	const VkSamplerCreateInfo nearestNoRepeatSamplerCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.magFilter = VK_FILTER_NEAREST,
 		.minFilter = VK_FILTER_NEAREST,
@@ -1642,13 +1645,13 @@ bool CreateTextureSampler()
 		.unnormalizedCoordinates = VK_FALSE,
 	};
 
-	VulkanTest(vkCreateSampler(device, &linearRepeatSamplerCreateInfo, nullptr, &textureSamplers.linearRepeat),
+	VulkanTest(vkCreateSampler(device, &linearRepeatSamplerCreateInfo, NULL, &textureSamplers.linearRepeat),
 			   "Failed to create linear repeating texture sampler!");
-	VulkanTest(vkCreateSampler(device, &nearestRepeatSamplerCreateInfo, nullptr, &textureSamplers.nearestRepeat),
+	VulkanTest(vkCreateSampler(device, &nearestRepeatSamplerCreateInfo, NULL, &textureSamplers.nearestRepeat),
 			   "Failed to create nearest repeating texture sampler!");
-	VulkanTest(vkCreateSampler(device, &linearNoRepeatSamplerCreateInfo, nullptr, &textureSamplers.linearNoRepeat),
+	VulkanTest(vkCreateSampler(device, &linearNoRepeatSamplerCreateInfo, NULL, &textureSamplers.linearNoRepeat),
 			   "Failed to create linear non-repeating texture sampler!");
-	VulkanTest(vkCreateSampler(device, &nearestNoRepeatSamplerCreateInfo, nullptr, &textureSamplers.nearestNoRepeat),
+	VulkanTest(vkCreateSampler(device, &nearestNoRepeatSamplerCreateInfo, NULL, &textureSamplers.nearestNoRepeat),
 			   "Failed to create nearest non-repeating texture sampler!");
 
 	return true;
@@ -1705,14 +1708,14 @@ bool CreateDescriptorPool()
 	};
 	const VkDescriptorPoolCreateInfo poolCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
 		.maxSets = MAX_FRAMES_IN_FLIGHT,
 		.poolSizeCount = 3,
 		.pPoolSizes = poolSizes,
 	};
 
-	VulkanTest(vkCreateDescriptorPool(device, &poolCreateInfo, nullptr, &descriptorPool),
+	VulkanTest(vkCreateDescriptorPool(device, &poolCreateInfo, NULL, &descriptorPool),
 			   "Failed to create descriptor pool!");
 
 	return true;
@@ -1728,7 +1731,7 @@ bool CreateDescriptorSets()
 
 	const VkDescriptorSetAllocateInfo allocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.descriptorPool = descriptorPool,
 		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
 		.pSetLayouts = layouts,
@@ -1754,17 +1757,17 @@ bool CreateDescriptorSets()
 		}
 		const VkWriteDescriptorSet writeDescriptor = {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.pNext = nullptr,
+			.pNext = NULL,
 			.dstSet = descriptorSets[i],
 			.dstBinding = 0,
 			.dstArrayElement = 0,
 			.descriptorCount = textures.length,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.pImageInfo = imageInfo,
-			.pBufferInfo = nullptr,
-			.pTexelBufferView = nullptr,
+			.pBufferInfo = NULL,
+			.pTexelBufferView = NULL,
 		};
-		vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, nullptr);
+		vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, NULL);
 	}
 
 	return true;
@@ -1774,7 +1777,7 @@ bool CreateCommandBuffers()
 {
 	const VkCommandBufferAllocateInfo allocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.commandPool = graphicsCommandPool,
 		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 		.commandBufferCount = MAX_FRAMES_IN_FLIGHT,
@@ -1790,25 +1793,25 @@ bool CreateSyncObjects()
 {
 	const VkSemaphoreCreateInfo semaphoreInfo = {
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 	};
 
 	const VkFenceCreateInfo fenceInfo = {
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = VK_FENCE_CREATE_SIGNALED_BIT,
 	};
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
-		VulkanTest(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]),
+		VulkanTest(vkCreateSemaphore(device, &semaphoreInfo, NULL, &imageAvailableSemaphores[i]),
 				   "Failed to create Vulkan semaphores!");
 
-		VulkanTest(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]),
+		VulkanTest(vkCreateSemaphore(device, &semaphoreInfo, NULL, &renderFinishedSemaphores[i]),
 				   "Failed to create Vulkan semaphores!");
 
-		VulkanTest(vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]), "Failed to create Vulkan semaphores!");
+		VulkanTest(vkCreateFence(device, &fenceInfo, NULL, &inFlightFences[i]), "Failed to create Vulkan semaphores!");
 	}
 
 	return true;

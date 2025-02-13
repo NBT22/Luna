@@ -21,7 +21,7 @@ VkSurfaceKHR surface;
 PhysicalDevice physicalDevice;
 QueueFamilyIndices queueFamilyIndices;
 SwapChainSupportDetails swapChainSupport = {0};
-VkDevice device = nullptr;
+VkDevice device = NULL;
 VkQueue graphicsQueue;
 VkQueue presentQueue;
 VkQueue transferQueue;
@@ -30,13 +30,13 @@ VkImage *swapChainImages;
 uint32_t swapChainCount = 0;
 VkFormat swapChainImageFormat;
 VkExtent2D swapChainExtent;
-VkImageView *swapChainImageViews = nullptr;
+VkImageView *swapChainImageViews = NULL;
 VkRenderPass renderPass = VK_NULL_HANDLE;
 VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 VkPipelineCache pipelineCache = VK_NULL_HANDLE;
 Pipelines pipelines = {.walls = VK_NULL_HANDLE, .actors = VK_NULL_HANDLE, .ui = VK_NULL_HANDLE};
-VkFramebuffer *swapChainFramebuffers = nullptr;
+VkFramebuffer *swapChainFramebuffers = NULL;
 VkCommandPool graphicsCommandPool = VK_NULL_HANDLE;
 VkCommandPool transferCommandPool = VK_NULL_HANDLE;
 VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
@@ -49,13 +49,13 @@ uint32_t swapchainImageIndex = -1;
 MemoryPools memoryPools = {
 	{
 		.size = 0,
-		.mappedMemory = nullptr,
+		.mappedMemory = NULL,
 		.memory = VK_NULL_HANDLE,
 		.type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 	},
 	{
 		.size = 0,
-		.mappedMemory = nullptr,
+		.mappedMemory = NULL,
 		.memory = VK_NULL_HANDLE,
 		.type = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 	},
@@ -93,7 +93,7 @@ bool QuerySwapChainSupport(const VkPhysicalDevice pDevice)
 	VulkanTest(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pDevice, surface, &swapChainSupport.capabilities),
 			   "Failed to query Vulkan surface capabilities!");
 
-	VulkanTest(vkGetPhysicalDeviceSurfaceFormatsKHR(pDevice, surface, &swapChainSupport.formatCount, nullptr),
+	VulkanTest(vkGetPhysicalDeviceSurfaceFormatsKHR(pDevice, surface, &swapChainSupport.formatCount, NULL),
 			   "Failed to query Vulkan surface color formats!");
 	if (swapChainSupport.formatCount != 0)
 	{
@@ -107,7 +107,7 @@ bool QuerySwapChainSupport(const VkPhysicalDevice pDevice)
 				   "Failed to query Vulkan surface color formats!");
 	}
 
-	VulkanTest(vkGetPhysicalDeviceSurfacePresentModesKHR(pDevice, surface, &swapChainSupport.presentModeCount, nullptr),
+	VulkanTest(vkGetPhysicalDeviceSurfacePresentModesKHR(pDevice, surface, &swapChainSupport.presentModeCount, NULL),
 			   "Failed to query Vulkan surface presentation modes!");
 	if (swapChainSupport.presentModeCount != 0)
 	{
@@ -146,7 +146,7 @@ bool CreateImageView(VkImageView *imageView,
 	};
 	const VkImageViewCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.image = image,
 		.viewType = VK_IMAGE_VIEW_TYPE_2D,
@@ -155,7 +155,7 @@ bool CreateImageView(VkImageView *imageView,
 		.subresourceRange = subresourceRange,
 	};
 
-	VulkanTest(vkCreateImageView(device, &createInfo, nullptr, imageView), errorMessage);
+	VulkanTest(vkCreateImageView(device, &createInfo, NULL, imageView), errorMessage);
 
 	return true;
 }
@@ -167,14 +167,14 @@ VkShaderModule CreateShaderModule(const char *path)
 
 	const VkShaderModuleCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.codeSize = shader->size - sizeof(uint32_t) * 4, // sizeof(uint32_t) * 4 is the asset header
 		.pCode = (uint32_t *)shader->data,
 	};
 
-	VulkanTestWithReturn(vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule),
-						 nullptr,
+	VulkanTestWithReturn(vkCreateShaderModule(device, &createInfo, NULL, &shaderModule),
+						 NULL,
 						 "Failed to create shader module!");
 
 	return shaderModule;
@@ -213,7 +213,7 @@ bool CreateImage(VkImage *image,
 
 	const VkImageCreateInfo imageInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.imageType = VK_IMAGE_TYPE_2D,
 		.format = format,
@@ -230,11 +230,11 @@ bool CreateImage(VkImage *image,
 		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 	};
 
-	VulkanTest(vkCreateImage(device, &imageInfo, nullptr, image), "Failed to create Vulkan %s image!", imageType);
+	VulkanTest(vkCreateImage(device, &imageInfo, NULL, image), "Failed to create Vulkan %s image!", imageType);
 
 	if (!imageMemory)
 	{
-		return true; // If image memory is nullptr, then allocation will be handled by the calling function
+		return true; // If image memory is NULL, then allocation will be handled by the calling function
 	}
 	// Otherwise, allocate the memory for the image
 
@@ -251,12 +251,12 @@ bool CreateImage(VkImage *image,
 														 (double)memoryRequirements.alignment);
 			const VkMemoryAllocateInfo allocateInfo = {
 				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				.pNext = nullptr,
+				.pNext = NULL,
 				.allocationSize = size,
 				.memoryTypeIndex = i,
 			};
 
-			VulkanTest(vkAllocateMemory(device, &allocateInfo, nullptr, imageMemory),
+			VulkanTest(vkAllocateMemory(device, &allocateInfo, NULL, imageMemory),
 					   "Failed to allocate Vulkan %s image memory!",
 					   imageType);
 			break;
@@ -272,7 +272,7 @@ bool BeginCommandBuffer(const VkCommandBuffer *commandBuffer, const VkCommandPoo
 {
 	const VkCommandBufferAllocateInfo allocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.commandPool = commandPool,
 		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 		.commandBufferCount = 1,
@@ -283,9 +283,9 @@ bool BeginCommandBuffer(const VkCommandBuffer *commandBuffer, const VkCommandPoo
 
 	const VkCommandBufferBeginInfo beginInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		.pInheritanceInfo = nullptr,
+		.pInheritanceInfo = NULL,
 	};
 
 	VulkanTest(vkBeginCommandBuffer(*commandBuffer, &beginInfo),
@@ -300,14 +300,14 @@ bool EndCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandPool command
 
 	const VkSubmitInfo submitInfo = {
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.waitSemaphoreCount = 0,
-		.pWaitSemaphores = nullptr,
+		.pWaitSemaphores = NULL,
 		.pWaitDstStageMask = 0,
 		.commandBufferCount = 1,
 		.pCommandBuffers = &commandBuffer,
 		.signalSemaphoreCount = 0,
-		.pSignalSemaphores = nullptr,
+		.pSignalSemaphores = NULL,
 	};
 
 	VulkanTest(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE),
@@ -345,7 +345,7 @@ bool CreateBuffer(Buffer *buffer, const bool newAllocation)
 
 	const VkBufferCreateInfo bufferInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = 0,
 		.size = buffer->size,
 		.usage = buffer->memoryAllocationInfo.usageFlags,
@@ -355,7 +355,7 @@ bool CreateBuffer(Buffer *buffer, const bool newAllocation)
 		.pQueueFamilyIndices = pQueueFamilyIndices,
 	};
 
-	VulkanTest(vkCreateBuffer(device, &bufferInfo, nullptr, &buffer->buffer), "Failed to create Vulkan buffer!");
+	VulkanTest(vkCreateBuffer(device, &bufferInfo, NULL, &buffer->buffer), "Failed to create Vulkan buffer!");
 
 	vkGetBufferMemoryRequirements(device, buffer->buffer, &buffer->memoryAllocationInfo.memoryRequirements);
 	const VkDeviceSize memorySize = buffer->memoryAllocationInfo.memoryRequirements.alignment *
@@ -378,12 +378,12 @@ bool CreateBuffer(Buffer *buffer, const bool newAllocation)
 		{
 			const VkMemoryAllocateInfo allocInfo = {
 				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				.pNext = nullptr,
+				.pNext = NULL,
 				.allocationSize = memorySize,
 				.memoryTypeIndex = i,
 			};
 
-			VulkanTest(vkAllocateMemory(device, &allocInfo, nullptr, &buffer->memoryAllocationInfo.memoryInfo->memory),
+			VulkanTest(vkAllocateMemory(device, &allocInfo, NULL, &buffer->memoryAllocationInfo.memoryInfo->memory),
 					   "Failed to allocate Vulkan buffer memory!");
 
 			VulkanTest(vkBindBufferMemory(device, buffer->buffer, buffer->memoryAllocationInfo.memoryInfo->memory, 0),
@@ -440,17 +440,17 @@ void CleanupSwapChain()
 	{
 		for (uint32_t i = 0; i < swapChainCount; i++)
 		{
-			vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+			vkDestroyFramebuffer(device, swapChainFramebuffers[i], NULL);
 		}
 	}
 	if (swapChainImageViews)
 	{
 		for (uint32_t i = 0; i < swapChainCount; i++)
 		{
-			vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+			vkDestroyImageView(device, swapChainImageViews[i], NULL);
 		}
 	}
-	vkDestroySwapchainKHR(device, swapChain, nullptr);
+	vkDestroySwapchainKHR(device, swapChain, NULL);
 
 	free(swapChainSupport.formats);
 	free(swapChainSupport.presentMode);
@@ -458,43 +458,43 @@ void CleanupSwapChain()
 	free(swapChainImageViews);
 	free(swapChainFramebuffers);
 
-	swapChainSupport.formats = nullptr;
-	swapChainSupport.presentMode = nullptr;
-	swapChainImages = nullptr;
-	swapChainImageViews = nullptr;
-	swapChainFramebuffers = nullptr;
+	swapChainSupport.formats = NULL;
+	swapChainSupport.presentMode = NULL;
+	swapChainImages = NULL;
+	swapChainImageViews = NULL;
+	swapChainFramebuffers = NULL;
 }
 
 void CleanupColorImage()
 {
-	vkDestroyImageView(device, colorImageView, nullptr);
-	vkDestroyImage(device, colorImage, nullptr);
-	vkFreeMemory(device, colorImageMemory, nullptr);
+	vkDestroyImageView(device, colorImageView, NULL);
+	vkDestroyImage(device, colorImage, NULL);
+	vkFreeMemory(device, colorImageMemory, NULL);
 }
 
 void CleanupDepthImage()
 {
-	vkDestroyImageView(device, depthImageView, nullptr);
-	vkDestroyImage(device, depthImage, nullptr);
-	vkFreeMemory(device, depthImageMemory, nullptr);
+	vkDestroyImageView(device, depthImageView, NULL);
+	vkDestroyImage(device, depthImage, NULL);
+	vkFreeMemory(device, depthImageMemory, NULL);
 }
 
 void CleanupPipeline()
 {
-	vkDestroyPipeline(device, pipelines.walls, nullptr);
-	vkDestroyPipeline(device, pipelines.actors, nullptr);
-	vkDestroyPipeline(device, pipelines.ui, nullptr);
-	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+	vkDestroyPipeline(device, pipelines.walls, NULL);
+	vkDestroyPipeline(device, pipelines.actors, NULL);
+	vkDestroyPipeline(device, pipelines.ui, NULL);
+	vkDestroyPipelineLayout(device, pipelineLayout, NULL);
 }
 
 void CleanupSyncObjects()
 {
 	for (uint8_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
-		vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-		vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(device, imageAvailableSemaphores[i], NULL);
+		vkDestroySemaphore(device, renderFinishedSemaphores[i], NULL);
 
-		vkDestroyFence(device, inFlightFences[i], nullptr);
+		vkDestroyFence(device, inFlightFences[i], NULL);
 	}
 }
 
@@ -521,12 +521,12 @@ bool DestroyBuffer(Buffer *buffer)
 {
 	VulkanTest(vkDeviceWaitIdle(device), "Failed to wait for device to become idle!");
 
-	vkDestroyBuffer(device, buffer->buffer, nullptr);
+	vkDestroyBuffer(device, buffer->buffer, NULL);
 	buffer->buffer = VK_NULL_HANDLE;
 
 	if (buffer->memoryAllocationInfo.memoryInfo)
 	{
-		vkFreeMemory(device, buffer->memoryAllocationInfo.memoryInfo->memory, nullptr);
+		vkFreeMemory(device, buffer->memoryAllocationInfo.memoryInfo->memory, NULL);
 	}
 	buffer->memoryAllocationInfo = (MemoryAllocationInfo){0};
 
@@ -704,7 +704,7 @@ void LoadActorWalls(const Level *level, ActorVertex *vertices, uint32_t *indices
 	for (size_t i = 0; i < level->actors.length; i++)
 	{
 		const Actor *actor = ListGet(level->actors, i);
-		if (!actor->actorWall || actor->actorModel != nullptr)
+		if (!actor->actorWall || actor->actorModel != NULL)
 		{
 			continue;
 		}
@@ -1004,9 +1004,9 @@ VkResult BeginRenderPass(const VkCommandBuffer commandBuffer, const uint32_t ima
 {
 	const VkCommandBufferBeginInfo beginInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		.pInheritanceInfo = nullptr,
+		.pInheritanceInfo = NULL,
 	};
 
 	VulkanTestReturnResult(vkBeginCommandBuffer(commandBuffer, &beginInfo),
@@ -1022,7 +1022,7 @@ VkResult BeginRenderPass(const VkCommandBuffer commandBuffer, const uint32_t ima
 	};
 	const VkRenderPassBeginInfo renderPassInfo = {
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.pNext = nullptr,
+		.pNext = NULL,
 		.renderPass = renderPass,
 		.framebuffer = swapChainFramebuffers[imageIndex],
 		.renderArea = renderArea,
