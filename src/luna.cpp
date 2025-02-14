@@ -2,20 +2,29 @@
 // Created by NBT22 on 2/11/25.
 //
 
-#include <iostream>
-#include <luna/helpers/LockingList.hpp>
 #include <luna/luna.h>
-#include <vector>
 
-using namespace luna;
+void createInstanceCpp()
+{
+	constexpr LunaApplicationInfo applicationInfo = {
+		.applicationName = "name",
+		.applicationVersion = 1,
+		.engineName = "name2",
+		.engineVersion = 2,
+		.apiVersion = VK_API_VERSION_1_2,
+	};
+	const LunaInstanceExtensionInfo extensionInfo = {
+		.extensionCount = 2,
+		.extensionNames = (const char *[]){"VK_KHR_surface", "VK_KHR_xlib_surface"},
+	};
+	constexpr LunaInstanceLayerInfo layerInfo = {
+		.enableValidation = true,
+	};
+	const LunaInstance instance = lunaCreateInstance(applicationInfo, extensionInfo, layerInfo);
+}
 
 int main()
 {
-	helpers::LockingList<std::vector, int> list({1, 2, 3});
-	for (const std::scoped_lock lock(list.mutex); const int i: list)
-	{
-		std::cout << i << ' ';
-	}
-
+	createInstanceCpp();
 	return 0;
 }
