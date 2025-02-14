@@ -13,6 +13,7 @@ extern "C"
 #endif
 
 typedef struct LunaInstanceStruct *LunaInstance;
+typedef struct LunaPhysicalDeviceStruct *LunaPhysicalDevice;
 
 struct LunaApplicationInfo
 {

@@ -3,16 +3,19 @@
 //
 
 #pragma once
+#include <luna/lunaInstance.h>
 
-struct LunaInstanceStruct
+namespace luna::core
 {
-
-};
-
-namespace luna::core::instance
-{
+extern VkInstance instance;
 
 class Instance
 {};
 
-} // namespace luna::core::instance
+LunaInstance createInstance(const LunaApplicationInfo &applicationInfo,
+							const LunaInstanceExtensionInfo &extensionInfo,
+							const LunaInstanceLayerInfo &layerInfo);
+} // namespace luna::core
+
+struct LunaInstanceStruct : luna::core::Instance
+{};

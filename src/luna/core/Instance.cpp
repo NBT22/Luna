@@ -6,11 +6,13 @@
 #include <cstring>
 #include <luna/lunaInstance.h>
 
-static VkInstance instance = VK_NULL_HANDLE;
+namespace luna::core
+{
+VkInstance instance = VK_NULL_HANDLE;
 
-LunaInstance lunaCreateInstance(const LunaApplicationInfo &applicationInfo,
-								const LunaInstanceExtensionInfo &extensionInfo,
-								const LunaInstanceLayerInfo &layerInfo)
+LunaInstance createInstance(const LunaApplicationInfo &applicationInfo,
+							const LunaInstanceExtensionInfo &extensionInfo,
+							const LunaInstanceLayerInfo &layerInfo)
 {
 	const VkApplicationInfo vulkanApplicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -62,8 +64,13 @@ LunaInstance lunaCreateInstance(const LunaApplicationInfo &applicationInfo,
 	}
 
 	vkCreateInstance(&createInfo, nullptr, &instance);
-	return nullptr;
+	return LunaInstance();
 }
+} // namespace luna::core
 
-namespace luna::core
-{}
+LunaInstance lunaCreateInstance(const LunaApplicationInfo &applicationInfo,
+								const LunaInstanceExtensionInfo &extensionInfo,
+								const LunaInstanceLayerInfo &layerInfo)
+{
+	return luna::core::createInstance(applicationInfo, extensionInfo, layerInfo);
+}
