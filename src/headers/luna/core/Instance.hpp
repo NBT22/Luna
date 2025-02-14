@@ -9,7 +9,7 @@ namespace luna::core
 {
 extern VkInstance instance;
 
-class Instance
+struct Instance
 {};
 
 LunaInstance createInstance(const LunaApplicationInfo &applicationInfo,

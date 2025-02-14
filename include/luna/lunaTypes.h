@@ -13,7 +13,8 @@ extern "C"
 #endif
 
 typedef struct LunaInstanceStruct *LunaInstance;
-typedef struct LunaPhysicalDeviceStruct *LunaPhysicalDevice;
+typedef struct LunaPhysicalDeviceStruct *LunaPhysicalDevice; // TODO: Is this even needed, or is only logical needed?
+typedef struct LunaLogicalDeviceStruct *LunaLogicalDevice;
 
 struct LunaApplicationInfo
 {

@@ -10,7 +10,7 @@ namespace luna::core
 {
 extern VkPhysicalDevice physicalDevice;
 
-class PhysicalDevice
+struct PhysicalDevice
 {};
 
 LunaPhysicalDevice pickPhysicalDeivce();
