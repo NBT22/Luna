@@ -7,6 +7,7 @@
 
 #include <luna/lunaTypes.h>
 
-LunaLogicalDevice lunaCreateLogicalDevice();
+void lunaAddNewDevice(const LunaDeviceCreationInfo &creationInfo);
+void lunaAddNewDevice2(const LunaDeviceCreationInfo2 &creationInfo);
 
 #endif //LUNALOGICALDEVICE_H

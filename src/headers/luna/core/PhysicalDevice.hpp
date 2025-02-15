@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <luna/lunaPhysicalDevice.h>
+#include <vulkan/vulkan.h>
 
 /// A pointer to this is given to the application, so that the application can give it back to Luna, that way we can
 /// determine what physical device should be used for that operation. This struct should not be used for things that are
@@ -19,23 +19,24 @@ class PhysicalDevice
 {
 	public:
 		PhysicalDevice() = default;
-		PhysicalDevice(VkInstance instance, uint32_t apiMinorVersion, const VkPhysicalDeviceFeatures &requiredFeatures);
-		PhysicalDevice(VkInstance instance,
-					   uint32_t apiMinorVersion,
-					   const VkPhysicalDeviceFeatures2 &requiredFeatures);
+		// explicit PhysicalDevice(const VkPhysicalDeviceFeatures &requiredFeatures);
+		explicit PhysicalDevice(const VkPhysicalDeviceFeatures2 &requiredFeatures);
 
-		// /// A getter for the @c graphicsFamily_ value
-		// /// @return The index of the family on the GPU that will be used for graphics processing
-		// [[nodiscard]] uint32_t graphicsFamily() const;
-		// /// A getter for the @c presentationFamily_ value
-		// /// @return The index of the family on the GPU that will be used for presentation
-		// [[nodiscard]] uint32_t presentationFamily() const;
-		// /// A getter for the @c transferFamily_ value
-		// /// @return The index of the family on the GPU that will be used for transfer operations
-		// [[nodiscard]] uint32_t transferFamily() const;
-		// /// A getter for the @c familyCount_ value
-		// /// @return The total count of unique families
-		// [[nodiscard]] uint32_t familyCount() const;
+		/// A getter for the @c device_ value
+		/// @return The Vulkan handle for the physical device described in this instance
+		[[nodiscard]] VkPhysicalDevice device() const;
+		/// A getter for the @c graphicsFamily_ value
+		/// @return The index of the family on the GPU that will be used for graphics processing
+		[[nodiscard]] uint32_t graphicsFamily() const;
+		/// A getter for the @c transferFamily_ value
+		/// @return The index of the family on the GPU that will be used for transfer operations
+		[[nodiscard]] uint32_t transferFamily() const;
+		/// A getter for the @c presentationFamily_ value
+		/// @return The index of the family on the GPU that will be used for presentation
+		[[nodiscard]] uint32_t presentationFamily() const;
+		/// A getter for the @c familyCount_ value
+		/// @return The total count of unique families
+		[[nodiscard]] uint32_t familyCount() const;
 		// /// A getter for the @c hasPresentation_ value
 		// /// @return A boolean for if there is a unique family for presentation
 		// [[nodiscard]] bool hasPresentation() const;
@@ -45,7 +46,7 @@ class PhysicalDevice
 
 	private:
 		/// The actual device
-		VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
+		VkPhysicalDevice device_ = VK_NULL_HANDLE;
 		VkPhysicalDeviceVulkan14Features vulkan14Features_{};
 		VkPhysicalDeviceVulkan13Features vulkan13Features_{};
 		VkPhysicalDeviceVulkan12Features vulkan12Features_{};
@@ -54,11 +55,11 @@ class PhysicalDevice
 		VkPhysicalDeviceProperties properties_{};
 		VkPhysicalDeviceMemoryProperties memoryProperties_{};
 		/// The index of the family on the GPU that will be used for graphics processing
-		uint32_t graphicsFamily_ = -1u;
+		uint32_t graphicsFamily_ = 0;
 		/// The index of the family on the GPU that will be used for presentation
-		uint32_t transferFamily_ = -1u;
+		uint32_t transferFamily_ = 0;
 		/// The total count of unique families
-		uint32_t presentationFamily_ = -1u;
+		uint32_t presentationFamily_ = 0;
 		/// The index of the family on the GPU that will be used for transfer operations
 		bool hasGraphics_ = false;
 		/// A boolean for if there is a unique family for transfer operations
@@ -81,6 +82,4 @@ class PhysicalDevice
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
 		[[nodiscard]] bool checkUsability();
 };
-
-LunaPhysicalDevice pickPhysicalDeivce();
 } // namespace luna::core

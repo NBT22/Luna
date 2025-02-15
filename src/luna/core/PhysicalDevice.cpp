@@ -4,31 +4,128 @@
 
 #include <cassert>
 #include <cstring>
-#include <iostream>
+#include <luna/core/Instance.hpp>
 #include <luna/core/PhysicalDevice.hpp>
-#include <luna/lunaTypes.h>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
 
 namespace luna::core
 {
-PhysicalDevice::PhysicalDevice(const VkInstance instance,
-							   const uint32_t apiMinorVersion,
-							   const VkPhysicalDeviceFeatures &requiredFeatures)
+// PhysicalDevice::PhysicalDevice(const VkPhysicalDeviceFeatures &requiredFeatures)
+// {
+// 	uint32_t match = -1u;
+// 	uint32_t deviceCount = 0;
+// 	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, nullptr);
+// 	if (deviceCount == 0)
+// 	{
+// 		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
+// 	}
+// 	VkPhysicalDevice devices[deviceCount];
+// 	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices);
+// 	for (uint32_t i = 0; i < deviceCount; i++)
+// 	{
+// 		device_ = devices[i];
+// 		switch (VK_API_VERSION_MINOR(instance.version()))
+// 		{
+// 			case 1:
+// 				vulkan11Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+// 				};
+// 				features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+// 					.pNext = &vulkan11Features_,
+// 				};
+// 				break;
+// 			case 2:
+// 				vulkan12Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+// 				};
+// 				vulkan11Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+// 					.pNext = &vulkan12Features_,
+// 				};
+// 				features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+// 					.pNext = &vulkan11Features_,
+// 				};
+// 				break;
+// 			case 3:
+// 				vulkan13Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+// 				};
+// 				vulkan12Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+// 					.pNext = &vulkan13Features_,
+// 				};
+// 				vulkan11Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+// 					.pNext = &vulkan12Features_,
+// 				};
+// 				features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+// 					.pNext = &vulkan11Features_,
+// 				};
+// 				break;
+// 			case 4:
+// 				vulkan14Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+// 				};
+// 				vulkan13Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+// 					.pNext = &vulkan14Features_,
+// 				};
+// 				vulkan12Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+// 					.pNext = &vulkan13Features_,
+// 				};
+// 				vulkan11Features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+// 					.pNext = &vulkan12Features_,
+// 				};
+// 				features_ = {
+// 					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+// 					.pNext = &vulkan11Features_,
+// 				};
+// 				break;
+// 			default:
+// 				assert(1 <= VK_API_VERSION_MINOR(instance.version()) && VK_API_VERSION_MINOR(instance.version()) <= 4);
+// 		}
+// 		vkGetPhysicalDeviceFeatures2(device_, &features_);
+// 		if (!checkFeatureSupport({.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .features = requiredFeatures}))
+// 		{
+// 			return;
+// 		}
+//
+// 		if (!checkUsability())
+// 		{
+// 			continue;
+// 		}
+// 		if (properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+// 		{
+// 			return;
+// 		}
+// 		match = i;
+// 	}
+//
+// 	if (match == -1u)
+// 	{
+// 		throw std::runtime_error("Failed to find a suitable GPU to create Vulkan instance!");
+// 	}
+// }
+PhysicalDevice::PhysicalDevice(const VkPhysicalDeviceFeatures2 &requiredFeatures)
 {
 	uint32_t match = -1u;
 	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, nullptr);
 	if (deviceCount == 0)
 	{
 		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
 	}
 	VkPhysicalDevice devices[deviceCount];
-	vkEnumeratePhysicalDevices(instance, &deviceCount, devices);
+	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices);
 	for (uint32_t i = 0; i < deviceCount; i++)
 	{
-		physicalDevice_ = devices[i];
-		switch (apiMinorVersion)
+		device_ = devices[i];
+		switch (instance.minorVersion())
 		{
 			case 1:
 				vulkan11Features_ = {
@@ -91,112 +188,9 @@ PhysicalDevice::PhysicalDevice(const VkInstance instance,
 				};
 				break;
 			default:
-				assert(1 <= apiMinorVersion && apiMinorVersion <= 4);
+				assert(1 <= instance.minorVersion() && instance.minorVersion() <= 4);
 		}
-		vkGetPhysicalDeviceFeatures2(physicalDevice_, &features_);
-		if (!checkFeatureSupport({.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .features = requiredFeatures}))
-		{
-			return;
-		}
-
-		if (!checkUsability())
-		{
-			continue;
-		}
-		if (properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-		{
-			return;
-		}
-		match = i;
-	}
-
-	if (match == -1u)
-	{
-		throw std::runtime_error("Failed to find a suitable GPU to create Vulkan instance!");
-	}
-}
-PhysicalDevice::PhysicalDevice(const VkInstance instance,
-							   const uint32_t apiMinorVersion,
-							   const VkPhysicalDeviceFeatures2 &requiredFeatures)
-{
-	uint32_t match = -1u;
-	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-	if (deviceCount == 0)
-	{
-		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
-	}
-	VkPhysicalDevice devices[deviceCount];
-	vkEnumeratePhysicalDevices(instance, &deviceCount, devices);
-	for (uint32_t i = 0; i < deviceCount; i++)
-	{
-		physicalDevice_ = devices[i];
-		switch (apiMinorVersion)
-		{
-			case 1:
-				vulkan11Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-				};
-				features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-					.pNext = &vulkan11Features_,
-				};
-				break;
-			case 2:
-				vulkan12Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-				};
-				vulkan11Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-					.pNext = &vulkan12Features_,
-				};
-				features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-					.pNext = &vulkan11Features_,
-				};
-				break;
-			case 3:
-				vulkan13Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-				};
-				vulkan12Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-					.pNext = &vulkan13Features_,
-				};
-				vulkan11Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-					.pNext = &vulkan12Features_,
-				};
-				features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-					.pNext = &vulkan11Features_,
-				};
-				break;
-			case 4:
-				vulkan14Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
-				};
-				vulkan13Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-					.pNext = &vulkan14Features_,
-				};
-				vulkan12Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-					.pNext = &vulkan13Features_,
-				};
-				vulkan11Features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-					.pNext = &vulkan12Features_,
-				};
-				features_ = {
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-					.pNext = &vulkan11Features_,
-				};
-				break;
-			default:
-				assert(1 <= apiMinorVersion && apiMinorVersion <= 4);
-		}
-		vkGetPhysicalDeviceFeatures2(physicalDevice_, &features_);
+		vkGetPhysicalDeviceFeatures2(device_, &features_);
 		if (!checkFeatureSupport(requiredFeatures))
 		{
 			return;
@@ -219,6 +213,27 @@ PhysicalDevice::PhysicalDevice(const VkInstance instance,
 	}
 }
 
+VkPhysicalDevice PhysicalDevice::device() const
+{
+	return device_;
+}
+uint32_t PhysicalDevice::graphicsFamily() const
+{
+	return graphicsFamily_;
+}
+uint32_t PhysicalDevice::transferFamily() const
+{
+	return transferFamily_;
+}
+uint32_t PhysicalDevice::presentationFamily() const
+{
+	return presentationFamily_;
+}
+uint32_t PhysicalDevice::familyCount() const
+{
+	return familyCount_;
+}
+
 // TODO: Better family finding logic to allow for
 //  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
 //  2. Ensuring that the most optimal layout is found, regardless of what order the implementation provides the families
@@ -227,8 +242,6 @@ void PhysicalDevice::findQueueFamilyIndices(const VkPhysicalDevice physicalDevic
 	assert(physicalDevice != VK_NULL_HANDLE);
 
 	familyCount_ = 0;
-	graphicsFamily_ = -1u;
-	transferFamily_ = -1u;
 	hasGraphics_ = false;
 	hasTransfer_ = false;
 
@@ -238,12 +251,12 @@ void PhysicalDevice::findQueueFamilyIndices(const VkPhysicalDevice physicalDevic
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families);
 	for (uint32_t index = 0; index < familyCount; index++)
 	{
-		if ((families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && graphicsFamily_ == -1u)
+		if ((families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && !hasGraphics_)
 		{
 			graphicsFamily_ = index;
 			familyCount_++;
 			hasGraphics_ = true;
-		} else if ((families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0 && transferFamily_ == -1u)
+		} else if ((families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0 && !hasTransfer_)
 		{
 			transferFamily_ = index;
 			familyCount_++;
@@ -368,23 +381,23 @@ bool PhysicalDevice::checkUsability()
 	 *   }
 	 */
 
-	findQueueFamilyIndices(physicalDevice_);
+	findQueueFamilyIndices(device_);
 	if (familyCount_ == 0)
 	{
 		return false;
 	}
 
-	vkGetPhysicalDeviceProperties(physicalDevice_, &properties_);
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice_, &memoryProperties_);
+	vkGetPhysicalDeviceProperties(device_, &properties_);
+	vkGetPhysicalDeviceMemoryProperties(device_, &memoryProperties_);
 
 	uint32_t extensionCount;
-	vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &extensionCount, nullptr);
+	vkEnumerateDeviceExtensionProperties(device_, nullptr, &extensionCount, nullptr);
 	if (extensionCount == 0)
 	{
 		return false;
 	}
 	VkExtensionProperties availableExtensions[extensionCount];
-	vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &extensionCount, availableExtensions);
+	vkEnumerateDeviceExtensionProperties(device_, nullptr, &extensionCount, availableExtensions);
 	for (uint32_t j = 0; j < extensionCount; j++)
 	{
 		if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
@@ -395,15 +408,4 @@ bool PhysicalDevice::checkUsability()
 
 	return false;
 }
-
-
-LunaPhysicalDevice pickPhysicalDeivce()
-{
-	return LunaPhysicalDevice();
-}
 } // namespace luna::core
-
-LunaPhysicalDevice lunaPickPhysicalDevice()
-{
-	return luna::core::pickPhysicalDeivce();
-}

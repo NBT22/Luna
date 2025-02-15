@@ -3,18 +3,26 @@
 //
 
 #pragma once
-#include <luna/lunaLogicalDevice.h>
+
+#include <luna/core/PhysicalDevice.hpp>
+#include <luna/lunaTypes.h>
+
+struct LunaLogicalDeviceStruct
+{};
 
 namespace luna::core
 {
-extern VkDevice device;
+class LogicalDevice
+{
+	private:
+		VkDevice device_{};
+		VkQueue graphicsQueue_{};
+		VkQueue transferQueue_{};
+		VkQueue presentQueue_{};
 
-struct LogicalDevice
-{};
-
-LunaLogicalDevice createLogicalDevice();
+	public:
+		LogicalDevice() = default;
+		explicit LogicalDevice(const PhysicalDevice &physicalDevice, const LunaDeviceCreationInfo2 &creationInfo);
+};
 
 } // namespace luna::core
-
-struct LunaLogicalDeviceStruct: luna::core::LogicalDevice
-{};

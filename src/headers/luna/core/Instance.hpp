@@ -5,6 +5,8 @@
 #pragma once
 
 #include <luna/core/PhysicalDevice.hpp>
+#include <luna/lunaTypes.h>
+#include "LogicalDevice.hpp"
 
 namespace luna::core
 {
@@ -14,24 +16,18 @@ class Instance
 {
 	public:
 		Instance() = default;
-		Instance(const LunaInstanceExtensionInfo &extensionInfo,
-				 const LunaInstanceLayerInfo &layerInfo,
-				 const LunaInstanceRequirements &instanceRequirements);
-		Instance(const LunaInstanceExtensionInfo &extensionInfo,
-				 const LunaInstanceLayerInfo &layerInfo,
-				 const LunaInstanceRequirements2 &instanceRequirements);
+		Instance(const LunaInstanceCreationInfo &creationInfo, uint32_t apiVersion);
 
-		[[nodiscard]] uint32_t version() const;
+		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
+
+		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
 		[[nodiscard]] PhysicalDevice physicalDevice() const;
 
 	private:
-		VkInstance createInstance(const LunaInstanceExtensionInfo &extensionInfo,
-								  const LunaInstanceLayerInfo &layerInfo,
-								  uint32_t apiVersion);
-
 		uint32_t apiVersion_ = 0;
 		VkInstance instance_ = VK_NULL_HANDLE;
-		PhysicalDevice physicalDevice_;
+		PhysicalDevice physicalDevice_{};
+		LogicalDevice logicalDevice_{};
 };
 } // namespace luna::core

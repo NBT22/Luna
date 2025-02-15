@@ -12,32 +12,30 @@ extern "C"
 {
 #endif
 
-typedef struct LunaPhysicalDeviceStruct *LunaPhysicalDevice; // TODO: Is this even needed, or is only logical needed?
-typedef struct LunaLogicalDeviceStruct *LunaLogicalDevice;
-
-struct LunaInstanceRequirements
-{
-		const uint32_t apiVersion;
-		VkPhysicalDeviceFeatures requiredFeatures;
-};
-
-struct LunaInstanceRequirements2
-{
-		const uint32_t apiVersion;
-		VkPhysicalDeviceFeatures2 requiredFeatures;
-};
-
-struct LunaInstanceExtensionInfo
+struct LunaInstanceCreationInfo
 {
 		const uint32_t extensionCount;
 		const char *const *extensionNames;
-};
 
-struct LunaInstanceLayerInfo
-{
 		bool enableValidation;
 		const uint32_t layerCount;
 		const char *const *layerNames;
+};
+
+struct LunaDeviceCreationInfo
+{
+		const uint32_t extensionCount;
+		const char *const *extensionNames;
+
+		const VkPhysicalDeviceFeatures requiredFeatures;
+};
+
+struct LunaDeviceCreationInfo2
+{
+		const uint32_t extensionCount;
+		const char *const *extensionNames;
+
+		const VkPhysicalDeviceFeatures2 requiredFeatures;
 };
 
 #ifdef __cplusplus

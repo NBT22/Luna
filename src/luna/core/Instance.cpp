@@ -10,21 +10,66 @@
 namespace luna::core
 {
 Instance instance;
-Instance::Instance(const LunaInstanceExtensionInfo &extensionInfo,
-				   const LunaInstanceLayerInfo &layerInfo,
-				   const LunaInstanceRequirements &instanceRequirements):
-	physicalDevice_(createInstance(extensionInfo, layerInfo, instanceRequirements.apiVersion),
-					VK_API_VERSION_MINOR(instanceRequirements.apiVersion),
-					instanceRequirements.requiredFeatures)
-{}
-Instance::Instance(const LunaInstanceExtensionInfo &extensionInfo,
-				   const LunaInstanceLayerInfo &layerInfo,
-				   const LunaInstanceRequirements2 &instanceRequirements):
-	physicalDevice_(createInstance(extensionInfo, layerInfo, instanceRequirements.apiVersion),
-					VK_API_VERSION_MINOR(instanceRequirements.apiVersion),
-					instanceRequirements.requiredFeatures)
-{}
-uint32_t Instance::version() const
+Instance::Instance(const LunaInstanceCreationInfo &creationInfo, const uint32_t apiVersion)
+{
+	apiVersion_ = apiVersion;
+
+	const uint32_t enabledLayerCount = creationInfo.enableValidation ? creationInfo.layerCount + 1
+																	 : creationInfo.layerCount;
+	const char *enabledLayers[enabledLayerCount];
+	for (uint32_t i = 0; i < creationInfo.layerCount; i++)
+	{
+		enabledLayers[i] = creationInfo.layerNames[i];
+	}
+	if (creationInfo.enableValidation)
+	{
+		enabledLayers[enabledLayerCount - 1] = "VK_LAYER_KHRONOS_validation";
+	}
+
+	uint32_t layerCount;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+	VkLayerProperties availableLayers[layerCount];
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers);
+	uint32_t found = 0;
+	for (uint32_t i = 0; i < layerCount; i++)
+	{
+		for (uint32_t j = 0; j < enabledLayerCount; j++)
+		{
+			if (std::strncmp(availableLayers[i].layerName, enabledLayers[j], VK_MAX_EXTENSION_NAME_SIZE) == 0)
+			{
+				found++;
+				break;
+			}
+		}
+	}
+	if (found < enabledLayerCount)
+	{
+		throw std::runtime_error("Failed to find enabled layers!");
+	}
+
+	const VkApplicationInfo vulkanApplicationInfo = {
+		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+		.apiVersion = apiVersion,
+	};
+	// TODO: Check extension support
+	const VkInstanceCreateInfo createInfo = {
+		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.pApplicationInfo = &vulkanApplicationInfo,
+		.enabledLayerCount = enabledLayerCount,
+		.ppEnabledLayerNames = enabledLayers,
+		.enabledExtensionCount = creationInfo.extensionCount,
+		.ppEnabledExtensionNames = creationInfo.extensionNames,
+	};
+	vkCreateInstance(&createInfo, nullptr, &instance_);
+}
+
+void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
+{
+	physicalDevice_ = PhysicalDevice(creationInfo.requiredFeatures);
+	logicalDevice_ = LogicalDevice(physicalDevice_, creationInfo);
+}
+
+uint32_t Instance::minorVersion() const
 {
 	return VK_API_VERSION_MINOR(apiVersion_);
 }
@@ -36,70 +81,9 @@ PhysicalDevice Instance::physicalDevice() const
 {
 	return physicalDevice_;
 }
-VkInstance Instance::createInstance(const LunaInstanceExtensionInfo &extensionInfo,
-									const LunaInstanceLayerInfo &layerInfo,
-									const uint32_t apiVersion)
-{
-	apiVersion_ = apiVersion;
-
-	const VkApplicationInfo vulkanApplicationInfo = {
-		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.apiVersion = apiVersion,
-	};
-	VkInstanceCreateInfo createInfo = {
-		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pNext = nullptr,
-		.pApplicationInfo = &vulkanApplicationInfo,
-		.enabledLayerCount = layerInfo.layerCount,
-		.ppEnabledLayerNames = layerInfo.layerNames,
-		.enabledExtensionCount = extensionInfo.extensionCount,
-		.ppEnabledExtensionNames = extensionInfo.extensionNames,
-	};
-	if (layerInfo.enableValidation)
-	{
-		uint32_t layerCount;
-		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-		VkLayerProperties availableLayers[layerCount];
-		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers);
-		bool found = false;
-		for (uint32_t i = 0; i < layerCount; i++)
-		{
-			if (std::strncmp(availableLayers[i].layerName, "VK_LAYER_KHRONOS_validation", 27) == 0)
-			{
-				found = true;
-				break;
-			}
-		}
-		if (!found)
-		{
-			throw std::runtime_error("Failed to find Khronos validation layer!");
-		}
-		if (createInfo.enabledLayerCount == 0)
-		{
-			createInfo.enabledLayerCount = 1;
-			createInfo.ppEnabledLayerNames = (const char *const[1]){"VK_LAYER_KHRONOS_validation"};
-		} else
-		{
-			createInfo.enabledLayerCount++;
-			createInfo.ppEnabledLayerNames = new char *[createInfo.enabledLayerCount];
-		}
-	}
-
-	vkCreateInstance(&createInfo, nullptr, &instance_);
-	return instance_;
-}
 } // namespace luna::core
 
-void lunaCreateInstance(const LunaInstanceExtensionInfo &extensionInfo,
-						const LunaInstanceLayerInfo &layerInfo,
-						const LunaInstanceRequirements &instanceRequirements)
+void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo, const uint32_t apiVersion)
 {
-	luna::core::instance = luna::core::Instance(extensionInfo, layerInfo, instanceRequirements);
-}
-
-void lunaCreateInstance2(const LunaInstanceExtensionInfo &extensionInfo,
-						 const LunaInstanceLayerInfo &layerInfo,
-						 const LunaInstanceRequirements2 &instanceRequirements)
-{
-	luna::core::instance = luna::core::Instance(extensionInfo, layerInfo, instanceRequirements);
+	luna::core::instance = luna::core::Instance(creationInfo, apiVersion);
 }
