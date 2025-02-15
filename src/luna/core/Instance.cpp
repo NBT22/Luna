@@ -2,31 +2,52 @@
 // Created by NBT22 on 2/13/25.
 //
 
-#include <cassert>
 #include <cstring>
+#include <luna/core/Instance.hpp>
 #include <luna/lunaInstance.h>
+#include <stdexcept>
 
 namespace luna::core
 {
-VkInstance instance = VK_NULL_HANDLE;
-
-LunaInstance createInstance(const LunaApplicationInfo &applicationInfo,
-							const LunaInstanceExtensionInfo &extensionInfo,
-							const LunaInstanceLayerInfo &layerInfo)
+Instance instance;
+Instance::Instance(const LunaInstanceExtensionInfo &extensionInfo,
+				   const LunaInstanceLayerInfo &layerInfo,
+				   const LunaInstanceRequirements &instanceRequirements):
+	physicalDevice_(createInstance(extensionInfo, layerInfo, instanceRequirements.apiVersion),
+					instanceRequirements.requiredFeatures)
+{}
+Instance::Instance(const LunaInstanceExtensionInfo &extensionInfo,
+				   const LunaInstanceLayerInfo &layerInfo,
+				   const LunaInstanceRequirements2 &instanceRequirements):
+	physicalDevice_(createInstance(extensionInfo, layerInfo, instanceRequirements.apiVersion),
+					VK_API_VERSION_MINOR(instanceRequirements.apiVersion),
+					instanceRequirements.requiredFeatures)
+{}
+uint32_t Instance::version() const
 {
+	return VK_API_VERSION_MINOR(apiVersion_);
+}
+VkInstance Instance::instance() const
+{
+	return instance_;
+}
+PhysicalDevice Instance::physicalDevice() const
+{
+	return physicalDevice_;
+}
+VkInstance Instance::createInstance(const LunaInstanceExtensionInfo &extensionInfo,
+									const LunaInstanceLayerInfo &layerInfo,
+									const uint32_t apiVersion)
+{
+	apiVersion_ = apiVersion;
+
 	const VkApplicationInfo vulkanApplicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.pNext = nullptr, // TODO: VkApplicationParametersEXT?
-		.pApplicationName = applicationInfo.applicationName,
-		.applicationVersion = applicationInfo.applicationVersion,
-		.pEngineName = applicationInfo.engineName,
-		.engineVersion = applicationInfo.engineVersion,
-		.apiVersion = applicationInfo.apiVersion,
+		.apiVersion = apiVersion,
 	};
 	VkInstanceCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pNext = nullptr,
-		.flags = 0,
 		.pApplicationInfo = &vulkanApplicationInfo,
 		.enabledLayerCount = layerInfo.layerCount,
 		.ppEnabledLayerNames = layerInfo.layerNames,
@@ -50,7 +71,7 @@ LunaInstance createInstance(const LunaApplicationInfo &applicationInfo,
 		}
 		if (!found)
 		{
-			assert("Failed to find Khronos validation layer!");
+			throw std::runtime_error("Failed to find Khronos validation layer!");
 		}
 		if (createInfo.enabledLayerCount == 0)
 		{
@@ -63,14 +84,21 @@ LunaInstance createInstance(const LunaApplicationInfo &applicationInfo,
 		}
 	}
 
-	vkCreateInstance(&createInfo, nullptr, &instance);
-	return LunaInstance();
+	vkCreateInstance(&createInfo, nullptr, &instance_);
+	return instance_;
 }
 } // namespace luna::core
 
-LunaInstance lunaCreateInstance(const LunaApplicationInfo &applicationInfo,
-								const LunaInstanceExtensionInfo &extensionInfo,
-								const LunaInstanceLayerInfo &layerInfo)
+void lunaCreateInstance(const LunaInstanceExtensionInfo &extensionInfo,
+						const LunaInstanceLayerInfo &layerInfo,
+						const LunaInstanceRequirements &instanceRequirements)
 {
-	return luna::core::createInstance(applicationInfo, extensionInfo, layerInfo);
+	luna::core::instance = luna::core::Instance(extensionInfo, layerInfo, instanceRequirements);
+}
+
+void lunaCreateInstance2(const LunaInstanceExtensionInfo &extensionInfo,
+						 const LunaInstanceLayerInfo &layerInfo,
+						 const LunaInstanceRequirements2 &instanceRequirements)
+{
+	luna::core::instance = luna::core::Instance(extensionInfo, layerInfo, instanceRequirements);
 }

@@ -3,19 +3,35 @@
 //
 
 #pragma once
-#include <luna/lunaInstance.h>
+
+#include <luna/core/PhysicalDevice.hpp>
 
 namespace luna::core
 {
-extern VkInstance instance;
+extern class Instance instance;
 
-struct Instance
-{};
+class Instance
+{
+	public:
+		Instance() = default;
+		Instance(const LunaInstanceExtensionInfo &extensionInfo,
+				 const LunaInstanceLayerInfo &layerInfo,
+				 const LunaInstanceRequirements &instanceRequirements);
+		Instance(const LunaInstanceExtensionInfo &extensionInfo,
+				 const LunaInstanceLayerInfo &layerInfo,
+				 const LunaInstanceRequirements2 &instanceRequirements);
 
-LunaInstance createInstance(const LunaApplicationInfo &applicationInfo,
-							const LunaInstanceExtensionInfo &extensionInfo,
-							const LunaInstanceLayerInfo &layerInfo);
+		[[nodiscard]] uint32_t version() const;
+		[[nodiscard]] VkInstance instance() const;
+		[[nodiscard]] PhysicalDevice physicalDevice() const;
+
+	private:
+		VkInstance createInstance(const LunaInstanceExtensionInfo &extensionInfo,
+								  const LunaInstanceLayerInfo &layerInfo,
+								  uint32_t apiVersion);
+
+		uint32_t apiVersion_ = 0;
+		VkInstance instance_ = VK_NULL_HANDLE;
+		PhysicalDevice physicalDevice_;
+};
 } // namespace luna::core
-
-struct LunaInstanceStruct : luna::core::Instance
-{};

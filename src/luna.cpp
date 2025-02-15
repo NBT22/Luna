@@ -6,13 +6,6 @@
 
 void createInstanceCpp()
 {
-	constexpr LunaApplicationInfo applicationInfo = {
-		.applicationName = "name",
-		.applicationVersion = 1,
-		.engineName = "name2",
-		.engineVersion = 2,
-		.apiVersion = VK_API_VERSION_1_2,
-	};
 	const LunaInstanceExtensionInfo extensionInfo = {
 		.extensionCount = 2,
 		.extensionNames = (const char *[]){"VK_KHR_surface", "VK_KHR_xlib_surface"},
@@ -20,7 +13,15 @@ void createInstanceCpp()
 	constexpr LunaInstanceLayerInfo layerInfo = {
 		.enableValidation = true,
 	};
-	const LunaInstance instance = lunaCreateInstance(applicationInfo, extensionInfo, layerInfo);
+	constexpr VkPhysicalDeviceFeatures2 requiredFeatures = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+		.features = {.samplerAnisotropy = VK_TRUE},
+	};
+	constexpr LunaInstanceRequirements2 instanceRequirements = {
+		.apiVersion = VK_API_VERSION_1_2,
+		.requiredFeatures = requiredFeatures,
+	};
+	lunaCreateInstance2(extensionInfo, layerInfo, instanceRequirements);
 }
 
 int main()

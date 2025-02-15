@@ -12,17 +12,19 @@ extern "C"
 {
 #endif
 
-typedef struct LunaInstanceStruct *LunaInstance;
 typedef struct LunaPhysicalDeviceStruct *LunaPhysicalDevice; // TODO: Is this even needed, or is only logical needed?
 typedef struct LunaLogicalDeviceStruct *LunaLogicalDevice;
 
-struct LunaApplicationInfo
+struct LunaInstanceRequirements
 {
-		const char *applicationName;
-		const uint32_t applicationVersion;
-		const char *engineName;
-		const uint32_t engineVersion;
 		const uint32_t apiVersion;
+		VkPhysicalDeviceFeatures requiredFeatures;
+};
+
+struct LunaInstanceRequirements2
+{
+		const uint32_t apiVersion;
+		VkPhysicalDeviceFeatures2 requiredFeatures;
 };
 
 struct LunaInstanceExtensionInfo
