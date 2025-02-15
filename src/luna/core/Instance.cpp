@@ -14,6 +14,7 @@ Instance::Instance(const LunaInstanceExtensionInfo &extensionInfo,
 				   const LunaInstanceLayerInfo &layerInfo,
 				   const LunaInstanceRequirements &instanceRequirements):
 	physicalDevice_(createInstance(extensionInfo, layerInfo, instanceRequirements.apiVersion),
+					VK_API_VERSION_MINOR(instanceRequirements.apiVersion),
 					instanceRequirements.requiredFeatures)
 {}
 Instance::Instance(const LunaInstanceExtensionInfo &extensionInfo,

@@ -4,7 +4,7 @@
 
 #include <luna/luna.h>
 
-void createInstanceCpp()
+int main()
 {
 	const LunaInstanceExtensionInfo extensionInfo = {
 		.extensionCount = 2,
@@ -13,19 +13,10 @@ void createInstanceCpp()
 	constexpr LunaInstanceLayerInfo layerInfo = {
 		.enableValidation = true,
 	};
-	constexpr VkPhysicalDeviceFeatures2 requiredFeatures = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-		.features = {.samplerAnisotropy = VK_TRUE},
-	};
-	constexpr LunaInstanceRequirements2 instanceRequirements = {
+	constexpr LunaInstanceRequirements instanceRequirements = {
 		.apiVersion = VK_API_VERSION_1_2,
-		.requiredFeatures = requiredFeatures,
+		.requiredFeatures = {.samplerAnisotropy = VK_TRUE},
 	};
-	lunaCreateInstance2(extensionInfo, layerInfo, instanceRequirements);
-}
-
-int main()
-{
-	createInstanceCpp();
+	lunaCreateInstance(extensionInfo, layerInfo, instanceRequirements);
 	return 0;
 }

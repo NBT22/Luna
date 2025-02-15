@@ -19,7 +19,7 @@ class PhysicalDevice
 {
 	public:
 		PhysicalDevice() = default;
-		PhysicalDevice(VkInstance instance, const VkPhysicalDeviceFeatures &requiredFeatures);
+		PhysicalDevice(VkInstance instance, uint32_t apiMinorVersion, const VkPhysicalDeviceFeatures &requiredFeatures);
 		PhysicalDevice(VkInstance instance,
 					   uint32_t apiMinorVersion,
 					   const VkPhysicalDeviceFeatures2 &requiredFeatures);
@@ -68,7 +68,7 @@ class PhysicalDevice
 		uint32_t familyCount_ = 0;
 		/// Boolean for if this device will be used for presentation. True if the device will be used for presentation,
 		/// false if the device will only be used for rendering but never for presentation.
-		/// @note This will eventually be used for the case of if there is one device used for rendering and a seperate
+		/// @note This will eventually be used for the case of if there is one device used for rendering and a separate
 		///  device used for presentation, but that ability is not a high priority, so for the time being this is uesd
 		///  to indicate if the library is being used to draw to the screen at all or if it is just rendering but never
 		///  presenting. TODO: As of right now, presentation is not supported so this value is always false.
@@ -79,6 +79,7 @@ class PhysicalDevice
 		void findQueueFamilyIndicesWithPresentation(VkPhysicalDevice physicalDevice);
 		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
+		[[nodiscard]] bool checkUsability();
 };
 
 LunaPhysicalDevice pickPhysicalDeivce();
