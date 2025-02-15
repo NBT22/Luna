@@ -4,25 +4,23 @@
 
 #pragma once
 
-#include <vector>
-
 namespace luna::helpers
 {
 template<template<typename listType> class ListType, typename T> LockingList<ListType, T>::LockingList()
 {
-	list = std::vector<T>();
+	list = ListType<T>();
 }
 template<template<typename listType> class ListType, typename T> LockingList<ListType, T>::LockingList(const T elements[],
 																									   size_t length)
 {
-	list = std::vector<T>();
+	list = ListType<T>();
 	add(elements, length);
 }
 template<template<typename listType> class ListType, typename T> LockingList<ListType,
 																			 T>::LockingList(std::initializer_list<T>
 																									 &&elements)
 {
-	list = std::vector<T>();
+	list = ListType<T>();
 	list.insert(list.end(), elements.begin(), elements.end());
 }
 
