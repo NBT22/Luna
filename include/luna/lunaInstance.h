@@ -12,7 +12,9 @@ extern "C"
 {
 #endif
 
-void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo);
+void lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
+VkInstance lunaGetInstance();
+void lunaAddSurface(VkSurfaceKHR surface);
 
 #ifdef __cplusplus
 }

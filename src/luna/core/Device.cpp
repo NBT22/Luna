@@ -17,7 +17,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, nullptr);
 	if (deviceCount == 0)
 	{
-		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
+		// throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
 	}
 	VkPhysicalDevice devices[deviceCount];
 	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices);
@@ -103,7 +103,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 
 	if (match == -1u)
 	{
-		throw std::runtime_error("Failed to find a suitable GPU to create Vulkan instance!");
+		// throw std::runtime_error("Failed to find a suitable GPU to create Vulkan instance!");
 	}
 
 	constexpr float queuePriority = 1;
@@ -150,7 +150,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 bool Device::checkUsability()
 {
 	uint32_t count;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice_, instance.surface(), &count, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice_, instance.surface, &count, nullptr);
 
 	findQueueFamilyIndices(physicalDevice_);
 	if (familyCount_ == 0)
@@ -181,20 +181,22 @@ bool Device::checkUsability()
 }
 } // namespace luna::core
 
-void lunaAddNewDevice(const LunaDeviceCreationInfo &creationInfo)
+void lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
 {
+	assert(creationInfo);
 	const VkPhysicalDeviceFeatures2 requiredFeatures2 = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-		.features = creationInfo.requiredFeatures,
+		.features = creationInfo->requiredFeatures,
 	};
 	const LunaDeviceCreationInfo2 creationInfo2 = {
-		.extensionCount = creationInfo.extensionCount,
-		.extensionNames = creationInfo.extensionNames,
+		.extensionCount = creationInfo->extensionCount,
+		.extensionNames = creationInfo->extensionNames,
 		.requiredFeatures = requiredFeatures2,
 	};
 	luna::core::instance.addNewDevice(creationInfo2);
 }
-void lunaAddNewDevice2(const LunaDeviceCreationInfo2 &creationInfo)
+void lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
-	luna::core::instance.addNewDevice(creationInfo);
+	assert(creationInfo);
+	luna::core::instance.addNewDevice(*creationInfo);
 }

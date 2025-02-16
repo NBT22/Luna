@@ -15,7 +15,7 @@ int main()
 
 		.enableValidation = true,
 	};
-	lunaCreateInstance(creationInfo);
+	lunaCreateInstance(&creationInfo);
 
 	constexpr VkPhysicalDeviceFeatures requiredFeatures = {
 		.logicOp = VK_TRUE,
@@ -26,6 +26,6 @@ int main()
 		.extensionNames = (const char *const[]){VK_KHR_SWAPCHAIN_EXTENSION_NAME},
 		.requiredFeatures = requiredFeatures,
 	};
-	lunaAddNewDevice(deviceCreationInfo);
+	lunaAddNewDevice(&deviceCreationInfo);
 	return 0;
 }

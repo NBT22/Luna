@@ -57,10 +57,6 @@ inline void Instance::querySwapChainSupport()
 {
 	return instance_;
 }
-[[nodiscard]] inline VkSurfaceKHR Instance::surface() const
-{
-	return surface_;
-}
 [[nodiscard]] inline Device Instance::device() const
 {
 	return device_;

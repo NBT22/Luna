@@ -5,7 +5,6 @@
 #include <cstring>
 #include <luna/core/Instance.hpp>
 #include <luna/lunaInstance.h>
-#include <stdexcept>
 
 namespace luna::core
 {
@@ -13,7 +12,6 @@ Instance instance;
 Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 {
 	apiVersion_ = creationInfo.apiVersion;
-	surface_ = creationInfo.surface;
 
 	const uint32_t enabledLayerCount = creationInfo.enableValidation ? creationInfo.layerCount + 1
 																	 : creationInfo.layerCount;
@@ -54,7 +52,16 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 }
 } // namespace luna::core
 
-void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo)
+void lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 {
-	luna::core::instance = luna::core::Instance(creationInfo);
+	assert(creationInfo);
+	luna::core::instance = luna::core::Instance(*creationInfo);
+}
+VkInstance lunaGetInstance()
+{
+	return luna::core::instance.instance();
+}
+void lunaAddSurface(const VkSurfaceKHR surface)
+{
+	luna::core::instance.surface = surface;
 }

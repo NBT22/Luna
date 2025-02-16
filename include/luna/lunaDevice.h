@@ -7,7 +7,16 @@
 
 #include <luna/lunaTypes.h>
 
-void lunaAddNewDevice(const LunaDeviceCreationInfo &creationInfo);
-void lunaAddNewDevice2(const LunaDeviceCreationInfo2 &creationInfo);
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+void lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo);
+void lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //LUNALOGICALDEVICE_H

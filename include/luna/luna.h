@@ -5,9 +5,9 @@
 #ifndef LUNA_H
 #define LUNA_H
 
+#include <luna/lunaDevice.h>
 #include <luna/lunaInstance.h>
 #include <luna/lunaTypes.h>
-#include <vulkan/vulkan.h>
 
 #ifdef __cplusplus
 extern "C"

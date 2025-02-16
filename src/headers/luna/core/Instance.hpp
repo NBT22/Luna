@@ -30,15 +30,15 @@ class Instance
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
-		[[nodiscard]] VkSurfaceKHR surface() const;
 		[[nodiscard]] Device device() const;
+
+		VkSurfaceKHR surface{};
 
 	private:
 		void querySwapChainSupport();
 
 		uint32_t apiVersion_ = 0;
 		VkInstance instance_ = VK_NULL_HANDLE;
-		VkSurfaceKHR surface_{};
 		Device device_{};
 		SwapChainSupportDetails swapChainSupport_{};
 };

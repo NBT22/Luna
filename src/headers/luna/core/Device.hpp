@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include "luna/lunaTypes.h"
+#include <luna/lunaTypes.h>
 
 /// A pointer to this is given to the application, so that the application can give it back to Luna, that way we can
 /// determine what physical device should be used for that operation. This struct should not be used for things that are

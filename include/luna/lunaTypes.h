@@ -10,9 +10,15 @@
 #ifdef __cplusplus
 extern "C"
 {
+#else
+#include <stdbool.h>
 #endif
 
-struct LunaInstanceCreationInfo
+typedef struct LunaInstanceCreationInfoStruct LunaInstanceCreationInfo;
+typedef struct LunaDeviceCreationInfoStruct LunaDeviceCreationInfo;
+typedef struct LunaDeviceCreationInfo2Struct LunaDeviceCreationInfo2;
+
+struct LunaInstanceCreationInfoStruct
 {
 		const uint32_t apiVersion;
 
@@ -22,11 +28,9 @@ struct LunaInstanceCreationInfo
 		bool enableValidation;
 		const uint32_t layerCount;
 		const char *const *layerNames;
-
-		VkSurfaceKHR surface;
 };
 
-struct LunaDeviceCreationInfo
+struct LunaDeviceCreationInfoStruct
 {
 		const uint32_t extensionCount;
 		const char *const *extensionNames;
@@ -34,7 +38,7 @@ struct LunaDeviceCreationInfo
 		const VkPhysicalDeviceFeatures requiredFeatures;
 };
 
-struct LunaDeviceCreationInfo2
+struct LunaDeviceCreationInfo2Struct
 {
 		const uint32_t extensionCount;
 		const char *const *extensionNames;
