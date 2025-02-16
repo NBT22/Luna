@@ -3,17 +3,19 @@
 //
 
 #include <luna/luna.h>
-#include <luna/lunaLogicalDevice.h>
+#include <luna/lunaDevice.h>
 
 int main()
 {
 	const LunaInstanceCreationInfo creationInfo = {
-		.extensionCount = 2,
-		.extensionNames = (const char *[]){"VK_KHR_surface", "VK_KHR_xlib_surface"},
+		.apiVersion = VK_API_VERSION_1_2,
+
+		.extensionCount = 1,
+		.extensionNames = (const char *[]){"VK_KHR_surface"},
 
 		.enableValidation = true,
 	};
-	lunaCreateInstance(creationInfo, VK_API_VERSION_1_2);
+	lunaCreateInstance(creationInfo);
 
 	constexpr VkPhysicalDeviceFeatures requiredFeatures = {
 		.logicOp = VK_TRUE,

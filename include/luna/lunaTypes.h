@@ -14,12 +14,16 @@ extern "C"
 
 struct LunaInstanceCreationInfo
 {
+		const uint32_t apiVersion;
+
 		const uint32_t extensionCount;
 		const char *const *extensionNames;
 
 		bool enableValidation;
 		const uint32_t layerCount;
 		const char *const *layerNames;
+
+		VkSurfaceKHR surface;
 };
 
 struct LunaDeviceCreationInfo

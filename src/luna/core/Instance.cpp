@@ -10,9 +10,10 @@
 namespace luna::core
 {
 Instance instance;
-Instance::Instance(const LunaInstanceCreationInfo &creationInfo, const uint32_t apiVersion)
+Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 {
-	apiVersion_ = apiVersion;
+	apiVersion_ = creationInfo.apiVersion;
+	surface_ = creationInfo.surface;
 
 	const uint32_t enabledLayerCount = creationInfo.enableValidation ? creationInfo.layerCount + 1
 																	 : creationInfo.layerCount;
@@ -26,32 +27,21 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo, const uint32_t 
 		enabledLayers[enabledLayerCount - 1] = "VK_LAYER_KHRONOS_validation";
 	}
 
-	uint32_t layerCount;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-	VkLayerProperties availableLayers[layerCount];
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers);
-	uint32_t found = 0;
-	for (uint32_t i = 0; i < layerCount; i++)
+	bool surfaceExtensionFound = false;
+	for (uint32_t i = 0; i < creationInfo.extensionCount; i++)
 	{
-		for (uint32_t j = 0; j < enabledLayerCount; j++)
+		if (std::strncmp(creationInfo.extensionNames[i], "VK_KHR_surface", 14) == 0)
 		{
-			if (std::strncmp(availableLayers[i].layerName, enabledLayers[j], VK_MAX_EXTENSION_NAME_SIZE) == 0)
-			{
-				found++;
-				break;
-			}
+			surfaceExtensionFound = true;
+			break;
 		}
 	}
-	if (found < enabledLayerCount)
-	{
-		throw std::runtime_error("Failed to find enabled layers!");
-	}
+	assert(surfaceExtensionFound);
 
 	const VkApplicationInfo vulkanApplicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.apiVersion = apiVersion,
+		.apiVersion = creationInfo.apiVersion,
 	};
-	// TODO: Check extension support
 	const VkInstanceCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pApplicationInfo = &vulkanApplicationInfo,
@@ -64,7 +54,7 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo, const uint32_t 
 }
 } // namespace luna::core
 
-void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo, const uint32_t apiVersion)
+void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo)
 {
-	luna::core::instance = luna::core::Instance(creationInfo, apiVersion);
+	luna::core::instance = luna::core::Instance(creationInfo);
 }

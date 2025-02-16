@@ -12,7 +12,7 @@ extern "C"
 {
 #endif
 
-void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo, uint32_t apiVersion);
+void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo);
 
 #ifdef __cplusplus
 }

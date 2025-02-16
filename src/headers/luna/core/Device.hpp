@@ -5,6 +5,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include "luna/lunaTypes.h"
 
 /// A pointer to this is given to the application, so that the application can give it back to Luna, that way we can
 /// determine what physical device should be used for that operation. This struct should not be used for things that are
@@ -15,15 +16,15 @@ struct LunaPhysicalDeviceStruct
 
 namespace luna::core
 {
-class PhysicalDevice
+class Device
 {
 	public:
-		PhysicalDevice() = default;
-		explicit PhysicalDevice(const VkPhysicalDeviceFeatures2 &requiredFeatures);
+		Device() = default;
+		explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
 
-		/// A getter for the @c device_ value
+		/// A getter for the @c physicalDevice_ value
 		/// @return The Vulkan handle for the physical device described in this instance
-		[[nodiscard]] VkPhysicalDevice device() const;
+		[[nodiscard]] VkPhysicalDevice physicalDevice() const;
 		/// A getter for the @c graphicsFamily_ value
 		/// @return The index of the family on the GPU that will be used for graphics processing
 		[[nodiscard]] uint32_t graphicsFamily() const;
@@ -44,8 +45,14 @@ class PhysicalDevice
 		// [[nodiscard]] bool hasTransfer() const;
 
 	private:
+		void findQueueFamilyIndices(VkPhysicalDevice physicalDevice);
+		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
+		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
+		[[nodiscard]] bool checkUsability();
+
 		/// The actual device
-		VkPhysicalDevice device_ = VK_NULL_HANDLE;
+		VkPhysicalDevice physicalDevice_{};
+		VkDevice logicalDevice_{};
 		VkPhysicalDeviceVulkan14Features vulkan14Features_{};
 		VkPhysicalDeviceVulkan13Features vulkan13Features_{};
 		VkPhysicalDeviceVulkan12Features vulkan12Features_{};
@@ -73,14 +80,10 @@ class PhysicalDevice
 		///  to indicate if the library is being used to draw to the screen at all or if it is just rendering but never
 		///  presenting. TODO: As of right now, presentation is not supported so this value is always false.
 		bool usesPresentation_ = false;
-
-
-		void findQueueFamilyIndices(VkPhysicalDevice physicalDevice);
-		void findQueueFamilyIndicesWithPresentation(VkPhysicalDevice physicalDevice);
-		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
-		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
-		[[nodiscard]] bool checkUsability();
+		VkQueue graphicsQueue_{};
+		VkQueue transferQueue_{};
+		VkQueue presentQueue_{};
 };
 } // namespace luna::core
 
-#include <luna/implementations/core/PhysicalDevice.ipp>
+#include <luna/implementations/core/Device.ipp>

@@ -10,23 +10,23 @@
 
 namespace luna::core
 {
-inline VkPhysicalDevice PhysicalDevice::device() const
+inline VkPhysicalDevice Device::physicalDevice() const
 {
-	return device_;
+	return physicalDevice_;
 }
-inline uint32_t PhysicalDevice::graphicsFamily() const
+inline uint32_t Device::graphicsFamily() const
 {
 	return graphicsFamily_;
 }
-inline uint32_t PhysicalDevice::transferFamily() const
+inline uint32_t Device::transferFamily() const
 {
 	return transferFamily_;
 }
-inline uint32_t PhysicalDevice::presentationFamily() const
+inline uint32_t Device::presentationFamily() const
 {
 	return presentationFamily_;
 }
-inline uint32_t PhysicalDevice::familyCount() const
+inline uint32_t Device::familyCount() const
 {
 	return familyCount_;
 }
@@ -34,7 +34,7 @@ inline uint32_t PhysicalDevice::familyCount() const
 // TODO: Better family finding logic to allow for
 //  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
 //  2. Ensuring that the most optimal layout is found, regardless of what order the implementation provides the families
-inline void PhysicalDevice::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice)
+inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice)
 {
 	assert(physicalDevice != VK_NULL_HANDLE);
 
@@ -70,7 +70,7 @@ inline void PhysicalDevice::findQueueFamilyIndices(const VkPhysicalDevice physic
 		transferFamily_ = graphicsFamily_;
 	}
 }
-inline bool PhysicalDevice::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
+inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
 	const auto *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures);
 	constexpr int featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
@@ -90,7 +90,7 @@ inline bool PhysicalDevice::checkFeatureSupport(const VkPhysicalDeviceFeatures2 
 
 	return true;
 }
-inline bool PhysicalDevice::checkFeatureSupport(const VkBool32 *requiredFeatures) const
+inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 {
 	assert(requiredFeatures != nullptr);
 
@@ -164,46 +164,5 @@ inline bool PhysicalDevice::checkFeatureSupport(const VkBool32 *requiredFeatures
 		return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));
 	}
 	return true;
-}
-inline bool PhysicalDevice::checkUsability()
-{
-	/** TODO: Check swapchain support, once presentation is implemented
-	 *   if (!QuerySwapChainSupport(pDevice))
-	 *   {
-	 *   	VulkanLogError("Failed to query swap chain support!\n");
-	 *   	return false;
-	 *   }
-	 *   if (swapChainSupport.formatCount == 0 && swapChainSupport.presentModeCount == 0)
-	 *   {
-	 *   	continue;
-	 *   }
-	 */
-
-	findQueueFamilyIndices(device_);
-	if (familyCount_ == 0)
-	{
-		return false;
-	}
-
-	vkGetPhysicalDeviceProperties(device_, &properties_);
-	vkGetPhysicalDeviceMemoryProperties(device_, &memoryProperties_);
-
-	uint32_t extensionCount;
-	vkEnumerateDeviceExtensionProperties(device_, nullptr, &extensionCount, nullptr);
-	if (extensionCount == 0)
-	{
-		return false;
-	}
-	VkExtensionProperties availableExtensions[extensionCount];
-	vkEnumerateDeviceExtensionProperties(device_, nullptr, &extensionCount, availableExtensions);
-	for (uint32_t j = 0; j < extensionCount; j++)
-	{
-		if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
-		{
-			return true;
-		}
-	}
-
-	return false;
 }
 } // namespace luna::core
