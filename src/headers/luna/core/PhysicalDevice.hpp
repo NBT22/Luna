@@ -19,7 +19,6 @@ class PhysicalDevice
 {
 	public:
 		PhysicalDevice() = default;
-		// explicit PhysicalDevice(const VkPhysicalDeviceFeatures &requiredFeatures);
 		explicit PhysicalDevice(const VkPhysicalDeviceFeatures2 &requiredFeatures);
 
 		/// A getter for the @c device_ value
@@ -83,3 +82,5 @@ class PhysicalDevice
 		[[nodiscard]] bool checkUsability();
 };
 } // namespace luna::core
+
+#include <luna/implementations/core/PhysicalDevice.ipp>

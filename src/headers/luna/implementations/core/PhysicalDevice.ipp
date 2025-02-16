@@ -1,0 +1,209 @@
+//
+// Created by NBT22 on 2/15/25.
+//
+
+#pragma once
+
+#include <cassert>
+#include <cstring>
+#include <stdexcept>
+
+namespace luna::core
+{
+inline VkPhysicalDevice PhysicalDevice::device() const
+{
+	return device_;
+}
+inline uint32_t PhysicalDevice::graphicsFamily() const
+{
+	return graphicsFamily_;
+}
+inline uint32_t PhysicalDevice::transferFamily() const
+{
+	return transferFamily_;
+}
+inline uint32_t PhysicalDevice::presentationFamily() const
+{
+	return presentationFamily_;
+}
+inline uint32_t PhysicalDevice::familyCount() const
+{
+	return familyCount_;
+}
+
+// TODO: Better family finding logic to allow for
+//  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
+//  2. Ensuring that the most optimal layout is found, regardless of what order the implementation provides the families
+inline void PhysicalDevice::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice)
+{
+	assert(physicalDevice != VK_NULL_HANDLE);
+
+	familyCount_ = 0;
+	hasGraphics_ = false;
+	hasTransfer_ = false;
+
+	uint32_t familyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, nullptr);
+	VkQueueFamilyProperties families[familyCount];
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families);
+	for (uint32_t index = 0; index < familyCount; index++)
+	{
+		if ((families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && !hasGraphics_)
+		{
+			graphicsFamily_ = index;
+			familyCount_++;
+			hasGraphics_ = true;
+		} else if ((families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0 && !hasTransfer_)
+		{
+			transferFamily_ = index;
+			familyCount_++;
+			hasTransfer_ = true;
+		}
+
+		if (hasGraphics_ && hasTransfer_)
+		{
+			break;
+		}
+	}
+	if (!hasTransfer_ && hasGraphics_)
+	{
+		transferFamily_ = graphicsFamily_;
+	}
+}
+inline bool PhysicalDevice::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
+{
+	const auto *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures);
+	constexpr int featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
+	const auto *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_);
+	for (int i = 0; i < featureCount; i++)
+	{
+		if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+		{
+			return false;
+		}
+	}
+
+	if (requiredFeatures.pNext != nullptr)
+	{
+		return checkFeatureSupport(static_cast<const VkBool32 *>(requiredFeatures.pNext));
+	}
+
+	return true;
+}
+inline bool PhysicalDevice::checkFeatureSupport(const VkBool32 *requiredFeatures) const
+{
+	assert(requiredFeatures != nullptr);
+
+	const VkBool32 *requiredFeatureArray = requiredFeatures + 2;
+	switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
+	{
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
+		{
+			constexpr int vulkan11FeatureCount = (sizeof(VkPhysicalDeviceVulkan11Features) - 16) / sizeof(VkBool32);
+			const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&vulkan11Features_) + 4;
+			for (int i = 0; i < vulkan11FeatureCount; i++)
+			{
+				if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+				{
+					return false;
+				}
+			}
+			break;
+		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
+		{
+			constexpr int vulkan12FeatureCount = (sizeof(VkPhysicalDeviceVulkan12Features) - 16) / sizeof(VkBool32);
+			const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&vulkan12Features_) + 4;
+			for (int i = 0; i < vulkan12FeatureCount; i++)
+			{
+				if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+				{
+					return false;
+				}
+			}
+			break;
+		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES:
+		{
+			constexpr int vulkan13FeatureCount = (sizeof(VkPhysicalDeviceVulkan13Features) - 16) / sizeof(VkBool32);
+			const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&vulkan13Features_) + 4;
+			for (int i = 0; i < vulkan13FeatureCount; i++)
+			{
+				if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+				{
+					return false;
+				}
+			}
+			break;
+		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES:
+		{
+			constexpr int vulkan14FeatureCount = (sizeof(VkPhysicalDeviceVulkan14Features) - 16) / sizeof(VkBool32);
+			const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&vulkan14Features_) + 4;
+			for (int i = 0; i < vulkan14FeatureCount; i++)
+			{
+				if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+				{
+					return false;
+				}
+			}
+			break;
+		}
+		default:
+			[[maybe_unused]] const VkStructureType
+					structureType = *reinterpret_cast<const VkStructureType *>(requiredFeatures);
+			assert(structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES ||
+				   structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES ||
+				   structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES ||
+				   structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
+	}
+
+	const void *pNext = requiredFeatures + 2;
+	if (pNext != nullptr)
+	{
+		return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));
+	}
+	return true;
+}
+inline bool PhysicalDevice::checkUsability()
+{
+	/** TODO: Check swapchain support, once presentation is implemented
+	 *   if (!QuerySwapChainSupport(pDevice))
+	 *   {
+	 *   	VulkanLogError("Failed to query swap chain support!\n");
+	 *   	return false;
+	 *   }
+	 *   if (swapChainSupport.formatCount == 0 && swapChainSupport.presentModeCount == 0)
+	 *   {
+	 *   	continue;
+	 *   }
+	 */
+
+	findQueueFamilyIndices(device_);
+	if (familyCount_ == 0)
+	{
+		return false;
+	}
+
+	vkGetPhysicalDeviceProperties(device_, &properties_);
+	vkGetPhysicalDeviceMemoryProperties(device_, &memoryProperties_);
+
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device_, nullptr, &extensionCount, nullptr);
+	if (extensionCount == 0)
+	{
+		return false;
+	}
+	VkExtensionProperties availableExtensions[extensionCount];
+	vkEnumerateDeviceExtensionProperties(device_, nullptr, &extensionCount, availableExtensions);
+	for (uint32_t j = 0; j < extensionCount; j++)
+	{
+		if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+} // namespace luna::core

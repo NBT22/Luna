@@ -62,25 +62,6 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo, const uint32_t 
 	};
 	vkCreateInstance(&createInfo, nullptr, &instance_);
 }
-
-void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
-{
-	physicalDevice_ = PhysicalDevice(creationInfo.requiredFeatures);
-	logicalDevice_ = LogicalDevice(physicalDevice_, creationInfo);
-}
-
-uint32_t Instance::minorVersion() const
-{
-	return VK_API_VERSION_MINOR(apiVersion_);
-}
-VkInstance Instance::instance() const
-{
-	return instance_;
-}
-PhysicalDevice Instance::physicalDevice() const
-{
-	return physicalDevice_;
-}
 } // namespace luna::core
 
 void lunaCreateInstance(const LunaInstanceCreationInfo &creationInfo, const uint32_t apiVersion)

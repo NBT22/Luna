@@ -6,7 +6,7 @@
 
 #include <luna/core/PhysicalDevice.hpp>
 #include <luna/lunaTypes.h>
-#include "LogicalDevice.hpp"
+#include <luna/core/LogicalDevice.hpp>
 
 namespace luna::core
 {
@@ -31,3 +31,5 @@ class Instance
 		LogicalDevice logicalDevice_{};
 };
 } // namespace luna::core
+
+#include <luna/implementations/core/Instance.ipp>
