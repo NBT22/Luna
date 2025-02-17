@@ -5,8 +5,6 @@
 #pragma once
 
 #include <cassert>
-#include <cstring>
-#include <stdexcept>
 
 namespace luna::core
 {
@@ -70,12 +68,12 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 			familyCount_++;
 			hasGraphics_ = true;
 
-			if (supportsPresentation)
+			if (supportsPresentation != 0)
 			{
 				presentationFamily_ = index;
 				presentationFound = true;
 			}
-		} else if (!presentationFound && supportsPresentation)
+		} else if (!presentationFound && supportsPresentation != 0)
 		{
 			presentationFamily_ = index;
 			familyCount_++;

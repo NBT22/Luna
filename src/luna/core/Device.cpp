@@ -3,10 +3,11 @@
 //
 
 #include <cassert>
+#include <cstring>
 #include <luna/core/Device.hpp>
 #include <luna/core/Instance.hpp>
+#include <luna/implementations/core/Device.ipp>
 #include <luna/lunaDevice.h>
-#include <stdexcept>
 
 namespace luna::core
 {
@@ -101,10 +102,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		}
 	}
 
-	if (match == -1u)
-	{
-		// throw std::runtime_error("Failed to find a suitable GPU to create Vulkan instance!");
-	}
+	assert(match != -1u);
 
 	constexpr float queuePriority = 1;
 	assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);

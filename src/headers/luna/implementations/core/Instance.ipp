@@ -9,6 +9,62 @@
 
 #define clamp(val, min, max) ((val) < (min) ? (min) : (val) > (max) ? (max) : (val))
 
+static void initQueueFamilyIndices(const luna::core::Device &device, uint32_t *queueFamilyIndices)
+{
+	switch (device.familyCount())
+	{
+		case 1:
+			queueFamilyIndices[0] = device.graphicsFamily();
+			break;
+		case 2:
+			queueFamilyIndices[0] = device.graphicsFamily();
+			queueFamilyIndices[1] = device.hasTransfer() ? device.transferFamily() : device.presentationFamily();
+			break;
+		case 3:
+			queueFamilyIndices[0] = device.graphicsFamily();
+			queueFamilyIndices[1] = device.presentationFamily();
+			queueFamilyIndices[2] = device.transferFamily();
+			break;
+		default:
+			assert(device.familyCount() == 1 || device.familyCount() == 2 || device.familyCount() == 3);
+	}
+}
+
+static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
+								const VkSurfaceKHR surface,
+								const uint32_t targetFormatCount,
+								VkSurfaceFormatKHR *targetFormats,
+								VkSurfaceFormatKHR &destination)
+{
+	destination = {.format = VK_FORMAT_MAX_ENUM, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+	if (formatCount == 0)
+	{
+		return;
+	}
+	VkSurfaceFormatKHR formats[formatCount];
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats);
+	for (uint32_t i = 0; i < targetFormatCount; i++)
+	{
+		const auto [targetFormat, targetColorSpace] = targetFormats[i];
+		for (uint32_t j = 0; j < formatCount; j++)
+		{
+			const VkSurfaceFormatKHR format = formats[j];
+			if (format.colorSpace == targetColorSpace && format.format == targetFormat)
+			{
+				destination = format;
+				break;
+			}
+		}
+		if (destination.format != VK_FORMAT_MAX_ENUM && destination.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR)
+		{
+			break;
+		}
+	}
+	assert(destination.format != VK_FORMAT_MAX_ENUM && destination.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR);
+}
+
 namespace luna::core
 {
 inline void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
@@ -27,15 +83,6 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 	VkSurfaceCapabilitiesKHR capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_.physicalDevice(), surface_, &capabilities);
 
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device_.physicalDevice(), surface_, &formatCount, nullptr);
-	if (formatCount == 0)
-	{
-		return;
-	}
-	VkSurfaceFormatKHR formats[formatCount];
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device_.physicalDevice(), surface_, &formatCount, formats);
-
 	uint32_t presentModeCount;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(device_.physicalDevice(), surface_, &presentModeCount, nullptr);
 	if (presentModeCount == 0)
@@ -45,52 +92,20 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 	VkPresentModeKHR presentModes[presentModeCount];
 	vkGetPhysicalDeviceSurfacePresentModesKHR(device_.physicalDevice(), surface_, &presentModeCount, presentModes);
 
-	if (!capabilities.currentExtent.width || !capabilities.currentExtent.height)
+	if (capabilities.currentExtent.width == 0 || capabilities.currentExtent.height == 0)
 	{
 		minimized = true;
 		return;
 	}
 
-	uint32_t pQueueFamilyIndices[device_.familyCount()];
-	switch (device_.familyCount())
-	{
-		case 1:
-			pQueueFamilyIndices[0] = device_.graphicsFamily();
-			break;
-		case 2:
-			pQueueFamilyIndices[0] = device_.graphicsFamily();
-			pQueueFamilyIndices[1] = device_.hasTransfer() ? device_.transferFamily() : device_.presentationFamily();
-			break;
-		case 3:
-			pQueueFamilyIndices[0] = device_.graphicsFamily();
-			pQueueFamilyIndices[1] = device_.presentationFamily();
-			pQueueFamilyIndices[2] = device_.transferFamily();
-			break;
-		default:
-			assert(device_.familyCount() == 1 || device_.familyCount() == 2 || device_.familyCount() == 3);
-	}
+	uint32_t queueFamilyIndices[device_.familyCount()];
+	initQueueFamilyIndices(device_, queueFamilyIndices);
 
-	swapChain_.format = {.format = VK_FORMAT_MAX_ENUM, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
-	for (uint32_t i = 0; i < creationInfo.formatCount; i++)
-	{
-		const auto [targetFormat, targetColorSpace] = creationInfo.formatPriorityList[i];
-		for (uint32_t j = 0; j < formatCount; j++)
-		{
-			const VkSurfaceFormatKHR format = formats[j];
-			if (format.colorSpace == targetColorSpace && format.format == targetFormat)
-			{
-				swapChain_.format = format;
-				break;
-			}
-		}
-		if (swapChain_.format.format != VK_FORMAT_MAX_ENUM &&
-			swapChain_.format.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR)
-		{
-			break;
-		}
-	}
-	assert(swapChain_.format.format != VK_FORMAT_MAX_ENUM &&
-		   swapChain_.format.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR);
+	findSwapChainFormat(device_.physicalDevice(),
+						surface_,
+						creationInfo.formatCount,
+						creationInfo.formatPriorityList,
+						swapChain_.format);
 
 	swapChain_.extent = capabilities.currentExtent;
 	if (swapChain_.extent.width == UINT32_MAX || swapChain_.extent.height == UINT32_MAX)
@@ -136,7 +151,7 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		.imageSharingMode = device_.hasPresentation() ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 		.queueFamilyIndexCount = device_.familyCount(),
-		.pQueueFamilyIndices = pQueueFamilyIndices,
+		.pQueueFamilyIndices = queueFamilyIndices,
 		.preTransform = capabilities.currentTransform,
 		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 		.presentMode = swapChain_.presentMode,
@@ -147,6 +162,7 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 
 	vkGetSwapchainImagesKHR(device_.logicalDevice(), swapChain_.swapChain, &swapChain_.imageCount, nullptr);
 	swapChain_.images = static_cast<VkImage *>(calloc(swapChain_.imageCount, sizeof(VkImage)));
+	assert(swapChain_.images);
 	vkGetSwapchainImagesKHR(device_.logicalDevice(), swapChain_.swapChain, &swapChain_.imageCount, swapChain_.images);
 }
 
