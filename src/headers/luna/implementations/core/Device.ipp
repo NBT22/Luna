@@ -47,7 +47,6 @@ inline bool Device::hasPresentation() const
 inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface)
 {
 	assert(physicalDevice != VK_NULL_HANDLE);
-
 	familyCount_ = 0;
 	hasGraphics_ = false;
 	hasTransfer_ = false;
@@ -56,7 +55,7 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 	bool presentationFound = false;
 	uint32_t familyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, nullptr);
-	VkQueueFamilyProperties families[familyCount];
+	VkQueueFamilyProperties *families = new VkQueueFamilyProperties[familyCount];
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families);
 	for (uint32_t index = 0; index < familyCount; index++)
 	{
@@ -101,16 +100,17 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 	{
 		transferFamily_ = graphicsFamily_;
 	}
-	if (!presentationFound && hasGraphics_)
+	if (!presentationFound)
 	{
-		presentationFamily_ = graphicsFamily_;
+		familyCount_ = 0;
 	}
+	delete[] families;
 }
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
-	const auto *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures);
+	const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures);
 	constexpr int featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
-	const auto *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_);
+	const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_);
 	for (int i = 0; i < featureCount; i++)
 	{
 		if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
@@ -128,8 +128,7 @@ inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &require
 }
 inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 {
-	assert(requiredFeatures != nullptr);
-
+	assert(requiredFeatures);
 	const VkBool32 *requiredFeatureArray = requiredFeatures + 2;
 	switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
 	{

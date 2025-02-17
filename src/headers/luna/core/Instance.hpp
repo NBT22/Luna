@@ -15,8 +15,8 @@ struct SwapChain
 		VkPresentModeKHR presentMode;
 		uint32_t imageCount;
 		VkSwapchainKHR swapChain;
-		VkImage *images;
-		VkImageView *imageViews;
+		VkImage *images; // TODO: free me
+		VkImageView *imageViews; // TODO: free me
 };
 
 namespace luna::core

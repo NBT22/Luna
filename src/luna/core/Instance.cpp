@@ -15,7 +15,7 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 
 	const uint32_t enabledLayerCount = creationInfo.enableValidation ? creationInfo.layerCount + 1
 																	 : creationInfo.layerCount;
-	const char *enabledLayers[enabledLayerCount];
+	const char **enabledLayers = new const char *[enabledLayerCount];
 	for (uint32_t i = 0; i < creationInfo.layerCount; i++)
 	{
 		enabledLayers[i] = creationInfo.layerNames[i];
@@ -25,16 +25,16 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 		enabledLayers[enabledLayerCount - 1] = "VK_LAYER_KHRONOS_validation";
 	}
 
-	bool surfaceExtensionFound = false;
+	bool surfaceExtensionRequested = false;
 	for (uint32_t i = 0; i < creationInfo.extensionCount; i++)
 	{
 		if (std::strncmp(creationInfo.extensionNames[i], "VK_KHR_surface", 14) == 0)
 		{
-			surfaceExtensionFound = true;
+			surfaceExtensionRequested = true;
 			break;
 		}
 	}
-	assert(surfaceExtensionFound);
+	assert(surfaceExtensionRequested);
 
 	const VkApplicationInfo vulkanApplicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -49,6 +49,7 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 		.ppEnabledExtensionNames = creationInfo.extensionNames,
 	};
 	vkCreateInstance(&createInfo, nullptr, &instance_);
+	delete[] enabledLayers;
 }
 } // namespace luna::core
 
@@ -70,5 +71,6 @@ VkSurfaceCapabilitiesKHR lunaGetSurfaceCapabilities(const VkSurfaceKHR surface)
 {
 	VkSurfaceCapabilitiesKHR capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::instance.device().physicalDevice(), surface, &capabilities);
+	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 	return capabilities;
 }

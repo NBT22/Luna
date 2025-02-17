@@ -18,9 +18,9 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, nullptr);
 	if (deviceCount == 0)
 	{
-		// throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
+		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
 	}
-	VkPhysicalDevice devices[deviceCount];
+	VkPhysicalDevice *devices = new VkPhysicalDevice[deviceCount];
 	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices);
 	for (uint32_t i = 0; i < deviceCount; i++)
 	{
@@ -101,48 +101,52 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 			break;
 		}
 	}
-
-	assert(match != -1u);
+	delete[] devices;
+	if (match == -1u)
+	{
+		throw std::runtime_error("Failed to find a suitable GPU for Vulkan!");
+	}
 
 	constexpr float queuePriority = 1;
-	assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
-	VkDeviceQueueCreateInfo queueCreateInfos[familyCount_];
+	VkDeviceQueueCreateInfo *queuesCreateInfo = new VkDeviceQueueCreateInfo[familyCount_];
 	switch (familyCount_)
 	{
 		case 3:
-			queueCreateInfos[2] = (VkDeviceQueueCreateInfo){
+			queuesCreateInfo[2] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 				.queueFamilyIndex = presentationFamily_,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
 		case 2:
-			queueCreateInfos[1] = (VkDeviceQueueCreateInfo){
+			queuesCreateInfo[1] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 				.queueFamilyIndex = hasTransfer_ ? transferFamily_ : presentationFamily_,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
 		case 1:
-			queueCreateInfos[0] = (VkDeviceQueueCreateInfo){
+			queuesCreateInfo[0] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 				.queueFamilyIndex = graphicsFamily_,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
-		default:;
+		default:
+			assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
 	}
 
 	const VkDeviceCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		.pNext = creationInfo.requiredFeatures.pNext,
 		.queueCreateInfoCount = familyCount_,
-		.pQueueCreateInfos = queueCreateInfos,
+		.pQueueCreateInfos = queuesCreateInfo,
 		.enabledExtensionCount = creationInfo.extensionCount,
 		.ppEnabledExtensionNames = creationInfo.extensionNames,
 		.pEnabledFeatures = &creationInfo.requiredFeatures.features,
 	};
 	vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_);
+	delete[] queuesCreateInfo;
 
 	vkGetDeviceQueue(logicalDevice_, graphicsFamily_, 0, &graphicsQueue_);
 	vkGetDeviceQueue(logicalDevice_, transferFamily_, 0, &transferQueue_);
@@ -177,15 +181,17 @@ bool Device::checkUsability(const VkSurfaceKHR surface)
 	{
 		return false;
 	}
-	VkExtensionProperties availableExtensions[extensionCount];
+	VkExtensionProperties *availableExtensions = new VkExtensionProperties[extensionCount];
 	vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &extensionCount, availableExtensions);
 	for (uint32_t j = 0; j < extensionCount; j++)
 	{
 		if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
 		{
+			delete[] availableExtensions;
 			return true;
 		}
 	}
+	delete[] availableExtensions;
 
 	return false;
 }

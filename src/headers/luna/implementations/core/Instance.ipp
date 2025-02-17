@@ -36,14 +36,14 @@ static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 								VkSurfaceFormatKHR *targetFormats,
 								VkSurfaceFormatKHR &destination)
 {
-	destination = {.format = VK_FORMAT_MAX_ENUM, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
+	destination = {.format = VK_FORMAT_UNDEFINED, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
 	uint32_t formatCount;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
 	if (formatCount == 0)
 	{
 		return;
 	}
-	VkSurfaceFormatKHR formats[formatCount];
+	VkSurfaceFormatKHR *formats = new VkSurfaceFormatKHR[formatCount];
 	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats);
 	for (uint32_t i = 0; i < targetFormatCount; i++)
 	{
@@ -57,12 +57,16 @@ static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 				break;
 			}
 		}
-		if (destination.format != VK_FORMAT_MAX_ENUM && destination.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR)
+		if (destination.format != VK_FORMAT_UNDEFINED && destination.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR)
 		{
 			break;
 		}
 	}
-	assert(destination.format != VK_FORMAT_MAX_ENUM && destination.colorSpace != VK_COLOR_SPACE_MAX_ENUM_KHR);
+	delete[] formats;
+	if (destination.format == VK_FORMAT_UNDEFINED || destination.colorSpace == VK_COLOR_SPACE_MAX_ENUM_KHR)
+	{
+		throw std::runtime_error("Unable to find suitable Vulkan surface format!");
+	}
 }
 
 namespace luna::core
@@ -82,6 +86,7 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 
 	VkSurfaceCapabilitiesKHR capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_.physicalDevice(), surface_, &capabilities);
+	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 
 	uint32_t presentModeCount;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(device_.physicalDevice(), surface_, &presentModeCount, nullptr);
@@ -89,7 +94,7 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 	{
 		return;
 	}
-	VkPresentModeKHR presentModes[presentModeCount];
+	VkPresentModeKHR *presentModes = new VkPresentModeKHR[presentModeCount];
 	vkGetPhysicalDeviceSurfacePresentModesKHR(device_.physicalDevice(), surface_, &presentModeCount, presentModes);
 
 	if (capabilities.currentExtent.width == 0 || capabilities.currentExtent.height == 0)
@@ -98,7 +103,7 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 		return;
 	}
 
-	uint32_t queueFamilyIndices[device_.familyCount()];
+	uint32_t *queueFamilyIndices = new uint32_t[device_.familyCount()];
 	initQueueFamilyIndices(device_, queueFamilyIndices);
 
 	findSwapChainFormat(device_.physicalDevice(),
@@ -135,6 +140,8 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 			break;
 		}
 	}
+	delete[] presentModes;
+	// This is an assert instead of an error because VK_PRESENT_MODE_FIFO_KHR is required to be supported.
 	assert(swapChain_.presentMode != VK_PRESENT_MODE_MAX_ENUM_KHR);
 
 	swapChain_.imageCount = creationInfo.minImageCount;
@@ -159,10 +166,10 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 		.oldSwapchain = VK_NULL_HANDLE,
 	};
 	vkCreateSwapchainKHR(device_.logicalDevice(), &createInfo, nullptr, &swapChain_.swapChain);
+	delete[] queueFamilyIndices;
 
 	vkGetSwapchainImagesKHR(device_.logicalDevice(), swapChain_.swapChain, &swapChain_.imageCount, nullptr);
-	swapChain_.images = static_cast<VkImage *>(calloc(swapChain_.imageCount, sizeof(VkImage)));
-	assert(swapChain_.images);
+	swapChain_.images = new VkImage[swapChain_.imageCount];
 	vkGetSwapchainImagesKHR(device_.logicalDevice(), swapChain_.swapChain, &swapChain_.imageCount, swapChain_.images);
 }
 
