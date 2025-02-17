@@ -14,6 +14,10 @@ inline VkPhysicalDevice Device::physicalDevice() const
 {
 	return physicalDevice_;
 }
+inline VkDevice Device::logicalDevice() const
+{
+	return logicalDevice_;
+}
 inline uint32_t Device::graphicsFamily() const
 {
 	return graphicsFamily_;
@@ -30,37 +34,67 @@ inline uint32_t Device::familyCount() const
 {
 	return familyCount_;
 }
+inline bool Device::hasTransfer() const
+{
+	return hasTransfer_;
+}
+inline bool Device::hasPresentation() const
+{
+	return hasPresentation_;
+}
 
 // TODO: Better family finding logic to allow for
 //  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
 //  2. Ensuring that the most optimal layout is found, regardless of what order the implementation provides the families
-inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice)
+inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface)
 {
 	assert(physicalDevice != VK_NULL_HANDLE);
 
 	familyCount_ = 0;
 	hasGraphics_ = false;
 	hasTransfer_ = false;
+	hasPresentation_ = false;
 
+	bool presentationFound = false;
 	uint32_t familyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, nullptr);
 	VkQueueFamilyProperties families[familyCount];
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families);
 	for (uint32_t index = 0; index < familyCount; index++)
 	{
-		if ((families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && !hasGraphics_)
+		VkBool32 supportsPresentation = VK_FALSE;
+		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &supportsPresentation);
+		if (!hasGraphics_ && (families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
 		{
 			graphicsFamily_ = index;
 			familyCount_++;
 			hasGraphics_ = true;
-		} else if ((families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0 && !hasTransfer_)
+
+			if (supportsPresentation)
+			{
+				presentationFamily_ = index;
+				presentationFound = true;
+			}
+		} else if (!presentationFound && supportsPresentation)
+		{
+			presentationFamily_ = index;
+			familyCount_++;
+			hasPresentation_ = true;
+			presentationFound = true;
+
+			if (!hasTransfer_ && (families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
+			{
+				transferFamily_ = index;
+				hasTransfer_ = true;
+			}
+		} else if (!hasTransfer_ && (families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
 		{
 			transferFamily_ = index;
 			familyCount_++;
 			hasTransfer_ = true;
 		}
 
-		if (hasGraphics_ && hasTransfer_)
+		if (hasGraphics_ && hasTransfer_ && presentationFound)
 		{
 			break;
 		}
@@ -68,6 +102,10 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 	if (!hasTransfer_ && hasGraphics_)
 	{
 		transferFamily_ = graphicsFamily_;
+	}
+	if (!presentationFound && hasGraphics_)
+	{
+		presentationFamily_ = graphicsFamily_;
 	}
 }
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const

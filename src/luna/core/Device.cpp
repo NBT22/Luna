@@ -90,7 +90,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 				assert(1 <= instance.minorVersion() && instance.minorVersion() <= 4);
 		}
 		vkGetPhysicalDeviceFeatures2(physicalDevice_, &features_);
-		if (!checkFeatureSupport(creationInfo.requiredFeatures) || !checkUsability())
+		if (!checkFeatureSupport(creationInfo.requiredFeatures) || !checkUsability(creationInfo.surface))
 		{
 			continue;
 		}
@@ -107,30 +107,32 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	}
 
 	constexpr float queuePriority = 1;
-	assert(familyCount_ == 1 || familyCount_ == 2);
+	assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
 	VkDeviceQueueCreateInfo queueCreateInfos[familyCount_];
-	if (familyCount_ == 1)
+	switch (familyCount_)
 	{
-		queueCreateInfos[0] = (VkDeviceQueueCreateInfo){
-			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = graphicsFamily_,
-			.queueCount = 1,
-			.pQueuePriorities = &queuePriority,
-		};
-	} else if (familyCount_ == 2)
-	{
-		queueCreateInfos[0] = (VkDeviceQueueCreateInfo){
-			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = graphicsFamily_,
-			.queueCount = 1,
-			.pQueuePriorities = &queuePriority,
-		};
-		queueCreateInfos[1] = (VkDeviceQueueCreateInfo){
-			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = transferFamily_,
-			.queueCount = 1,
-			.pQueuePriorities = &queuePriority,
-		};
+		case 3:
+			queueCreateInfos[2] = (VkDeviceQueueCreateInfo){
+				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+				.queueFamilyIndex = presentationFamily_,
+				.queueCount = 1,
+				.pQueuePriorities = &queuePriority,
+			};
+		case 2:
+			queueCreateInfos[1] = (VkDeviceQueueCreateInfo){
+				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+				.queueFamilyIndex = hasTransfer_ ? transferFamily_ : presentationFamily_,
+				.queueCount = 1,
+				.pQueuePriorities = &queuePriority,
+			};
+		case 1:
+			queueCreateInfos[0] = (VkDeviceQueueCreateInfo){
+				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+				.queueFamilyIndex = graphicsFamily_,
+				.queueCount = 1,
+				.pQueuePriorities = &queuePriority,
+			};
+		default:;
 	}
 
 	const VkDeviceCreateInfo createInfo = {
@@ -146,13 +148,23 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 
 	vkGetDeviceQueue(logicalDevice_, graphicsFamily_, 0, &graphicsQueue_);
 	vkGetDeviceQueue(logicalDevice_, transferFamily_, 0, &transferQueue_);
+	vkGetDeviceQueue(logicalDevice_, presentationFamily_, 0, &presentQueue_);
 }
-bool Device::checkUsability()
+bool Device::checkUsability(const VkSurfaceKHR surface)
 {
 	uint32_t count;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice_, instance.surface, &count, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice_, surface, &count, nullptr);
+	if (count == 0)
+	{
+		return false;
+	}
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice_, surface, &count, nullptr);
+	if (count == 0)
+	{
+		return false;
+	}
 
-	findQueueFamilyIndices(physicalDevice_);
+	findQueueFamilyIndices(physicalDevice_, surface);
 	if (familyCount_ == 0)
 	{
 		return false;
@@ -192,6 +204,7 @@ void lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
 		.extensionCount = creationInfo->extensionCount,
 		.extensionNames = creationInfo->extensionNames,
 		.requiredFeatures = requiredFeatures2,
+		.surface = creationInfo->surface,
 	};
 	luna::core::instance.addNewDevice(creationInfo2);
 }

@@ -6,14 +6,17 @@
 
 #include <luna/core/Device.hpp>
 #include <luna/lunaTypes.h>
+#include <memory>
 
-struct SwapChainSupportDetails
+struct SwapChain
 {
-		uint32_t formatCount;
-		uint32_t presentModeCount;
-		VkSurfaceFormatKHR *formats;
-		VkPresentModeKHR *presentMode;
-		VkSurfaceCapabilitiesKHR capabilities;
+		VkSurfaceFormatKHR format;
+		VkExtent2D extent;
+		VkPresentModeKHR presentMode;
+		uint32_t imageCount;
+		VkSwapchainKHR swapChain;
+		VkImage *images;
+		VkImageView *imageViews;
 };
 
 namespace luna::core
@@ -27,20 +30,22 @@ class Instance
 		explicit Instance(const LunaInstanceCreationInfo &creationInfo);
 
 		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
+		void createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
 		[[nodiscard]] Device device() const;
+		[[nodiscard]] VkSurfaceKHR surface() const;
 
-		VkSurfaceKHR surface{};
+		bool minimized = false;
 
 	private:
-		void querySwapChainSupport();
 
 		uint32_t apiVersion_ = 0;
 		VkInstance instance_ = VK_NULL_HANDLE;
 		Device device_{};
-		SwapChainSupportDetails swapChainSupport_{};
+		VkSurfaceKHR surface_{};
+		SwapChain swapChain_{};
 };
 } // namespace luna::core
 

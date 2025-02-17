@@ -17,6 +17,7 @@ extern "C"
 typedef struct LunaInstanceCreationInfoStruct LunaInstanceCreationInfo;
 typedef struct LunaDeviceCreationInfoStruct LunaDeviceCreationInfo;
 typedef struct LunaDeviceCreationInfo2Struct LunaDeviceCreationInfo2;
+typedef struct LunaSwapChainCreationInfoStruct LunaSwapChainCreationInfo;
 
 struct LunaInstanceCreationInfoStruct
 {
@@ -36,6 +37,7 @@ struct LunaDeviceCreationInfoStruct
 		const char *const *extensionNames;
 
 		const VkPhysicalDeviceFeatures requiredFeatures;
+		VkSurfaceKHR surface;
 };
 
 struct LunaDeviceCreationInfo2Struct
@@ -44,6 +46,20 @@ struct LunaDeviceCreationInfo2Struct
 		const char *const *extensionNames;
 
 		const VkPhysicalDeviceFeatures2 requiredFeatures;
+		VkSurfaceKHR surface;
+};
+
+struct LunaSwapChainCreationInfoStruct
+{
+		VkSurfaceKHR surface;
+		uint32_t width;
+		uint32_t height;
+		uint32_t minImageCount;
+
+		uint32_t formatCount;
+		VkSurfaceFormatKHR *formatPriorityList;
+		uint32_t presentModeCount;
+		VkPresentModeKHR *presentModePriorityList;
 };
 
 #ifdef __cplusplus

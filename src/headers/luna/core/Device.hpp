@@ -24,6 +24,9 @@ class Device
 		/// A getter for the @c physicalDevice_ value
 		/// @return The Vulkan handle for the physical device described in this instance
 		[[nodiscard]] VkPhysicalDevice physicalDevice() const;
+		/// A getter for the @c logicalDevice_ value
+		/// @return The Vulkan handle for the physical device described in this instance
+		[[nodiscard]] VkDevice logicalDevice() const;
 		/// A getter for the @c graphicsFamily_ value
 		/// @return The index of the family on the GPU that will be used for graphics processing
 		[[nodiscard]] uint32_t graphicsFamily() const;
@@ -36,18 +39,18 @@ class Device
 		/// A getter for the @c familyCount_ value
 		/// @return The total count of unique families
 		[[nodiscard]] uint32_t familyCount() const;
-		// /// A getter for the @c hasPresentation_ value
-		// /// @return A boolean for if there is a unique family for presentation
-		// [[nodiscard]] bool hasPresentation() const;
-		// /// A getter for the @c hasTransfer_ value
-		// /// @return A boolean for if there is a unique family for transfer operations
-		// [[nodiscard]] bool hasTransfer() const;
+		/// A getter for the @c hasTransfer_ value
+		/// @return A boolean for if there is a unique family for transfer operations
+		[[nodiscard]] bool hasTransfer() const;
+		/// A getter for the @c hasPresentation_ value
+		/// @return A boolean for if there is a unique family for presentation
+		[[nodiscard]] bool hasPresentation() const;
 
 	private:
-		void findQueueFamilyIndices(VkPhysicalDevice physicalDevice);
+		void findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
-		[[nodiscard]] bool checkUsability();
+		[[nodiscard]] bool checkUsability(VkSurfaceKHR surface);
 
 		/// The actual device
 		VkPhysicalDevice physicalDevice_{};
@@ -72,13 +75,6 @@ class Device
 		/// A boolean for if there is a unique family for presentation
 		bool hasPresentation_ = false;
 		uint32_t familyCount_ = 0;
-		/// Boolean for if this device will be used for presentation. True if the device will be used for presentation,
-		/// false if the device will only be used for rendering but never for presentation.
-		/// @note This will eventually be used for the case of if there is one device used for rendering and a separate
-		///  device used for presentation, but that ability is not a high priority, so for the time being this is uesd
-		///  to indicate if the library is being used to draw to the screen at all or if it is just rendering but never
-		///  presenting. TODO: As of right now, presentation is not supported so this value is always false.
-		bool usesPresentation_ = false;
 		VkQueue graphicsQueue_{};
 		VkQueue transferQueue_{};
 		VkQueue presentQueue_{};

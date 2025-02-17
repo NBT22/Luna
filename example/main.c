@@ -39,8 +39,6 @@ int main()
 	{
 		return 3;
 	}
-	lunaAddSurface(surface);
-
 	const VkPhysicalDeviceFeatures requiredFeatures = {
 		.logicOp = VK_TRUE,
 		.samplerAnisotropy = VK_TRUE,
@@ -49,8 +47,21 @@ int main()
 		.extensionCount = 1,
 		.extensionNames = (const char *const[]){VK_KHR_SWAPCHAIN_EXTENSION_NAME},
 		.requiredFeatures = requiredFeatures,
+		.surface = surface,
 	};
 	lunaAddNewDevice(&deviceCreationInfo);
+
+	LunaSwapChainCreationInfo swapChainCreationInfo = {
+		.surface = surface,
+		.width = 1280,
+		.height = 720,
+		.minImageCount = 3,
+		.formatCount = 1,
+		.formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}},
+		.presentModeCount = 2,
+		.presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR},
+	};
+	lunaCreateSwapChain(&swapChainCreationInfo);
 
 	SDL_Event event;
 	while (SDL_WaitEvent(&event))

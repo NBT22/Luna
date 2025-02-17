@@ -61,7 +61,14 @@ VkInstance lunaGetInstance()
 {
 	return luna::core::instance.instance();
 }
-void lunaAddSurface(const VkSurfaceKHR surface)
+void lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo)
 {
-	luna::core::instance.surface = surface;
+	assert(creationInfo);
+	luna::core::instance.createSwapChain(*creationInfo);
+}
+VkSurfaceCapabilitiesKHR lunaGetSurfaceCapabilities(const VkSurfaceKHR surface)
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::instance.device().physicalDevice(), surface, &capabilities);
+	return capabilities;
 }
