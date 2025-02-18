@@ -5,6 +5,7 @@
 #pragma once
 
 #include <luna/core/Device.hpp>
+#include <luna/helpers/Luna.hpp>
 #include <luna/lunaTypes.h>
 
 #define clamp(val, min, max) ((val) < (min) ? (min) : (val) > (max) ? (max) : (val))
@@ -66,6 +67,25 @@ static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 	if (destination.format == VK_FORMAT_UNDEFINED || destination.colorSpace == VK_COLOR_SPACE_MAX_ENUM_KHR)
 	{
 		throw std::runtime_error("Unable to find suitable Vulkan surface format!");
+	}
+}
+
+static void createSwapChainImages(const VkDevice logicalDevice, SwapChain swapChain)
+{
+	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, nullptr);
+
+	swapChain.images = new VkImage[swapChain.imageCount];
+	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, swapChain.images);
+
+	swapChain.imageViews = new VkImageView[swapChain.imageCount];
+	for (uint32_t i = 0; i < swapChain.imageCount; i++)
+	{
+		luna::helpers::createImageView(logicalDevice,
+									   swapChain.images[i],
+									   swapChain.format.format,
+									   VK_IMAGE_ASPECT_COLOR_BIT,
+									   1,
+									   swapChain.imageViews[i]);
 	}
 }
 
@@ -163,14 +183,11 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 		.presentMode = swapChain_.presentMode,
 		.clipped = VK_TRUE,
-		.oldSwapchain = VK_NULL_HANDLE,
 	};
 	vkCreateSwapchainKHR(device_.logicalDevice(), &createInfo, nullptr, &swapChain_.swapChain);
 	delete[] queueFamilyIndices;
 
-	vkGetSwapchainImagesKHR(device_.logicalDevice(), swapChain_.swapChain, &swapChain_.imageCount, nullptr);
-	swapChain_.images = new VkImage[swapChain_.imageCount];
-	vkGetSwapchainImagesKHR(device_.logicalDevice(), swapChain_.swapChain, &swapChain_.imageCount, swapChain_.images);
+	createSwapChainImages(device_.logicalDevice(), swapChain_);
 }
 
 inline uint32_t Instance::minorVersion() const
