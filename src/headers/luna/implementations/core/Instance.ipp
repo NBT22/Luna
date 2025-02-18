@@ -89,6 +89,47 @@ static void createSwapChainImages(const VkDevice logicalDevice, SwapChain swapCh
 	}
 }
 
+static void getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
+									const VkSurfaceKHR surface,
+									const uint32_t targetPresentModeCount,
+									const VkPresentModeKHR *targetPresentModes,
+									VkPresentModeKHR &destination)
+{
+	if (targetPresentModeCount == 0)
+	{
+		destination = VK_PRESENT_MODE_FIFO_KHR;
+		return;
+	}
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
+	if (presentModeCount == 0)
+	{
+		return;
+	}
+	VkPresentModeKHR *presentModes = new VkPresentModeKHR[presentModeCount];
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes);
+	destination = VK_PRESENT_MODE_MAX_ENUM_KHR;
+	for (uint32_t i = 0; i < targetPresentModeCount; i++)
+	{
+		const VkPresentModeKHR mode = targetPresentModes[i];
+		for (uint32_t j = 0; j < presentModeCount; j++)
+		{
+			if (presentModes[j] == mode)
+			{
+				destination = mode;
+				break;
+			}
+		}
+		if (destination != VK_PRESENT_MODE_MAX_ENUM_KHR)
+		{
+			break;
+		}
+	}
+	delete[] presentModes;
+	// This is an assert instead of an error because VK_PRESENT_MODE_FIFO_KHR is required to be supported.
+	assert(destination != VK_PRESENT_MODE_MAX_ENUM_KHR);
+}
+
 namespace luna::core
 {
 inline void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
@@ -107,15 +148,6 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 	VkSurfaceCapabilitiesKHR capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_.physicalDevice(), surface_, &capabilities);
 	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
-
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device_.physicalDevice(), surface_, &presentModeCount, nullptr);
-	if (presentModeCount == 0)
-	{
-		return;
-	}
-	VkPresentModeKHR *presentModes = new VkPresentModeKHR[presentModeCount];
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device_.physicalDevice(), surface_, &presentModeCount, presentModes);
 
 	if (capabilities.currentExtent.width == 0 || capabilities.currentExtent.height == 0)
 	{
@@ -143,30 +175,18 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 	assert(capabilities.minImageExtent.height <= swapChain_.extent.height &&
 		   swapChain_.extent.height <= capabilities.maxImageExtent.height);
 
-	swapChain_.presentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
-	for (uint32_t i = 0; i < creationInfo.presentModeCount; i++)
-	{
-		const VkPresentModeKHR mode = presentModes[i];
-		for (uint32_t j = 0; j < presentModeCount; j++)
-		{
-			if (presentModes[j] == mode)
-			{
-				swapChain_.presentMode = mode;
-				break;
-			}
-		}
-		if (swapChain_.presentMode != VK_PRESENT_MODE_MAX_ENUM_KHR)
-		{
-			break;
-		}
-	}
-	delete[] presentModes;
-	// This is an assert instead of an error because VK_PRESENT_MODE_FIFO_KHR is required to be supported.
-	assert(swapChain_.presentMode != VK_PRESENT_MODE_MAX_ENUM_KHR);
+	getSwapChainPresentMode(device_.physicalDevice(),
+							surface_,
+							creationInfo.presentModeCount,
+							creationInfo.presentModePriorityList,
+							swapChain_.presentMode);
 
 	swapChain_.imageCount = creationInfo.minImageCount;
 	assert(capabilities.minImageCount <= swapChain_.imageCount && swapChain_.imageCount <= capabilities.maxImageCount);
 
+	const VkCompositeAlphaFlagBitsKHR compositeAlpha = creationInfo.compositeAlpha == 0
+															   ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
+															   : creationInfo.compositeAlpha;
 	const VkSwapchainCreateInfoKHR createInfo = {
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 		.surface = surface_,
@@ -175,14 +195,14 @@ inline void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationI
 		.imageColorSpace = swapChain_.format.colorSpace,
 		.imageExtent = swapChain_.extent,
 		.imageArrayLayers = 1,
-		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : creationInfo.imageUsage,
 		.imageSharingMode = device_.hasPresentation() ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 		.queueFamilyIndexCount = device_.familyCount(),
 		.pQueueFamilyIndices = queueFamilyIndices,
 		.preTransform = capabilities.currentTransform,
-		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+		.compositeAlpha = compositeAlpha,
 		.presentMode = swapChain_.presentMode,
-		.clipped = VK_TRUE,
+		.clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
 	};
 	vkCreateSwapchainKHR(device_.logicalDevice(), &createInfo, nullptr, &swapChain_.swapChain);
 	delete[] queueFamilyIndices;

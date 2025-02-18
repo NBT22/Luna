@@ -60,6 +60,9 @@ struct LunaSwapChainCreationInfoStruct
 		VkSurfaceFormatKHR *formatPriorityList;
 		uint32_t presentModeCount;
 		VkPresentModeKHR *presentModePriorityList;
+
+		VkImageUsageFlags imageUsage;
+		VkCompositeAlphaFlagBitsKHR compositeAlpha;
 };
 
 #ifdef __cplusplus
