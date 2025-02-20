@@ -18,7 +18,6 @@ LunaRenderPass createRenderPass()
 		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 	};
 	const VkAttachmentReference2 colorAttachmentRef = {
@@ -33,7 +32,6 @@ LunaRenderPass createRenderPass()
 		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 	};
 	const VkAttachmentReference2 depthAttachmentReference = {
@@ -49,7 +47,6 @@ LunaRenderPass createRenderPass()
 		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 	};
 	const VkAttachmentReference2 colorAttachmentResolveRef = {
@@ -58,48 +55,27 @@ LunaRenderPass createRenderPass()
 		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 	};
 
-	const VkSubpassDescription2 wallSubpass = {
-		.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-		.colorAttachmentCount = 1,
-		.pColorAttachments = &colorAttachmentRef,
-		.pResolveAttachments = &colorAttachmentResolveRef,
-		.pDepthStencilAttachment = &depthAttachmentReference,
-	};
-	const VkSubpassDescription2 uiSubpass = {
-		.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-		.colorAttachmentCount = 1,
-		.pColorAttachments = &colorAttachmentRef,
-		.pResolveAttachments = &colorAttachmentResolveRef,
-	};
-
-	const VkSubpassDependency2 dependencies[2] = {
-		{
+	const LunaRenderPassCreationInfo renderPassCreationInfo = {
+		.attachmentCount = 3,
+		.attachments = (const VkAttachmentDescription2[]){colorAttachment, depthAttachment, colorResolveAttachment},
+		.subpassCount = 1,
+		.subpasses = (const VkSubpassDescription2[]){{
+			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = &colorAttachmentRef,
+			.pResolveAttachments = &colorAttachmentResolveRef,
+			.pDepthStencilAttachment = &depthAttachmentReference,
+		}},
+		.dependencyCount = 1,
+		.dependencies = (const VkSubpassDependency2[]){{
 			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
 			.srcSubpass = VK_SUBPASS_EXTERNAL,
 			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
 			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 			.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-		},
-		{
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
-			.dstSubpass = 1,
-			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-		},
-	};
-
-	LunaRenderPassCreationInfo renderPassCreationInfo = {
-		.attachmentCount = 3,
-		.attachments = (const VkAttachmentDescription2[]){colorAttachment, depthAttachment, colorResolveAttachment},
-		.subpassCount = 2,
-		.subpasses = (const VkSubpassDescription2[]){wallSubpass, uiSubpass},
-		.dependencyCount = 2,
-		.dependencies = dependencies,
+		}},
 	};
 	return lunaCreateRenderPass(&renderPassCreationInfo);
 }
