@@ -2,8 +2,8 @@
 // Created by NBT22 on 2/13/25.
 //
 
-#ifndef LUNALOGICALDEVICE_H
-#define LUNALOGICALDEVICE_H
+#ifndef LUNADEVICE_H
+#define LUNADEVICE_H
 
 #include <luna/lunaTypes.h>
 
@@ -19,4 +19,4 @@ void lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo);
 }
 #endif
 
-#endif //LUNALOGICALDEVICE_H
+#endif //LUNADEVICE_H

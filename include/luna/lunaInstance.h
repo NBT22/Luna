@@ -15,7 +15,11 @@ extern "C"
 void lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
 VkInstance lunaGetInstance();
 void lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo);
+VkFormat lunaGetSwapChainFormat();
 VkSurfaceCapabilitiesKHR lunaGetSurfaceCapabilities(VkSurfaceKHR surface);
+void lunaSetDepthImageFormat(uint32_t formatCount, const VkFormat *formatPriorityList);
+VkFormat lunaGetDepthImageFormat();
+LunaRenderPass lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo);
 
 #ifdef __cplusplus
 }

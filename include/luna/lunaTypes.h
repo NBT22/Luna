@@ -14,12 +14,10 @@ extern "C"
 #include <stdbool.h>
 #endif
 
-typedef struct LunaInstanceCreationInfoStruct LunaInstanceCreationInfo;
-typedef struct LunaDeviceCreationInfoStruct LunaDeviceCreationInfo;
-typedef struct LunaDeviceCreationInfo2Struct LunaDeviceCreationInfo2;
-typedef struct LunaSwapChainCreationInfoStruct LunaSwapChainCreationInfo;
+typedef void *LunaRenderPass;
+typedef void *LunaRenderPassSubpass;
 
-struct LunaInstanceCreationInfoStruct
+typedef struct
 {
 		const uint32_t apiVersion;
 
@@ -29,27 +27,27 @@ struct LunaInstanceCreationInfoStruct
 		bool enableValidation;
 		const uint32_t layerCount;
 		const char *const *layerNames;
-};
+} LunaInstanceCreationInfo;
 
-struct LunaDeviceCreationInfoStruct
+typedef struct
 {
 		const uint32_t extensionCount;
 		const char *const *extensionNames;
 
 		const VkPhysicalDeviceFeatures requiredFeatures;
 		VkSurfaceKHR surface;
-};
+} LunaDeviceCreationInfo;
 
-struct LunaDeviceCreationInfo2Struct
+typedef struct
 {
 		const uint32_t extensionCount;
 		const char *const *extensionNames;
 
 		const VkPhysicalDeviceFeatures2 requiredFeatures;
 		VkSurfaceKHR surface;
-};
+} LunaDeviceCreationInfo2;
 
-struct LunaSwapChainCreationInfoStruct
+typedef struct
 {
 		VkSurfaceKHR surface;
 		uint32_t width;
@@ -63,7 +61,26 @@ struct LunaSwapChainCreationInfoStruct
 
 		VkImageUsageFlags imageUsage;
 		VkCompositeAlphaFlagBitsKHR compositeAlpha;
-};
+} LunaSwapChainCreationInfo;
+
+typedef struct
+{
+		uint32_t attachmentCount;
+		const VkAttachmentDescription2 *attachments;
+		const char **attachmentNames;
+
+		uint32_t subpassCount;
+		const VkSubpassDescription2 *subpasses;
+		const char **subpassNames;
+
+		uint32_t dependencyCount;
+		const VkSubpassDependency2 *dependencies;
+		const char **dependencyNames;
+
+		uint32_t correlatedViewMaskCount;
+		const uint32_t *correlatedViewMasks;
+		const char **correlatedViewMaskNames;
+} LunaRenderPassCreationInfo;
 
 #ifdef __cplusplus
 }

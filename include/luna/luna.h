@@ -7,6 +7,7 @@
 
 #include <luna/lunaDevice.h>
 #include <luna/lunaInstance.h>
+#include <luna/lunaRenderPass.h>
 #include <luna/lunaTypes.h>
 
 #ifdef __cplusplus

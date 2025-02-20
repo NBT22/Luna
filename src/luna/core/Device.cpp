@@ -2,12 +2,11 @@
 // Created by NBT22 on 2/13/25.
 //
 
-#include <cassert>
 #include <cstring>
 #include <luna/core/Device.hpp>
 #include <luna/core/Instance.hpp>
-#include <luna/implementations/core/Device.ipp>
 #include <luna/lunaDevice.h>
+#include <stdexcept>
 
 namespace luna::core
 {

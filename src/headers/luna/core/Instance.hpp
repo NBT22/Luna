@@ -5,8 +5,12 @@
 #pragma once
 
 #include <luna/core/Device.hpp>
-#include <luna/lunaTypes.h>
-#include <memory>
+#include <luna/core/RenderPass.hpp>
+#include <vector>
+
+namespace luna::core
+{
+extern class Instance instance;
 
 struct SwapChain
 {
@@ -19,10 +23,6 @@ struct SwapChain
 		VkImageView *imageViews; // TODO: free me
 };
 
-namespace luna::core
-{
-extern class Instance instance;
-
 class Instance
 {
 	public:
@@ -31,21 +31,26 @@ class Instance
 
 		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
 		void createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
+		size_t createRenderPass(const LunaRenderPassCreationInfo &creationInfo);
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
 		[[nodiscard]] Device device() const;
 		[[nodiscard]] VkSurfaceKHR surface() const;
+		[[nodiscard]] SwapChain swapChain() const;
+		[[nodiscard]] RenderPass renderPass(uint32_t index) const;
 
 		bool minimized = false;
+		VkFormat depthImageFormat{};
 
 	private:
 
-		uint32_t apiVersion_ = 0;
+		uint32_t apiVersion_{};
 		VkInstance instance_ = VK_NULL_HANDLE;
 		Device device_{};
 		VkSurfaceKHR surface_{};
 		SwapChain swapChain_{};
+		std::vector<RenderPass> renderPasses_{};
 };
 } // namespace luna::core
 
