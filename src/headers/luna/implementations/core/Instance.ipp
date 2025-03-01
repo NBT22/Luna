@@ -10,10 +10,26 @@ inline void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
 {
 	device_ = Device(creationInfo);
 }
-inline size_t Instance::createRenderPass(const LunaRenderPassCreationInfo &creationInfo)
+inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo &creationInfo)
 {
-	renderPasses_.emplace_back(creationInfo);
-	return renderPasses_.size() - 1;
+	renderPassIndices_.emplace_back(renderPasses_.size());
+	if (creationInfo.uniqueName != nullptr)
+	{
+		renderPassMap_[creationInfo.uniqueName] = renderPasses_.size();
+	}
+	renderPasses_.emplace_back(creationInfo, &renderPassIndices_.back());
+	return &renderPassIndices_.back();
+}
+inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo
+																			 &creationInfo)
+{
+	graphicsPipelineIndices_.emplace_back(graphicsPipelines_.size());
+	if (creationInfo.uniqueName != nullptr)
+	{
+		graphicsPipelineMap_[creationInfo.uniqueName] = graphicsPipelines_.size();
+	}
+	graphicsPipelines_.emplace_back(creationInfo);
+	return &graphicsPipelineIndices_.back();
 }
 
 inline uint32_t Instance::minorVersion() const
@@ -36,8 +52,20 @@ inline SwapChain Instance::swapChain() const
 {
 	return swapChain_;
 }
-inline RenderPass Instance::renderPass(const uint32_t index) const
+inline const RenderPass &Instance::renderPass(const uint32_t index) const
 {
 	return renderPasses_.at(index);
+}
+inline const RenderPass &Instance::renderPass(const LunaRenderPass index) const
+{
+	return renderPasses_.at(static_cast<const RenderPassIndex *>(index)->index);
+}
+inline const RenderPass &Instance::renderPass(const RenderPassIndex index) const
+{
+	return renderPasses_.at(index.index);
+}
+inline GraphicsPipeline Instance::graphicsPipeline(const uint32_t index) const
+{
+	return graphicsPipelines_.at(index);
 }
 } // namespace luna::core

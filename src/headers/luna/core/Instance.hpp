@@ -5,6 +5,7 @@
 #pragma once
 
 #include <luna/core/Device.hpp>
+#include <luna/core/GraphicsPipeline.hpp>
 #include <luna/core/RenderPass.hpp>
 #include <vector>
 
@@ -31,26 +32,34 @@ class Instance
 
 		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
 		void createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
-		size_t createRenderPass(const LunaRenderPassCreationInfo &creationInfo);
+		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo &creationInfo);
+		const GraphicsPipelineIndex *createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
 		[[nodiscard]] Device device() const;
 		[[nodiscard]] VkSurfaceKHR surface() const;
 		[[nodiscard]] SwapChain swapChain() const;
-		[[nodiscard]] RenderPass renderPass(uint32_t index) const;
+		[[nodiscard]] const RenderPass &renderPass(uint32_t index) const;
+		[[nodiscard]] const RenderPass &renderPass(LunaRenderPass index) const;
+		[[nodiscard]] const RenderPass &renderPass(RenderPassIndex index) const;
+		[[nodiscard]] GraphicsPipeline graphicsPipeline(uint32_t index) const;
 
 		bool minimized = false;
 		VkFormat depthImageFormat{};
 
 	private:
-
 		uint32_t apiVersion_{};
-		VkInstance instance_ = VK_NULL_HANDLE;
+		VkInstance instance_{};
 		Device device_{};
 		VkSurfaceKHR surface_{};
 		SwapChain swapChain_{};
+		std::vector<RenderPassIndex> renderPassIndices_{};
+		std::unordered_map<std::string, uint32_t> renderPassMap_{};
 		std::vector<RenderPass> renderPasses_{};
+		std::vector<GraphicsPipelineIndex> graphicsPipelineIndices_{};
+		std::unordered_map<std::string, uint32_t> graphicsPipelineMap_{};
+		std::vector<GraphicsPipeline> graphicsPipelines_{};
 };
 } // namespace luna::core
 

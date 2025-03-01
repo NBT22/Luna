@@ -12,6 +12,7 @@ extern "C"
 {
 #endif
 
+LunaRenderPass lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo);
 LunaRenderPassSubpass lunaGetRenderPassSubpassByName(LunaRenderPass renderPass, const char *name);
 
 #ifdef __cplusplus

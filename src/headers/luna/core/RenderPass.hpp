@@ -4,26 +4,43 @@
 
 #pragma once
 
-#include <luna/helpers/Luna.hpp>
 #include <luna/lunaTypes.h>
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace luna::core
 {
+struct RenderPassIndex
+{
+		uint32_t index;
+};
+struct RenderPassSubpassIndex
+{
+		uint32_t index;
+		const RenderPassIndex *renderPassIndex;
+};
+
 class RenderPass
 {
 	public:
 		RenderPass() = default;
-		explicit RenderPass(const LunaRenderPassCreationInfo &creationInfo);
+		RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
+		void destroy();
 
-		uint32_t getInfoIndexByName(const char *name) const;
+		[[nodiscard]] VkRenderPass renderPass() const;
+
+		const RenderPassSubpassIndex *getFirstSubpass() const;
+		const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
 
 	private:
-		void fillMap(const char **names, uint32_t count);
-
+		bool isDestroyed_ = true;
 		VkRenderPass renderPass_{};
-		std::unordered_map<std::string, uint32_t> infoMap_;
+		std::string name_{};
+		std::vector<RenderPassSubpassIndex> subpassIndices_{};
+		std::unordered_map<std::string, uint32_t> subpassMap_{};
+		std::vector<uint32_t> pipelineIndices_{};
 };
 } // namespace luna::core
 

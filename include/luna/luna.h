@@ -7,6 +7,7 @@
 
 #include <luna/lunaDevice.h>
 #include <luna/lunaInstance.h>
+#include <luna/lunaPipeline.h>
 #include <luna/lunaRenderPass.h>
 #include <luna/lunaTypes.h>
 
@@ -15,6 +16,7 @@ extern "C"
 {
 #endif
 
+VkShaderModule lunaCreateShaderModule(const uint32_t *spirv, size_t bytes);
 
 #ifdef __cplusplus
 }

@@ -10,7 +10,7 @@
 
 namespace luna::helpers
 {
-static void initQueueFamilyIndices(const luna::core::Device &device, uint32_t *queueFamilyIndices)
+static void initQueueFamilyIndices(const core::Device &device, uint32_t *queueFamilyIndices)
 {
 	switch (device.familyCount())
 	{
@@ -80,12 +80,12 @@ static void createSwapChainImages(const VkDevice logicalDevice, core::SwapChain 
 	swapChain.imageViews = new VkImageView[swapChain.imageCount];
 	for (uint32_t i = 0; i < swapChain.imageCount; i++)
 	{
-		luna::helpers::createImageView(logicalDevice,
-									   swapChain.images[i],
-									   swapChain.format.format,
-									   VK_IMAGE_ASPECT_COLOR_BIT,
-									   1,
-									   swapChain.imageViews[i]);
+		createImageView(logicalDevice,
+						swapChain.images[i],
+						swapChain.format.format,
+						VK_IMAGE_ASPECT_COLOR_BIT,
+						1,
+						swapChain.imageViews[i]);
 	}
 }
 
@@ -270,6 +270,10 @@ VkFormat lunaGetSwapChainFormat()
 {
 	return luna::core::instance.swapChain().format.format;
 }
+VkExtent2D lunaGetSwapChainExtent()
+{
+	return luna::core::instance.swapChain().extent;
+}
 VkSurfaceCapabilitiesKHR lunaGetSurfaceCapabilities(const VkSurfaceKHR surface)
 {
 	VkSurfaceCapabilitiesKHR capabilities;
@@ -279,6 +283,7 @@ VkSurfaceCapabilitiesKHR lunaGetSurfaceCapabilities(const VkSurfaceKHR surface)
 }
 void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatPriorityList)
 {
+	assert(formatPriorityList);
 	VkFormatProperties properties;
 	for (uint32_t i = 0; i < formatCount; i++)
 	{
@@ -296,9 +301,4 @@ void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatP
 VkFormat lunaGetDepthImageFormat()
 {
 	return luna::core::instance.depthImageFormat;
-}
-LunaRenderPass lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo)
-{
-	assert(creationInfo);
-	return reinterpret_cast<LunaRenderPass>(luna::core::instance.createRenderPass(*creationInfo));
 }

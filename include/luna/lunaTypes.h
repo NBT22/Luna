@@ -14,8 +14,9 @@ extern "C"
 #include <stdbool.h>
 #endif
 
-typedef void *LunaRenderPass;
-typedef void *LunaRenderPassSubpass;
+typedef const void *LunaRenderPass;
+typedef const void *LunaRenderPassSubpass;
+typedef const void *LunaGraphicsPipeline;
 
 typedef struct
 {
@@ -80,7 +81,45 @@ typedef struct
 		uint32_t correlatedViewMaskCount;
 		const uint32_t *correlatedViewMasks;
 		const char **correlatedViewMaskNames;
+
+		const char *uniqueName;
 } LunaRenderPassCreationInfo;
+
+typedef struct
+{
+		VkDescriptorSetLayoutCreateFlags flags;
+		uint32_t bindingCount;
+		const VkDescriptorSetLayoutBinding *bindings;
+} LunaDescriptorSetLayoutCreationInfo;
+
+typedef struct
+{
+		VkPipelineLayoutCreateFlags flags;
+		uint32_t descriptorSetLayoutCount;
+		const LunaDescriptorSetLayoutCreationInfo *descriptorSetLayouts;
+		uint32_t pushConstantRangeCount;
+		const VkPushConstantRange *pushConstantRanges;
+} LunaPipelineLayoutCreationInfo;
+
+typedef struct
+{
+		VkPipelineCreateFlags flags;
+		uint32_t shaderStageCount;
+		const VkPipelineShaderStageCreateInfo *shaderStages;
+		const VkPipelineVertexInputStateCreateInfo *vertexInputState;
+		const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
+		const VkPipelineTessellationStateCreateInfo *tessellationState;
+		const VkPipelineViewportStateCreateInfo *viewportState;
+		const VkPipelineRasterizationStateCreateInfo *rasterizationState;
+		const VkPipelineMultisampleStateCreateInfo *multisampleState;
+		const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
+		const VkPipelineColorBlendStateCreateInfo *colorBlendState;
+		const VkPipelineDynamicStateCreateInfo *dynamicState;
+		const LunaPipelineLayoutCreationInfo *layoutCreationInfo;
+		LunaRenderPassSubpass subpass;
+
+		const char *uniqueName;
+} LunaGraphicsPipelineCreationInfo;
 
 #ifdef __cplusplus
 }
