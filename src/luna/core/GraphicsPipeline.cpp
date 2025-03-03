@@ -18,12 +18,12 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 	descriptorSetLayouts_.reserve(descriptorSetLayoutCount);
 	for (uint32_t i = 0; i < descriptorSetLayoutCount; i++)
 	{
-		const auto [flags, bindingCount, bindings] = creationInfo.layoutCreationInfo->descriptorSetLayouts[i];
+		const LunaDescriptorSetLayoutCreationInfo layoutInfo = creationInfo.layoutCreationInfo->descriptorSetLayouts[i];
 		const VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-			.flags = flags,
-			.bindingCount = bindingCount,
-			.pBindings = bindings,
+			.flags = layoutInfo.flags,
+			.bindingCount = layoutInfo.bindingCount,
+			.pBindings = layoutInfo.bindings,
 		};
 		descriptorSetLayouts_.emplace_back();
 		vkCreateDescriptorSetLayout(instance.device().logicalDevice(),
@@ -35,7 +35,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.flags = creationInfo.flags,
 		.setLayoutCount = descriptorSetLayoutCount,
-		.pSetLayouts = &descriptorSetLayouts_.front(),
+		.pSetLayouts = descriptorSetLayouts_.data(),
 		.pushConstantRangeCount = creationInfo.layoutCreationInfo->pushConstantRangeCount,
 		.pPushConstantRanges = creationInfo.layoutCreationInfo->pushConstantRanges,
 	};

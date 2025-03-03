@@ -7,6 +7,7 @@
 #include <luna/core/Instance.hpp>
 #include <luna/lunaDevice.h>
 #include <stdexcept>
+#include <array>
 
 namespace luna::core
 {
@@ -87,6 +88,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 				};
 				break;
 			default:
+				delete[] devices;
 				assert(1 <= instance.minorVersion() && instance.minorVersion() <= 4);
 		}
 		vkGetPhysicalDeviceFeatures2(physicalDevice_, &features_);
@@ -107,7 +109,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	}
 
 	constexpr float queuePriority = 1;
-	VkDeviceQueueCreateInfo *queuesCreateInfo = new VkDeviceQueueCreateInfo[familyCount_];
+	std::array<VkDeviceQueueCreateInfo, 3> queuesCreateInfo{};
 	switch (familyCount_)
 	{
 		case 3:
@@ -139,13 +141,12 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		.pNext = creationInfo.requiredFeatures.pNext,
 		.queueCreateInfoCount = familyCount_,
-		.pQueueCreateInfos = queuesCreateInfo,
+		.pQueueCreateInfos = queuesCreateInfo.data(),
 		.enabledExtensionCount = creationInfo.extensionCount,
 		.ppEnabledExtensionNames = creationInfo.extensionNames,
 		.pEnabledFeatures = &creationInfo.requiredFeatures.features,
 	};
 	vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_);
-	delete[] queuesCreateInfo;
 
 	vkGetDeviceQueue(logicalDevice_, graphicsFamily_, 0, &graphicsQueue_);
 	vkGetDeviceQueue(logicalDevice_, transferFamily_, 0, &transferQueue_);

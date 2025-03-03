@@ -10,7 +10,7 @@
 
 namespace luna::helpers
 {
-static void initQueueFamilyIndices(const core::Device &device, uint32_t *queueFamilyIndices)
+static void initQueueFamilyIndices(const core::Device &device, std::vector<uint32_t> &queueFamilyIndices)
 {
 	switch (device.familyCount())
 	{
@@ -48,12 +48,11 @@ static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats);
 	for (uint32_t i = 0; i < targetFormatCount; i++)
 	{
-		const auto [targetFormat, targetColorSpace] = targetFormats[i];
+		const VkSurfaceFormatKHR targetFormat = targetFormats[i];
 		for (uint32_t j = 0; j < formatCount; j++)
 		{
 			const VkSurfaceFormatKHR format = formats[j];
-			if (format.colorSpace == targetColorSpace && format.format == targetFormat)
-			{
+			if (format.colorSpace == targetFormat.colorSpace && format.format == targetFormat.format)	{
 				destination = format;
 				break;
 			}
@@ -140,14 +139,15 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 
 	const uint32_t enabledLayerCount = creationInfo.enableValidation ? creationInfo.layerCount + 1
 																	 : creationInfo.layerCount;
-	const char **enabledLayers = new const char *[enabledLayerCount];
+	std::vector<const char *> enabledLayers;
+	enabledLayers.reserve(enabledLayerCount);
 	for (uint32_t i = 0; i < creationInfo.layerCount; i++)
 	{
-		enabledLayers[i] = creationInfo.layerNames[i];
+		enabledLayers.emplace_back(creationInfo.layerNames[i]);
 	}
 	if (creationInfo.enableValidation)
 	{
-		enabledLayers[enabledLayerCount - 1] = "VK_LAYER_KHRONOS_validation";
+		enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
 	}
 
 	bool surfaceExtensionRequested = false;
@@ -169,12 +169,11 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pApplicationInfo = &vulkanApplicationInfo,
 		.enabledLayerCount = enabledLayerCount,
-		.ppEnabledLayerNames = enabledLayers,
+		.ppEnabledLayerNames = enabledLayers.data(),
 		.enabledExtensionCount = creationInfo.extensionCount,
 		.ppEnabledExtensionNames = creationInfo.extensionNames,
 	};
 	vkCreateInstance(&createInfo, nullptr, &instance_);
-	delete[] enabledLayers;
 }
 
 void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
@@ -196,7 +195,7 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 		return;
 	}
 
-	uint32_t *queueFamilyIndices = new uint32_t[device_.familyCount()];
+	std::vector<uint32_t> queueFamilyIndices(device_.familyCount());
 	helpers::initQueueFamilyIndices(device_, queueFamilyIndices);
 
 	helpers::findSwapChainFormat(device_.physicalDevice(),
@@ -237,16 +236,15 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 		.imageExtent = swapChain_.extent,
 		.imageArrayLayers = 1,
 		.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : creationInfo.imageUsage,
-		.imageSharingMode = device_.hasPresentation() ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
+		.imageSharingMode = device_.familyCount() == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
 		.queueFamilyIndexCount = device_.familyCount(),
-		.pQueueFamilyIndices = queueFamilyIndices,
+		.pQueueFamilyIndices = queueFamilyIndices.data(),
 		.preTransform = capabilities.currentTransform,
 		.compositeAlpha = compositeAlpha,
 		.presentMode = swapChain_.presentMode,
 		.clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
 	};
 	vkCreateSwapchainKHR(device_.logicalDevice(), &createInfo, nullptr, &swapChain_.swapChain);
-	delete[] queueFamilyIndices;
 
 	helpers::createSwapChainImages(device_.logicalDevice(), swapChain_);
 }

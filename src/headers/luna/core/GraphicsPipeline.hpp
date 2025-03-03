@@ -25,7 +25,7 @@ class GraphicsPipeline
 		bool isDestroyed_ = true;
 		VkPipeline pipeline_{};
 		std::string name_{};
-		std::pmr::vector<VkDescriptorSetLayout> descriptorSetLayouts_{};
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts_{};
 		VkPipelineLayout layout_{};
 
 };

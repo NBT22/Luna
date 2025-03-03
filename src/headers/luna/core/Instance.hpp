@@ -33,6 +33,7 @@ class Instance
 		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
 		void createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
 		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo &creationInfo);
+		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo);
 		const GraphicsPipelineIndex *createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 
 		[[nodiscard]] uint32_t minorVersion() const;

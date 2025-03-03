@@ -18,6 +18,13 @@ typedef const void *LunaRenderPass;
 typedef const void *LunaRenderPassSubpass;
 typedef const void *LunaGraphicsPipeline;
 
+typedef enum
+{
+	LUNA_ATTACHMENT_LOAD_UNDEFINED = 1 << 0,
+	LUNA_ATTACHMENT_LOAD_CLEAR = 1 << 1,
+	LUNA_ATTACHMENT_LOAD_PRESERVE = 1 << 2,
+} LunaAttachmentLoadMode;
+
 typedef struct
 {
 		const uint32_t apiVersion;
@@ -66,24 +73,74 @@ typedef struct
 
 typedef struct
 {
+		VkSubpassDescriptionFlags flags;
+		VkPipelineBindPoint pipelineBindPoint;
+		uint32_t inputAttachmentCount;
+		const VkAttachmentReference *inputAttachments;
+		bool useColorAttachment;
+		bool useDepthAttachment;
+		uint32_t preserveAttachmentCount;
+		const uint32_t *preserveAttachments;
+} LunaSubpassCreationInfo;
+
+typedef struct
+{
+		VkSampleCountFlagBits samples;
+		bool createColorAttachment;
+		LunaAttachmentLoadMode colorAttachmentLoadMode;
+		bool createDepthAttachment;
+		LunaAttachmentLoadMode depthAttachmentLoadMode;
+
 		uint32_t attachmentCount;
-		const VkAttachmentDescription2 *attachments;
-		const char **attachmentNames;
+		const VkAttachmentDescription *attachments;
 
 		uint32_t subpassCount;
-		const VkSubpassDescription2 *subpasses;
+		const LunaSubpassCreationInfo *subpasses;
+		const char **subpassNames;
+
+		uint32_t dependencyCount;
+		const VkSubpassDependency *dependencies;
+
+		const char *uniqueName;
+} LunaRenderPassCreationInfo;
+
+typedef struct
+{
+		const void *pNext;
+		VkSubpassDescriptionFlags flags;
+		VkPipelineBindPoint pipelineBindPoint;
+		uint32_t viewMask;
+		uint32_t inputAttachmentCount;
+		const VkAttachmentReference2 *inputAttachments;
+		bool useColorAttachment;
+		bool useDepthAttachment;
+		uint32_t preserveAttachmentCount;
+		const uint32_t *preserveAttachments;
+} LunaSubpassCreationInfo2;
+
+typedef struct
+{
+		VkSampleCountFlagBits samples;
+		bool createColorAttachment;
+		LunaAttachmentLoadMode colorAttachmentLoadMode;
+		bool createDepthAttachment;
+		LunaAttachmentLoadMode depthAttachmentLoadMode;
+
+		uint32_t attachmentCount;
+		const VkAttachmentDescription2 *attachments;
+
+		uint32_t subpassCount;
+		const LunaSubpassCreationInfo2 *subpasses;
 		const char **subpassNames;
 
 		uint32_t dependencyCount;
 		const VkSubpassDependency2 *dependencies;
-		const char **dependencyNames;
 
 		uint32_t correlatedViewMaskCount;
 		const uint32_t *correlatedViewMasks;
-		const char **correlatedViewMaskNames;
 
 		const char *uniqueName;
-} LunaRenderPassCreationInfo;
+} LunaRenderPassCreationInfo2;
 
 typedef struct
 {

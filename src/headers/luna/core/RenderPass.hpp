@@ -22,11 +22,14 @@ struct RenderPassSubpassIndex
 		const RenderPassIndex *renderPassIndex;
 };
 
+// TODO: Check if attachment is requested to be used without being created
+// TODO: Support for multiple color attachments
 class RenderPass
 {
 	public:
 		RenderPass() = default;
 		RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
+		RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
 		void destroy();
 
 		[[nodiscard]] VkRenderPass renderPass() const;

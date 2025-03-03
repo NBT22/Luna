@@ -15,6 +15,18 @@ typedef struct
 #pragma endregion typedefs
 
 #pragma region constants
+/**
+ * Compiled SPIRV, generated from the following GLSL
+ * @code{'GLSL'}
+ * layout (location = 0) in vec3 inPos;
+ * layout (location = 1) in vec3 inColor;
+ * layout (location = 0) out vec4 outColor;
+ * void main() {
+ *     gl_Position = vec4(inPos, 1.0);
+ *     outColor = vec4(inColor, 1.0);
+ * }
+ * @endcode
+ */
 const uint32_t VERTEX_SHADER_SPIRV[280] = {
 	0x07230203, 0x00010000, 0x000d000b, 0x00000022, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, 0x00000001,
 	0x4c534c47, 0x6474732e, 0x3035342e, 0x00000000, 0x0003000e, 0x00000000, 0x00000001, 0x0009000f, 0x00000000,
@@ -49,6 +61,16 @@ const uint32_t VERTEX_SHADER_SPIRV[280] = {
 	0x00000021, 0x0000001e, 0x0000001f, 0x00000020, 0x00000014, 0x0003003e, 0x0000001b, 0x00000021, 0x000100fd,
 	0x00010038,
 };
+/**
+ * Compiled SPIRV, generated from the following GLSL
+ * @code{'GLSL'}
+ * layout (location = 0) in vec4 inColor;
+ * layout (location = 0) out vec4 outColor;
+ * void main() {
+ *     outColor = inColor;
+ * }
+ * @endcode
+ */
 const uint32_t FRAGMENT_SHADER_SPIRV[112] = {
 	0x07230203, 0x00010000, 0x000d000b, 0x0000000d, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, 0x00000001,
 	0x4c534c47, 0x6474732e, 0x3035342e, 0x00000000, 0x0003000e, 0x00000000, 0x00000001, 0x0007000f, 0x00000004,
@@ -64,78 +86,30 @@ const uint32_t FRAGMENT_SHADER_SPIRV[112] = {
 	0x00000000, 0x00000003, 0x000200f8, 0x00000005, 0x0004003d, 0x00000007, 0x0000000c, 0x0000000b, 0x0003003e,
 	0x00000009, 0x0000000c, 0x000100fd, 0x00010038,
 };
-
 #pragma endregion constants
 
 LunaRenderPass createRenderPass()
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
 
-	const VkAttachmentDescription2 colorAttachment = {
-		.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-		.format = lunaGetSwapChainFormat(),
-		.samples = VK_SAMPLE_COUNT_4_BIT,
-		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	};
-	const VkAttachmentReference2 colorAttachmentRef = {
-		.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	};
-	const VkAttachmentDescription2 depthAttachment = {
-		.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-		.format = lunaGetDepthImageFormat(),
-		.samples = VK_SAMPLE_COUNT_4_BIT,
-		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-	};
-	const VkAttachmentReference2 depthAttachmentReference = {
-		.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-		.attachment = 1,
-		.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-	};
-	const VkAttachmentDescription2 colorResolveAttachment = {
-		.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-		.format = lunaGetSwapChainFormat(),
-		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-	};
-	const VkAttachmentReference2 colorAttachmentResolveRef = {
-		.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-		.attachment = 2,
-		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	};
-
 	const LunaRenderPassCreationInfo renderPassCreationInfo = {
-		.attachmentCount = 3,
-		.attachments = (const VkAttachmentDescription2[]){colorAttachment, depthAttachment, colorResolveAttachment},
+		.samples = VK_SAMPLE_COUNT_4_BIT,
+		.createColorAttachment = true,
+		.colorAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_CLEAR,
+		.createDepthAttachment = true,
+		.depthAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_CLEAR,
 		.subpassCount = 1,
-		.subpasses = (const VkSubpassDescription2[]){{
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+		.subpasses = (const LunaSubpassCreationInfo[]){{
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = &colorAttachmentRef,
-			.pResolveAttachments = &colorAttachmentResolveRef,
-			.pDepthStencilAttachment = &depthAttachmentReference,
+			.useColorAttachment = true,
+			.useDepthAttachment = true,
 		}},
 		.dependencyCount = 1,
-		.dependencies = (const VkSubpassDependency2[]){{
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+		.dependencies = (const VkSubpassDependency[]){{
 			.srcSubpass = VK_SUBPASS_EXTERNAL,
-			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		}},
 	};
 	return lunaCreateRenderPass(&renderPassCreationInfo);

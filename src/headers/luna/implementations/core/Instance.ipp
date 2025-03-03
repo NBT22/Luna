@@ -20,6 +20,16 @@ inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCre
 	renderPasses_.emplace_back(creationInfo, &renderPassIndices_.back());
 	return &renderPassIndices_.back();
 }
+inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo)
+{
+	renderPassIndices_.emplace_back(renderPasses_.size());
+	if (creationInfo.uniqueName != nullptr)
+	{
+		renderPassMap_[creationInfo.uniqueName] = renderPasses_.size();
+	}
+	renderPasses_.emplace_back(creationInfo, &renderPassIndices_.back());
+	return &renderPassIndices_.back();
+}
 inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo
 																			 &creationInfo)
 {
