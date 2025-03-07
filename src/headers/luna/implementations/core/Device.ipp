@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cassert>
+#include <luna/core/Device.hpp>
 
 namespace luna::core
 {
@@ -40,9 +41,9 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 {
 	assert(physicalDevice != VK_NULL_HANDLE);
 	familyCount_ = 0;
-	hasGraphics_ = false;
-	hasTransfer_ = false;
-	hasPresentation_ = false;
+	hasFamily_.graphics = false;
+	hasFamily_.transfer = false;
+	hasFamily_.presentation = false;
 
 	bool presentationFound = false;
 	uint32_t familyCount = 0;
@@ -54,44 +55,44 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 	{
 		VkBool32 supportsPresentation = VK_FALSE;
 		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &supportsPresentation);
-		if (!hasGraphics_ && (families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+		if (!hasFamily_.graphics && (families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
 		{
-			graphicsFamily_ = index;
+			familyIndices_.graphics = index;
 			familyCount_++;
-			hasGraphics_ = true;
+			hasFamily_.graphics = true;
 
 			if (supportsPresentation != 0)
 			{
-				presentationFamily_ = index;
+				familyIndices_.presentation = index;
 				presentationFound = true;
 			}
 		} else if (!presentationFound && supportsPresentation != 0)
 		{
-			presentationFamily_ = index;
+			familyIndices_.presentation = index;
 			familyCount_++;
-			hasPresentation_ = true;
+			hasFamily_.presentation = true;
 			presentationFound = true;
 
-			if (!hasTransfer_ && (families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
+			if (!hasFamily_.transfer && (families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
 			{
-				transferFamily_ = index;
-				hasTransfer_ = true;
+				familyIndices_.transfer = index;
+				hasFamily_.transfer = true;
 			}
-		} else if (!hasTransfer_ && (families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
+		} else if (!hasFamily_.transfer && (families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
 		{
-			transferFamily_ = index;
+			familyIndices_.transfer = index;
 			familyCount_++;
-			hasTransfer_ = true;
+			hasFamily_.transfer = true;
 		}
 
-		if (hasGraphics_ && hasTransfer_ && presentationFound)
+		if (hasFamily_.graphics && hasFamily_.transfer && presentationFound)
 		{
 			break;
 		}
 	}
-	if (!hasTransfer_ && hasGraphics_)
+	if (!hasFamily_.transfer && hasFamily_.graphics)
 	{
-		transferFamily_ = graphicsFamily_;
+		familyIndices_.transfer = familyIndices_.graphics;
 	}
 	if (!presentationFound)
 	{
@@ -192,5 +193,55 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 		return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));
 	}
 	return true;
+}
+inline void Device::createCommandPoolsAndBuffers() {
+	if (hasFamily_.graphics)
+	{
+		const VkCommandPoolCreateInfo createInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			.queueFamilyIndex = familyIndices_.graphics,
+		};
+		vkCreateCommandPool(logicalDevice_, &createInfo, nullptr, &commandPools_.graphics);
+		const VkCommandBufferAllocateInfo allocateInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.commandPool = commandPools_.graphics,
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1,
+		};
+		vkAllocateCommandBuffers(logicalDevice_, &allocateInfo, &commandBuffers_.graphics);
+	}
+	if (hasFamily_.transfer)
+	{
+		const VkCommandPoolCreateInfo createInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			.queueFamilyIndex = familyIndices_.transfer,
+		};
+		vkCreateCommandPool(logicalDevice_, &createInfo, nullptr, &commandPools_.transfer);
+		const VkCommandBufferAllocateInfo allocateInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.commandPool = commandPools_.transfer,
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1,
+		};
+		vkAllocateCommandBuffers(logicalDevice_, &allocateInfo, &commandBuffers_.transfer);
+	}
+	if (hasFamily_.presentation)
+	{
+		const VkCommandPoolCreateInfo createInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			.queueFamilyIndex = familyIndices_.presentation,
+		};
+		vkCreateCommandPool(logicalDevice_, &createInfo, nullptr, &commandPools_.presentation);
+		const VkCommandBufferAllocateInfo allocateInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.commandPool = commandPools_.presentation,
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1,
+		};
+		vkAllocateCommandBuffers(logicalDevice_, &allocateInfo, &commandBuffers_.presentation);
+	}
 }
 } // namespace luna::core

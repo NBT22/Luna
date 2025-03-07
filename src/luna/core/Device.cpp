@@ -11,9 +11,6 @@
 #include <stdexcept>
 #include <vk_mem_alloc.h>
 
-namespace luna::helpers
-{}
-
 namespace luna::core
 {
 Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
@@ -118,21 +115,21 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		case 3:
 			queuesCreateInfo[2] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-				.queueFamilyIndex = presentationFamily_,
+				.queueFamilyIndex = familyIndices_.presentation,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
 		case 2:
 			queuesCreateInfo[1] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-				.queueFamilyIndex = hasTransfer_ ? transferFamily_ : presentationFamily_,
+				.queueFamilyIndex = hasFamily_.transfer ? familyIndices_.transfer : familyIndices_.presentation,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
 		case 1:
 			queuesCreateInfo[0] = (VkDeviceQueueCreateInfo){
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-				.queueFamilyIndex = graphicsFamily_,
+				.queueFamilyIndex = familyIndices_.graphics,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
@@ -152,9 +149,9 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	};
 	vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_);
 
-	vkGetDeviceQueue(logicalDevice_, graphicsFamily_, 0, &graphicsQueue_);
-	vkGetDeviceQueue(logicalDevice_, transferFamily_, 0, &transferQueue_);
-	vkGetDeviceQueue(logicalDevice_, presentationFamily_, 0, &presentQueue_);
+	vkGetDeviceQueue(logicalDevice_, familyIndices_.graphics, 0, &familyQueues_.graphics);
+	vkGetDeviceQueue(logicalDevice_, familyIndices_.transfer, 0, &familyQueues_.transfer);
+	vkGetDeviceQueue(logicalDevice_, familyIndices_.presentation, 0, &familyQueues_.presentation);
 
 	const VmaAllocatorCreateInfo allocationCreateInfo = {
 		.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
@@ -164,20 +161,22 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		.vulkanApiVersion = VK_MAKE_API_VERSION(0, 1, instance.minorVersion(), 0),
 	};
 	vmaCreateAllocator(&allocationCreateInfo, &allocator_);
+
+	createCommandPoolsAndBuffers();
 }
 
 void Device::initQueueFamilyIndices()
 {
 	queueFamilyIndices_.reserve(familyCount_);
-	queueFamilyIndices_[0] = graphicsFamily_;
+	queueFamilyIndices_[0] = familyIndices_.graphics;
 	switch (familyCount_)
 	{
 		case 2:
-			queueFamilyIndices_[1] = hasTransfer_ ? transferFamily_ : presentationFamily_;
+			queueFamilyIndices_[1] = hasFamily_.transfer ? familyIndices_.transfer : familyIndices_.presentation;
 			break;
 		case 3:
-			queueFamilyIndices_[1] = presentationFamily_;
-			queueFamilyIndices_[2] = transferFamily_;
+			queueFamilyIndices_[1] = familyIndices_.presentation;
+			queueFamilyIndices_[2] = familyIndices_.transfer;
 			break;
 		default:
 			assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);

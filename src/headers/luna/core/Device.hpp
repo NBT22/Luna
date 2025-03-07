@@ -8,15 +8,15 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 
-/// A pointer to this is given to the application, so that the application can give it back to Luna, that way we can
-/// determine what physical device should be used for that operation. This struct should not be used for things that are
-/// entirely internal. This should contain things like indexes that can be used to find the device in a list of devices
-/// that is stored in some sort of global state.
-struct LunaPhysicalDeviceStruct
-{};
-
 namespace luna::core
 {
+template<typename T> struct FamilyValues
+{
+	T graphics;
+	T transfer;
+	T presentation;
+};
+
 class Device
 {
 	public:
@@ -42,6 +42,7 @@ class Device
 		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
 		[[nodiscard]] bool checkUsability(VkSurfaceKHR surface);
+		void createCommandPoolsAndBuffers();
 
 		/// The actual device
 		VkPhysicalDevice physicalDevice_{};
@@ -53,24 +54,14 @@ class Device
 		VkPhysicalDeviceFeatures2 features_{};
 		VkPhysicalDeviceProperties properties_{};
 		VkPhysicalDeviceMemoryProperties memoryProperties_{};
-		/// The index of the family on the GPU that will be used for graphics processing
-		uint32_t graphicsFamily_ = 0;
-		/// The index of the family on the GPU that will be used for presentation
-		uint32_t transferFamily_ = 0;
-		/// The total count of unique families
-		uint32_t presentationFamily_ = 0;
-		/// The index of the family on the GPU that will be used for transfer operations
-		bool hasGraphics_ = false;
-		/// A boolean for if there is a unique family for transfer operations
-		bool hasTransfer_ = false;
-		/// A boolean for if there is a unique family for presentation
-		bool hasPresentation_ = false;
-		uint32_t familyCount_ = 0;
-		VkQueue graphicsQueue_{};
-		VkQueue transferQueue_{};
-		VkQueue presentQueue_{};
-		std::vector<uint32_t> queueFamilyIndices_{};
 		VmaAllocator allocator_{};
+		uint32_t familyCount_{};
+		std::vector<uint32_t> queueFamilyIndices_{};
+		FamilyValues<bool> hasFamily_{};
+		FamilyValues<VkQueue> familyQueues_{};
+		FamilyValues<uint32_t> familyIndices_{};
+		FamilyValues<VkCommandPool> commandPools_{};
+		FamilyValues<VkCommandBuffer> commandBuffers_{};
 };
 } // namespace luna::core
 
