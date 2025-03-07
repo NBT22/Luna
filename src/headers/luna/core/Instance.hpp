@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <luna/core/Buffer.hpp>
 #include <luna/core/Device.hpp>
 #include <luna/core/GraphicsPipeline.hpp>
 #include <luna/core/RenderPass.hpp>
@@ -12,7 +13,6 @@
 namespace luna::core
 {
 extern class Instance instance;
-
 struct SwapChain
 {
 		VkSurfaceFormatKHR format;
@@ -28,6 +28,7 @@ struct SwapChain
 class Instance
 {
 	public:
+		friend const buffer::BufferRegionIndex *buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &);
 		Instance() = default;
 		explicit Instance(const LunaInstanceCreationInfo &creationInfo);
 
@@ -36,6 +37,7 @@ class Instance
 		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo &creationInfo);
 		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo);
 		const GraphicsPipelineIndex *createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
+		uint32_t allocateBuffer(const LunaBufferCreationInfo &creationInfo);
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
@@ -61,6 +63,8 @@ class Instance
 		std::vector<GraphicsPipelineIndex> graphicsPipelineIndices_{};
 		std::unordered_map<std::string, uint32_t> graphicsPipelineMap_{};
 		std::vector<GraphicsPipeline> graphicsPipelines_{};
+		std::vector<buffer::BufferRegionIndex> bufferRegionIndices_{};
+		std::vector<Buffer> buffers_{};
 };
 } // namespace luna::core
 

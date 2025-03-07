@@ -66,8 +66,9 @@ static void getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
 	{
 		return;
 	}
-	VkPresentModeKHR *presentModes = new VkPresentModeKHR[presentModeCount];
-	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes);
+	std::vector<VkPresentModeKHR> presentModes;
+	presentModes.reserve(presentModeCount);
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
 	destination = VK_PRESENT_MODE_MAX_ENUM_KHR;
 	for (uint32_t i = 0; i < targetPresentModeCount; i++)
 	{
@@ -85,7 +86,6 @@ static void getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
 			break;
 		}
 	}
-	delete[] presentModes;
 	// This is an assert instead of an error because VK_PRESENT_MODE_FIFO_KHR is required to be supported.
 	assert(destination != VK_PRESENT_MODE_MAX_ENUM_KHR);
 }

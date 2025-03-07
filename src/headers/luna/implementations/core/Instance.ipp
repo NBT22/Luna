@@ -44,6 +44,21 @@ inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaG
 	graphicsPipelines_.emplace_back(creationInfo);
 	return &graphicsPipelineIndices_.back();
 }
+inline uint32_t Instance::allocateBuffer(const LunaBufferCreationInfo &creationInfo)
+{
+	VkBufferCreateInfo bufferCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.flags = creationInfo.flags,
+		.size = creationInfo.size,
+		.usage = creationInfo.usage,
+		.sharingMode = device().sharingMode(),
+		.queueFamilyIndexCount = device().familyCount(),
+		.pQueueFamilyIndices = device().queueFamilyIndices(),
+	};
+	buffers_.emplace_back(bufferCreateInfo);
+	return buffers_.size() - 1;
+}
+
 
 inline uint32_t Instance::minorVersion() const
 {

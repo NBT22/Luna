@@ -18,6 +18,9 @@ extern "C"
 
 VkShaderModule lunaCreateShaderModule(const uint32_t *spirv, size_t bytes);
 
+void lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo);
+LunaBuffer lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo);
+
 #ifdef __cplusplus
 }
 #endif

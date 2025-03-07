@@ -213,18 +213,16 @@ bool Device::checkUsability(const VkSurfaceKHR surface)
 	{
 		return false;
 	}
-	VkExtensionProperties *availableExtensions = new VkExtensionProperties[extensionCount];
-	vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &extensionCount, availableExtensions);
+	std::vector<VkExtensionProperties> availableExtensions;
+	availableExtensions.reserve(extensionCount);
+	vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &extensionCount, availableExtensions.data());
 	for (uint32_t j = 0; j < extensionCount; j++)
 	{
 		if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
 		{
-			delete[] availableExtensions;
 			return true;
 		}
 	}
-	delete[] availableExtensions;
-
 	return false;
 }
 } // namespace luna::core

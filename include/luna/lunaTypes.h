@@ -17,6 +17,7 @@ extern "C"
 typedef const void *LunaRenderPass;
 typedef const void *LunaRenderPassSubpass;
 typedef const void *LunaGraphicsPipeline;
+typedef const void *LunaBuffer;
 
 typedef enum
 {
@@ -183,6 +184,13 @@ typedef struct
 
 		const char *uniqueName;
 } LunaGraphicsPipelineCreationInfo;
+
+typedef struct
+{
+		size_t size;
+		VkBufferCreateFlags flags;
+		VkBufferUsageFlags usage;
+} LunaBufferCreationInfo;
 
 #ifdef __cplusplus
 }

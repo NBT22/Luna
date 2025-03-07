@@ -9,7 +9,7 @@
 #pragma region typedefs
 typedef struct
 {
-		float x, y, z;
+		float x, y;
 		float r, g, b;
 } Vertex;
 #pragma endregion typedefs
@@ -86,6 +86,12 @@ const uint32_t FRAGMENT_SHADER_SPIRV[112] = {
 	0x00000000, 0x00000003, 0x000200f8, 0x00000005, 0x0004003d, 0x00000007, 0x0000000c, 0x0000000b, 0x0003003e,
 	0x00000009, 0x0000000c, 0x000100fd, 0x00010038,
 };
+
+const Vertex vertices[3] = {
+	{.x = 0.0f, .y = -0.5f, .r = 1},
+	{.x = 0.5f, .y = 0.5f, .g = 1},
+	{.x = -0.5f, .y = 0.5f, .b = 1},
+};
 #pragma endregion constants
 
 LunaRenderPass createRenderPass(const VkExtent3D extent)
@@ -152,7 +158,7 @@ LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass)
 		{
 			.location = 0,
 			.binding = 0,
-			.format = VK_FORMAT_R32G32B32_SFLOAT,
+			.format = VK_FORMAT_R32G32_SFLOAT,
 			.offset = offsetof(Vertex, x),
 		},
 		{
@@ -330,6 +336,12 @@ int main()
 	LunaRenderPass renderPass = createRenderPass(extent);
 
 	LunaGraphicsPipeline graphicsPipeline = createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL));
+
+	LunaBufferCreationInfo bufferCreationInfo = {
+		.size = sizeof(vertices),
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	};
+	LunaBuffer vertexBuffer = lunaCreateBuffer(&bufferCreationInfo);
 
 	SDL_Event event;
 	while (SDL_WaitEvent(&event))

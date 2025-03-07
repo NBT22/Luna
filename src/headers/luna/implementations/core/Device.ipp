@@ -47,8 +47,9 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 	bool presentationFound = false;
 	uint32_t familyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, nullptr);
-	VkQueueFamilyProperties *families = new VkQueueFamilyProperties[familyCount];
-	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families);
+	std::vector<VkQueueFamilyProperties> families;
+	families.reserve(familyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families.data());
 	for (uint32_t index = 0; index < familyCount; index++)
 	{
 		VkBool32 supportsPresentation = VK_FALSE;
@@ -96,7 +97,6 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 	{
 		familyCount_ = 0;
 	}
-	delete[] families;
 }
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
