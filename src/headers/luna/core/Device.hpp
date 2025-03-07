@@ -5,6 +5,8 @@
 #pragma once
 
 #include <luna/lunaTypes.h>
+#include <vector>
+#include <vk_mem_alloc.h>
 
 /// A pointer to this is given to the application, so that the application can give it back to Luna, that way we can
 /// determine what physical device should be used for that operation. This struct should not be used for things that are
@@ -27,27 +29,16 @@ class Device
 		/// A getter for the @c logicalDevice_ value
 		/// @return The Vulkan handle for the physical device described in this instance
 		[[nodiscard]] VkDevice logicalDevice() const;
-		/// A getter for the @c graphicsFamily_ value
-		/// @return The index of the family on the GPU that will be used for graphics processing
-		[[nodiscard]] uint32_t graphicsFamily() const;
-		/// A getter for the @c transferFamily_ value
-		/// @return The index of the family on the GPU that will be used for transfer operations
-		[[nodiscard]] uint32_t transferFamily() const;
-		/// A getter for the @c presentationFamily_ value
-		/// @return The index of the family on the GPU that will be used for presentation
-		[[nodiscard]] uint32_t presentationFamily() const;
+		[[nodiscard]] VkSharingMode sharingMode() const;
 		/// A getter for the @c familyCount_ value
 		/// @return The total count of unique families
 		[[nodiscard]] uint32_t familyCount() const;
-		/// A getter for the @c hasTransfer_ value
-		/// @return A boolean for if there is a unique family for transfer operations
-		[[nodiscard]] bool hasTransfer() const;
-		/// A getter for the @c hasPresentation_ value
-		/// @return A boolean for if there is a unique family for presentation
-		[[nodiscard]] bool hasPresentation() const;
+		[[nodiscard]] const uint32_t *queueFamilyIndices() const;
+		[[nodiscard]] VmaAllocator allocator() const;
 
 	private:
 		void findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+		void initQueueFamilyIndices();
 		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
 		[[nodiscard]] bool checkUsability(VkSurfaceKHR surface);
@@ -78,6 +69,8 @@ class Device
 		VkQueue graphicsQueue_{};
 		VkQueue transferQueue_{};
 		VkQueue presentQueue_{};
+		std::vector<uint32_t> queueFamilyIndices_{};
+		VmaAllocator allocator_{};
 };
 } // namespace luna::core
 

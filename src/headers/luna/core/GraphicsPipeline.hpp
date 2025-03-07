@@ -12,7 +12,7 @@ namespace luna::core
 {
 struct GraphicsPipelineIndex
 {
-	uint32_t index;
+		uint32_t index;
 };
 class GraphicsPipeline
 {
@@ -27,6 +27,5 @@ class GraphicsPipeline
 		std::string name_{};
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts_{};
 		VkPipelineLayout layout_{};
-
 };
 } // namespace luna::core

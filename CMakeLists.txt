@@ -17,9 +17,9 @@ file(GLOB_RECURSE PRIVATE_HEADERS "src/headers/luna/*.hpp")
 file(GLOB_RECURSE PRIVATE_IMPLEMENTATIONS "src/headers/luna/implementations/*.[it]pp")
 file(GLOB_RECURSE PUBLIC_HEADERS "include/luna/*.h")
 
+add_subdirectory(vma)
 add_library(Luna STATIC ${SOURCES} ${PRIVATE_HEADERS} ${PRIVATE_IMPLEMENTATIONS} ${PUBLIC_HEADERS})
-#add_executable(Luna ${SOURCES} ${PRIVATE_HEADERS} ${PRIVATE_IMPLEMENTATIONS} ${PUBLIC_HEADERS})
-target_link_libraries(Luna ${Vulkan_LIBRARIES})
+target_link_libraries(Luna ${Vulkan_LIBRARIES} GPUOpen::VulkanMemoryAllocator)
 include_directories(Luna PUBLIC "${CMAKE_SOURCE_DIR}/src/headers")
 include_directories(Luna PUBLIC "${CMAKE_SOURCE_DIR}/include")
 

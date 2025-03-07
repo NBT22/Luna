@@ -16,14 +16,6 @@ void createImageView(VkDevice logicalDevice,
 					 VkImageAspectFlags aspectMask,
 					 uint8_t mipmapLevels,
 					 VkImageView &imageView);
-
-struct CharString
-{
-		bool operator()(const char *a, const char *b) const
-		{
-			return std::strcmp(a, b) < 0;
-		}
-};
 } // namespace luna::helpers
 
 #include <luna/implementations/helpers/Luna.ipp>

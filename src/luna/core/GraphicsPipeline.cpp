@@ -25,7 +25,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 			.bindingCount = layoutInfo.bindingCount,
 			.pBindings = layoutInfo.bindings,
 		};
-		descriptorSetLayouts_.emplace_back();
+		descriptorSetLayouts_.push_back(VK_NULL_HANDLE);
 		vkCreateDescriptorSetLayout(instance.device().logicalDevice(),
 									&layoutCreateInfo,
 									nullptr,
@@ -42,6 +42,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 	vkCreatePipelineLayout(instance.device().logicalDevice(), &layoutCreateInfo, nullptr, &layout_);
 
 	const RenderPassSubpassIndex *subpassIndex = static_cast<const RenderPassSubpassIndex *>(creationInfo.subpass);
+	const RenderPass &renderPass = instance.renderPass(subpassIndex->renderPassIndex);
 	const VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 		.flags = creationInfo.flags,
@@ -57,7 +58,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 		.pColorBlendState = creationInfo.colorBlendState,
 		.pDynamicState = creationInfo.dynamicState,
 		.layout = layout_,
-		.renderPass = instance.renderPass(subpassIndex->renderPassIndex).renderPass(),
+		.renderPass = renderPass.renderPass(),
 		.subpass = subpassIndex->index,
 	};
 	vkCreateGraphicsPipelines(instance.device().logicalDevice(), nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline_);

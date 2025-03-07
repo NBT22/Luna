@@ -16,29 +16,21 @@ inline VkDevice Device::logicalDevice() const
 {
 	return logicalDevice_;
 }
-inline uint32_t Device::graphicsFamily() const
+inline VkSharingMode Device::sharingMode() const
 {
-	return graphicsFamily_;
-}
-inline uint32_t Device::transferFamily() const
-{
-	return transferFamily_;
-}
-inline uint32_t Device::presentationFamily() const
-{
-	return presentationFamily_;
+	return familyCount_ == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 }
 inline uint32_t Device::familyCount() const
 {
 	return familyCount_;
 }
-inline bool Device::hasTransfer() const
+inline const uint32_t *Device::queueFamilyIndices() const
 {
-	return hasTransfer_;
+	return queueFamilyIndices_.data();
 }
-inline bool Device::hasPresentation() const
+inline VmaAllocator Device::allocator() const
 {
-	return hasPresentation_;
+	return allocator_;
 }
 
 // TODO: Better family finding logic to allow for

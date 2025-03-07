@@ -2,12 +2,17 @@
 // Created by NBT22 on 2/13/25.
 //
 
+#define VMA_IMPLEMENTATION
+#include <array>
 #include <cstring>
 #include <luna/core/Device.hpp>
 #include <luna/core/Instance.hpp>
 #include <luna/lunaDevice.h>
 #include <stdexcept>
-#include <array>
+#include <vk_mem_alloc.h>
+
+namespace luna::helpers
+{}
 
 namespace luna::core
 {
@@ -20,8 +25,8 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	{
 		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
 	}
-	VkPhysicalDevice *devices = new VkPhysicalDevice[deviceCount];
-	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices);
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices.data());
 	for (uint32_t i = 0; i < deviceCount; i++)
 	{
 		physicalDevice_ = devices[i];
@@ -88,7 +93,6 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 				};
 				break;
 			default:
-				delete[] devices;
 				assert(1 <= instance.minorVersion() && instance.minorVersion() <= 4);
 		}
 		vkGetPhysicalDeviceFeatures2(physicalDevice_, &features_);
@@ -102,7 +106,6 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 			break;
 		}
 	}
-	delete[] devices;
 	if (match == -1u)
 	{
 		throw std::runtime_error("Failed to find a suitable GPU for Vulkan!");
@@ -136,6 +139,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		default:
 			assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
 	}
+	initQueueFamilyIndices();
 
 	const VkDeviceCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -151,7 +155,35 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	vkGetDeviceQueue(logicalDevice_, graphicsFamily_, 0, &graphicsQueue_);
 	vkGetDeviceQueue(logicalDevice_, transferFamily_, 0, &transferQueue_);
 	vkGetDeviceQueue(logicalDevice_, presentationFamily_, 0, &presentQueue_);
+
+	const VmaAllocatorCreateInfo allocationCreateInfo = {
+		.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
+		.physicalDevice = physicalDevice_,
+		.device = logicalDevice_,
+		.instance = instance.instance(),
+		.vulkanApiVersion = VK_MAKE_API_VERSION(0, 1, instance.minorVersion(), 0),
+	};
+	vmaCreateAllocator(&allocationCreateInfo, &allocator_);
 }
+
+void Device::initQueueFamilyIndices()
+{
+	queueFamilyIndices_.reserve(familyCount_);
+	queueFamilyIndices_[0] = graphicsFamily_;
+	switch (familyCount_)
+	{
+		case 2:
+			queueFamilyIndices_[1] = hasTransfer_ ? transferFamily_ : presentationFamily_;
+			break;
+		case 3:
+			queueFamilyIndices_[1] = presentationFamily_;
+			queueFamilyIndices_[2] = transferFamily_;
+			break;
+		default:
+			assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
+	}
+}
+
 bool Device::checkUsability(const VkSurfaceKHR surface)
 {
 	uint32_t count;
@@ -212,6 +244,7 @@ void lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
 	};
 	luna::core::instance.addNewDevice(creationInfo2);
 }
+
 void lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
 	assert(creationInfo);

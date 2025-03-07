@@ -88,7 +88,7 @@ const uint32_t FRAGMENT_SHADER_SPIRV[112] = {
 };
 #pragma endregion constants
 
-LunaRenderPass createRenderPass()
+LunaRenderPass createRenderPass(const VkExtent3D extent)
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
 
@@ -111,6 +111,7 @@ LunaRenderPass createRenderPass()
 			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		}},
+		.extent = extent,
 	};
 	return lunaCreateRenderPass(&renderPassCreationInfo);
 }
@@ -266,7 +267,7 @@ LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass)
 
 int main()
 {
-	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC))
+	if (!SDL_Init(SDL_INIT_VIDEO))
 	{
 		return 1;
 	}
@@ -309,10 +310,15 @@ int main()
 	};
 	lunaAddNewDevice(&deviceCreationInfo);
 
-	const LunaSwapChainCreationInfo swapChainCreationInfo = {
-		.surface = surface,
+	const VkExtent3D extent = {
 		.width = 1280,
 		.height = 720,
+		.depth = 1,
+	};
+	const LunaSwapChainCreationInfo swapChainCreationInfo = {
+		.surface = surface,
+		.width = extent.width,
+		.height = extent.height,
 		.minImageCount = 3,
 		.formatCount = 1,
 		.formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}},
@@ -321,7 +327,7 @@ int main()
 	};
 	lunaCreateSwapChain(&swapChainCreationInfo);
 
-	LunaRenderPass renderPass = createRenderPass();
+	LunaRenderPass renderPass = createRenderPass(extent);
 
 	LunaGraphicsPipeline graphicsPipeline = createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL));
 

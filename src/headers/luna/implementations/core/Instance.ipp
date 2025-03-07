@@ -33,6 +33,9 @@ inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCre
 inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo
 																			 &creationInfo)
 {
+	const RenderPassIndex *index = static_cast<const RenderPassSubpassIndex *>(creationInfo.subpass)->renderPassIndex;
+	renderPass(index).pipelineIndices.emplace_back(graphicsPipelines_.size());
+
 	graphicsPipelineIndices_.emplace_back(graphicsPipelines_.size());
 	if (creationInfo.uniqueName != nullptr)
 	{
@@ -50,7 +53,7 @@ inline VkInstance Instance::instance() const
 {
 	return instance_;
 }
-inline Device Instance::device() const
+inline const Device &Instance::device() const
 {
 	return device_;
 }
@@ -58,23 +61,19 @@ inline VkSurfaceKHR Instance::surface() const
 {
 	return surface_;
 }
-inline SwapChain Instance::swapChain() const
+inline const SwapChain &Instance::swapChain() const
 {
 	return swapChain_;
 }
-inline const RenderPass &Instance::renderPass(const uint32_t index) const
+inline SwapChain &Instance::swapChain()
 {
-	return renderPasses_.at(index);
+	return swapChain_;
 }
-inline const RenderPass &Instance::renderPass(const LunaRenderPass index) const
+inline RenderPass &Instance::renderPass(const LunaRenderPass index)
 {
 	return renderPasses_.at(static_cast<const RenderPassIndex *>(index)->index);
 }
-inline const RenderPass &Instance::renderPass(const RenderPassIndex index) const
-{
-	return renderPasses_.at(index.index);
-}
-inline GraphicsPipeline Instance::graphicsPipeline(const uint32_t index) const
+inline GraphicsPipeline &Instance::graphicsPipeline(const uint32_t index)
 {
 	return graphicsPipelines_.at(index);
 }

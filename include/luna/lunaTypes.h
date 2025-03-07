@@ -101,6 +101,9 @@ typedef struct
 		uint32_t dependencyCount;
 		const VkSubpassDependency *dependencies;
 
+		VkExtent3D extent;
+		uint32_t framebufferAttachmentCount;
+		const VkImageView *framebufferAttachments;
 		const char *uniqueName;
 } LunaRenderPassCreationInfo;
 
@@ -139,6 +142,9 @@ typedef struct
 		uint32_t correlatedViewMaskCount;
 		const uint32_t *correlatedViewMasks;
 
+		VkExtent3D extent;
+		uint32_t framebufferAttachmentCount;
+		const VkImageView *framebufferAttachments;
 		const char *uniqueName;
 } LunaRenderPassCreationInfo2;
 

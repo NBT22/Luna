@@ -33,7 +33,6 @@ inline void createImageView(const VkDevice logicalDevice,
 		.components = componentMapping,
 		.subresourceRange = subresourceRange,
 	};
-
 	vkCreateImageView(logicalDevice, &createInfo, nullptr, &imageView);
 }
 } // namespace luna::helpers

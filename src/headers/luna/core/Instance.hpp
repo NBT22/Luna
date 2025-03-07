@@ -20,8 +20,9 @@ struct SwapChain
 		VkPresentModeKHR presentMode;
 		uint32_t imageCount;
 		VkSwapchainKHR swapChain;
-		VkImage *images; // TODO: free me
-		VkImageView *imageViews; // TODO: free me
+		std::vector<VkImage> images;
+		std::vector<VkImageView> imageViews;
+		std::vector<VkFramebuffer> framebuffers;
 };
 
 class Instance
@@ -38,13 +39,12 @@ class Instance
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
-		[[nodiscard]] Device device() const;
+		[[nodiscard]] const Device &device() const;
 		[[nodiscard]] VkSurfaceKHR surface() const;
-		[[nodiscard]] SwapChain swapChain() const;
-		[[nodiscard]] const RenderPass &renderPass(uint32_t index) const;
-		[[nodiscard]] const RenderPass &renderPass(LunaRenderPass index) const;
-		[[nodiscard]] const RenderPass &renderPass(RenderPassIndex index) const;
-		[[nodiscard]] GraphicsPipeline graphicsPipeline(uint32_t index) const;
+		[[nodiscard]] const SwapChain &swapChain() const;
+		[[nodiscard]] SwapChain &swapChain();
+		[[nodiscard]] RenderPass &renderPass(LunaRenderPass index);
+		[[nodiscard]] GraphicsPipeline &graphicsPipeline(uint32_t index);
 
 		bool minimized = false;
 		VkFormat depthImageFormat{};

@@ -10,31 +10,10 @@
 
 namespace luna::helpers
 {
-static void initQueueFamilyIndices(const core::Device &device, std::vector<uint32_t> &queueFamilyIndices)
-{
-	switch (device.familyCount())
-	{
-		case 1:
-			queueFamilyIndices[0] = device.graphicsFamily();
-			break;
-		case 2:
-			queueFamilyIndices[0] = device.graphicsFamily();
-			queueFamilyIndices[1] = device.hasTransfer() ? device.transferFamily() : device.presentationFamily();
-			break;
-		case 3:
-			queueFamilyIndices[0] = device.graphicsFamily();
-			queueFamilyIndices[1] = device.presentationFamily();
-			queueFamilyIndices[2] = device.transferFamily();
-			break;
-		default:
-			assert(device.familyCount() == 1 || device.familyCount() == 2 || device.familyCount() == 3);
-	}
-}
-
 static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 								const VkSurfaceKHR surface,
 								const uint32_t targetFormatCount,
-								VkSurfaceFormatKHR *targetFormats,
+								const VkSurfaceFormatKHR *targetFormats,
 								VkSurfaceFormatKHR &destination)
 {
 	destination = {.format = VK_FORMAT_UNDEFINED, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
@@ -44,15 +23,17 @@ static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 	{
 		return;
 	}
-	VkSurfaceFormatKHR *formats = new VkSurfaceFormatKHR[formatCount];
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats);
+	std::vector<VkSurfaceFormatKHR> formats;
+	formats.reserve(formatCount);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data());
 	for (uint32_t i = 0; i < targetFormatCount; i++)
 	{
 		const VkSurfaceFormatKHR targetFormat = targetFormats[i];
 		for (uint32_t j = 0; j < formatCount; j++)
 		{
 			const VkSurfaceFormatKHR format = formats[j];
-			if (format.colorSpace == targetFormat.colorSpace && format.format == targetFormat.format)	{
+			if (format.colorSpace == targetFormat.colorSpace && format.format == targetFormat.format)
+			{
 				destination = format;
 				break;
 			}
@@ -62,29 +43,9 @@ static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 			break;
 		}
 	}
-	delete[] formats;
 	if (destination.format == VK_FORMAT_UNDEFINED || destination.colorSpace == VK_COLOR_SPACE_MAX_ENUM_KHR)
 	{
 		throw std::runtime_error("Unable to find suitable Vulkan surface format!");
-	}
-}
-
-static void createSwapChainImages(const VkDevice logicalDevice, core::SwapChain swapChain)
-{
-	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, nullptr);
-
-	swapChain.images = new VkImage[swapChain.imageCount];
-	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, swapChain.images);
-
-	swapChain.imageViews = new VkImageView[swapChain.imageCount];
-	for (uint32_t i = 0; i < swapChain.imageCount; i++)
-	{
-		createImageView(logicalDevice,
-						swapChain.images[i],
-						swapChain.format.format,
-						VK_IMAGE_ASPECT_COLOR_BIT,
-						1,
-						swapChain.imageViews[i]);
 	}
 }
 
@@ -127,6 +88,25 @@ static void getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
 	delete[] presentModes;
 	// This is an assert instead of an error because VK_PRESENT_MODE_FIFO_KHR is required to be supported.
 	assert(destination != VK_PRESENT_MODE_MAX_ENUM_KHR);
+}
+
+static void createSwapChainImages(const VkDevice logicalDevice, core::SwapChain &swapChain)
+{
+	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, nullptr);
+
+	swapChain.images.resize(swapChain.imageCount);
+	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, swapChain.images.data());
+
+	swapChain.imageViews.resize(swapChain.imageCount);
+	for (uint32_t i = 0; i < swapChain.imageCount; i++)
+	{
+		createImageView(logicalDevice,
+						swapChain.images[i],
+						swapChain.format.format,
+						VK_IMAGE_ASPECT_COLOR_BIT,
+						1,
+						swapChain.imageViews[i]);
+	}
 }
 } // namespace luna::helpers
 
@@ -195,9 +175,6 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 		return;
 	}
 
-	std::vector<uint32_t> queueFamilyIndices(device_.familyCount());
-	helpers::initQueueFamilyIndices(device_, queueFamilyIndices);
-
 	helpers::findSwapChainFormat(device_.physicalDevice(),
 								 surface_,
 								 creationInfo.formatCount,
@@ -236,9 +213,9 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 		.imageExtent = swapChain_.extent,
 		.imageArrayLayers = 1,
 		.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : creationInfo.imageUsage,
-		.imageSharingMode = device_.familyCount() == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
+		.imageSharingMode = device_.sharingMode(),
 		.queueFamilyIndexCount = device_.familyCount(),
-		.pQueueFamilyIndices = queueFamilyIndices.data(),
+		.pQueueFamilyIndices = device_.queueFamilyIndices(),
 		.preTransform = capabilities.currentTransform,
 		.compositeAlpha = compositeAlpha,
 		.presentMode = swapChain_.presentMode,
