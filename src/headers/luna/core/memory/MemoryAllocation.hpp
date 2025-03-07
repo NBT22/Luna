@@ -9,6 +9,6 @@ namespace luna::core::memory
 {
 class MemoryAllocation
 {
-	std::unique_ptr<size_t> device;
+		std::unique_ptr<size_t> device;
 };
 } // namespace luna::core::memory
