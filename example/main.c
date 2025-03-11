@@ -342,7 +342,44 @@ int main()
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 	};
 	LunaBuffer vertexBuffer = lunaCreateBuffer(&bufferCreationInfo);
+	lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
 
+	const LunaRenderPassBeginInfo beginInfo = {
+		.renderArea.extent.width = extent.width,
+		.renderArea.extent.height = extent.height,
+		.depthAttachmentClearValue.depthStencil.depth = 1,
+	};
+	const LunaVertexBufferDrawInfo drawInfo = {
+		.vertexBuffer = vertexBuffer,
+		.pipeline = graphicsPipeline,
+		.vertexCount = sizeof(vertices) / sizeof(*vertices),
+		.instanceCount = 1,
+	};
+
+#ifdef ALWAYS_UPDATE
+	SDL_Event event;
+	while (true)
+	{
+		while (SDL_PollEvent(&event))
+		{
+			switch (event.type)
+			{
+				case SDL_EVENT_QUIT:
+					return 0;
+				case SDL_EVENT_KEY_UP:
+					if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+					{
+						return 0;
+					}
+					break;
+				default:;
+			}
+		}
+		lunaBeginRenderPass(renderPass, &beginInfo);
+		lunaDrawBuffer(&drawInfo);
+		lunaDrawFrame();
+	}
+#else
 	SDL_Event event;
 	while (SDL_WaitEvent(&event))
 	{
@@ -358,7 +395,11 @@ int main()
 				break;
 			default:;
 		}
+		lunaBeginRenderPass(renderPass, &beginInfo);
+		lunaDrawBuffer(&drawInfo);
+		lunaDrawFrame();
 	}
+#endif
 
 	return 0;
 }

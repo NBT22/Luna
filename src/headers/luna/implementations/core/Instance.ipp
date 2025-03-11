@@ -34,19 +34,19 @@ inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaG
 																			 &creationInfo)
 {
 	const RenderPassIndex *index = static_cast<const RenderPassSubpassIndex *>(creationInfo.subpass)->renderPassIndex;
-	renderPass(index).pipelineIndices.emplace_back(graphicsPipelines_.size());
+	renderPass_(index).pipelineIndices.emplace_back(graphicsPipelines.size());
 
-	graphicsPipelineIndices_.emplace_back(graphicsPipelines_.size());
+	graphicsPipelineIndices_.emplace_back(graphicsPipelines.size());
 	if (creationInfo.uniqueName != nullptr)
 	{
-		graphicsPipelineMap_[creationInfo.uniqueName] = graphicsPipelines_.size();
+		graphicsPipelineMap_[creationInfo.uniqueName] = graphicsPipelines.size();
 	}
-	graphicsPipelines_.emplace_back(creationInfo);
+	graphicsPipelines.emplace_back(creationInfo);
 	return &graphicsPipelineIndices_.back();
 }
 inline uint32_t Instance::allocateBuffer(const LunaBufferCreationInfo &creationInfo)
 {
-	VkBufferCreateInfo bufferCreateInfo = {
+	const VkBufferCreateInfo bufferCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.flags = creationInfo.flags,
 		.size = creationInfo.size,
@@ -76,20 +76,22 @@ inline VkSurfaceKHR Instance::surface() const
 {
 	return surface_;
 }
-inline const SwapChain &Instance::swapChain() const
-{
-	return swapChain_;
-}
-inline SwapChain &Instance::swapChain()
-{
-	return swapChain_;
-}
-inline RenderPass &Instance::renderPass(const LunaRenderPass index)
+inline const RenderPass &Instance::renderPass(const LunaRenderPass index) const
 {
 	return renderPasses_.at(static_cast<const RenderPassIndex *>(index)->index);
 }
-inline GraphicsPipeline &Instance::graphicsPipeline(const uint32_t index)
+inline const buffer::BufferRegion &Instance::bufferRegion(const LunaBuffer buffer) const
 {
-	return graphicsPipelines_.at(index);
+	const buffer::BufferRegionIndex index = *static_cast<const buffer::BufferRegionIndex *>(buffer);
+	return buffers_.at(index.bufferIndex).region(index.bufferRegionIndex);
+}
+inline const buffer::BufferRegion &Instance::bufferRegion(const buffer::BufferRegionIndex index) const
+{
+	return buffers_.at(index.bufferIndex).region(index.bufferRegionIndex);
+}
+
+inline RenderPass &Instance::renderPass_(const LunaRenderPass index)
+{
+	return renderPasses_.at(static_cast<const RenderPassIndex *>(index)->index);
 }
 } // namespace luna::core

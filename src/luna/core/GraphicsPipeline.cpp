@@ -18,12 +18,12 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 	descriptorSetLayouts_.reserve(descriptorSetLayoutCount);
 	for (uint32_t i = 0; i < descriptorSetLayoutCount; i++)
 	{
-		const LunaDescriptorSetLayoutCreationInfo layoutInfo = creationInfo.layoutCreationInfo->descriptorSetLayouts[i];
+		const auto &[flags, bindingCount, bindings] = creationInfo.layoutCreationInfo->descriptorSetLayouts[i];
 		const VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-			.flags = layoutInfo.flags,
-			.bindingCount = layoutInfo.bindingCount,
-			.pBindings = layoutInfo.bindings,
+			.flags = flags,
+			.bindingCount = bindingCount,
+			.pBindings = bindings,
 		};
 		descriptorSetLayouts_.push_back(VK_NULL_HANDLE);
 		vkCreateDescriptorSetLayout(instance.device().logicalDevice(),
@@ -74,6 +74,19 @@ void GraphicsPipeline::destroy()
 
 	vkDestroyPipeline(instance.device().logicalDevice(), pipeline_, nullptr);
 	isDestroyed_ = true;
+}
+void GraphicsPipeline::bind()
+{
+	if (bound_)
+	{
+		return;
+	}
+	for (GraphicsPipeline &pipeline: instance.graphicsPipelines)
+	{
+		pipeline.bound_ = false;
+	}
+	vkCmdBindPipeline(instance.device().commandBuffers().graphics, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+	bound_ = true;
 }
 } // namespace luna::core
 

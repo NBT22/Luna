@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <luna/lunaTypes.h>
+#include <luna/luna.h>
 #include <memory>
 #include <vector>
 #include <vk_mem_alloc.h>
@@ -20,15 +20,21 @@ struct BufferRegionIndex
 class BufferRegion
 {
 	public:
-		BufferRegion(size_t size, uint8_t *data);
-
+		// TODO: Maybe move this to Instance where the others live and friend it here?
 		static const BufferRegionIndex *createBuffer(const LunaBufferCreationInfo &creationInfo);
+
+		friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t);
+
+		BufferRegion(size_t size, uint8_t *data, size_t offset);
+
+		[[nodiscard]] const size_t &offset() const;
 
 	private:
 		size_t size_{};
 		/// This is a raw pointer because I don't own the pointer. It will be an offset into the pointer provided to me
 		/// by mapping the memory.
 		uint8_t *data_{};
+		size_t offset_{};
 };
 } // namespace luna::core::buffer
 
@@ -38,7 +44,11 @@ class Buffer
 {
 	public:
 		friend class buffer::BufferRegion;
+
 		explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo);
+
+		[[nodiscard]] const VkBuffer &buffer() const;
+		[[nodiscard]] const buffer::BufferRegion &region(uint32_t index) const;
 
 	private:
 		VkBuffer buffer_{};

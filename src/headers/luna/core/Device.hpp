@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <luna/lunaTypes.h>
+#include <luna/luna.h>
 #include <vector>
 #include <vk_mem_alloc.h>
 
@@ -12,14 +12,16 @@ namespace luna::core
 {
 template<typename T> struct FamilyValues
 {
-	T graphics;
-	T transfer;
-	T presentation;
+		T graphics;
+		T transfer;
+		T presentation;
 };
 
 class Device
 {
 	public:
+		friend void ::lunaBeginRenderPass(LunaRenderPass, const LunaRenderPassBeginInfo *beginInfo);
+
 		Device() = default;
 		explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
 
@@ -35,6 +37,12 @@ class Device
 		[[nodiscard]] uint32_t familyCount() const;
 		[[nodiscard]] const uint32_t *queueFamilyIndices() const;
 		[[nodiscard]] VmaAllocator allocator() const;
+		[[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const;
+		[[nodiscard]] const FamilyValues<VkCommandPool> &commandPools() const;
+		[[nodiscard]] const FamilyValues<VkCommandBuffer> &commandBuffers() const;
+		[[nodiscard]] VkSemaphore imageAvailableSemaphore() const;
+		[[nodiscard]] VkSemaphore renderFinishedSemaphore() const;
+		[[nodiscard]] VkFence frameFence() const;
 
 	private:
 		void findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -43,6 +51,7 @@ class Device
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
 		[[nodiscard]] bool checkUsability(VkSurfaceKHR surface);
 		void createCommandPoolsAndBuffers();
+		void createSynchronizationObjects();
 
 		/// The actual device
 		VkPhysicalDevice physicalDevice_{};
@@ -62,6 +71,9 @@ class Device
 		FamilyValues<uint32_t> familyIndices_{};
 		FamilyValues<VkCommandPool> commandPools_{};
 		FamilyValues<VkCommandBuffer> commandBuffers_{};
+		VkSemaphore imageAvailableSemaphore_{};
+		VkSemaphore renderFinishedSemaphore_{};
+		VkFence frameFence_{};
 };
 } // namespace luna::core
 

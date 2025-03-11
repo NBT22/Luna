@@ -192,6 +192,23 @@ typedef struct
 		VkBufferUsageFlags usage;
 } LunaBufferCreationInfo;
 
+typedef struct
+{
+		VkRect2D renderArea;
+		VkClearValue depthAttachmentClearValue;
+		VkClearValue colorAttachmentClearValue;
+} LunaRenderPassBeginInfo;
+
+typedef struct
+{
+		LunaBuffer vertexBuffer;
+		LunaGraphicsPipeline pipeline;
+		uint32_t vertexCount;
+		uint32_t instanceCount;
+		uint32_t firstVertex;
+		uint32_t firstInstance;
+} LunaVertexBufferDrawInfo;
+
 #ifdef __cplusplus
 }
 #endif

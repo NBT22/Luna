@@ -2,6 +2,7 @@
 // Created by NBT22 on 2/12/25.
 //
 
+#include <algorithm>
 #include <luna/core/Buffer.hpp>
 #include <luna/core/Instance.hpp>
 #include <luna/luna.h>
@@ -13,7 +14,7 @@ const BufferRegionIndex *BufferRegion::createBuffer(const LunaBufferCreationInfo
 	uint32_t index = -1u;
 	for (size_t i = 0; i < instance.buffers_.size(); i++)
 	{
-		const Buffer buffer = instance.buffers_.at(i);
+		const Buffer &buffer = instance.buffers_.at(i);
 		if (creationInfo.size <= buffer.freeBytes_ &&
 			(creationInfo.flags & buffer.creationFlags_) == creationInfo.flags &&
 			(creationInfo.usage & buffer.usageFlags_) == creationInfo.usage)
@@ -26,8 +27,10 @@ const BufferRegionIndex *BufferRegion::createBuffer(const LunaBufferCreationInfo
 	{
 		index = instance.allocateBuffer(creationInfo);
 	}
-	Buffer buffer = instance.buffers_.at(index);
-	buffer.regions_.emplace_back(creationInfo.size, static_cast<uint8_t *>(buffer.data_) + buffer.usedBytes_);
+	Buffer &buffer = instance.buffers_.at(index);
+	buffer.regions_.emplace_back(creationInfo.size,
+								 static_cast<uint8_t *>(buffer.data_) + buffer.usedBytes_,
+								 buffer.usedBytes_);
 	buffer.usedBytes_ += creationInfo.size;
 	buffer.freeBytes_ -= creationInfo.size;
 
@@ -44,7 +47,10 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 	usageFlags_ = bufferCreateInfo.usage;
 	freeBytes_ = bufferCreateInfo.size;
 
+	// TODO: Better memory types and allowing the application to pick based on VMA attributes
+	VmaAllocationInfo allocationInfo;
 	constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+		.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
 	vmaCreateBuffer(instance.device().allocator(),
@@ -52,8 +58,8 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 					&allocationCreateInfo,
 					&buffer_,
 					&allocation_,
-					nullptr);
-	// vmaMapMemory(instance.device().allocator(), allocation_, &data_);
+					&allocationInfo);
+	data_ = allocationInfo.pMappedData;
 }
 } // namespace luna::core
 
@@ -67,4 +73,29 @@ LunaBuffer lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo)
 {
 	assert(creationInfo);
 	return luna::core::buffer::BufferRegion::createBuffer(*creationInfo);
+}
+
+void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes)
+{
+	if (bytes == 0)
+	{
+		return;
+	}
+	assert(data);
+	std::copy_n(static_cast<const uint8_t *>(data), bytes, luna::core::instance.bufferRegion(buffer).data_);
+}
+
+void lunaDrawBuffer(const LunaVertexBufferDrawInfo *drawInfo)
+{
+	assert(drawInfo && drawInfo->vertexBuffer && drawInfo->pipeline);
+	const auto bufferRegionIndex = *static_cast<const luna::core::buffer::BufferRegionIndex *>(drawInfo->vertexBuffer);
+	const auto pipelineIndex = *static_cast<const luna::core::GraphicsPipelineIndex *>(drawInfo->pipeline);
+	const VkCommandBuffer commandBuffer = luna::core::instance.device().commandBuffers().graphics;
+	luna::core::instance.graphicsPipelines.at(pipelineIndex.index).bind();
+	vkCmdBindVertexBuffers(commandBuffer,
+						   0,
+						   1,
+						   &luna::core::instance.buffers_.at(bufferRegionIndex.bufferIndex).buffer(),
+						   &luna::core::instance.bufferRegion(bufferRegionIndex).offset());
+	vkCmdDraw(commandBuffer, drawInfo->vertexCount, drawInfo->instanceCount, drawInfo->firstVertex, drawInfo->firstInstance);
 }

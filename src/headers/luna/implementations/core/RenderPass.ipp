@@ -14,12 +14,12 @@ inline VkRenderPass RenderPass::renderPass() const
 }
 inline const RenderPassSubpassIndex *RenderPass::getFirstSubpass() const
 {
-	assert(subpassIndices_.size() > 0);
+	assert(!subpassIndices_.empty());
 	return subpassIndices_.data();
 }
 inline const RenderPassSubpassIndex *RenderPass::getSubpassIndexByName(const std::string &name) const
 {
-	assert(subpassMap_.size() > 0);
+	assert(!subpassMap_.empty());
 	try
 	{
 		return &subpassIndices_.at(subpassMap_.at(name));

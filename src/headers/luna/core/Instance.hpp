@@ -19,6 +19,7 @@ struct SwapChain
 		VkExtent2D extent;
 		VkPresentModeKHR presentMode;
 		uint32_t imageCount;
+		uint32_t imageIndex;
 		VkSwapchainKHR swapChain;
 		std::vector<VkImage> images;
 		std::vector<VkImageView> imageViews;
@@ -29,6 +30,8 @@ class Instance
 {
 	public:
 		friend const buffer::BufferRegionIndex *buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &);
+		friend void ::lunaDrawBuffer(const LunaVertexBufferDrawInfo *drawInfo);
+
 		Instance() = default;
 		explicit Instance(const LunaInstanceCreationInfo &creationInfo);
 
@@ -43,26 +46,26 @@ class Instance
 		[[nodiscard]] VkInstance instance() const;
 		[[nodiscard]] const Device &device() const;
 		[[nodiscard]] VkSurfaceKHR surface() const;
-		[[nodiscard]] const SwapChain &swapChain() const;
-		[[nodiscard]] SwapChain &swapChain();
-		[[nodiscard]] RenderPass &renderPass(LunaRenderPass index);
-		[[nodiscard]] GraphicsPipeline &graphicsPipeline(uint32_t index);
+		[[nodiscard]] const RenderPass &renderPass(LunaRenderPass index) const;
+		[[nodiscard]] const buffer::BufferRegion &bufferRegion(LunaBuffer buffer) const;
+		[[nodiscard]] const buffer::BufferRegion &bufferRegion(buffer::BufferRegionIndex index) const;
 
-		bool minimized = false;
+		SwapChain swapChain{};
 		VkFormat depthImageFormat{};
+		std::vector<GraphicsPipeline> graphicsPipelines{};
 
 	private:
+		[[nodiscard]] RenderPass &renderPass_(LunaRenderPass index);
+
 		uint32_t apiVersion_{};
 		VkInstance instance_{};
 		Device device_{};
 		VkSurfaceKHR surface_{};
-		SwapChain swapChain_{};
 		std::vector<RenderPassIndex> renderPassIndices_{};
 		std::unordered_map<std::string, uint32_t> renderPassMap_{};
 		std::vector<RenderPass> renderPasses_{};
 		std::vector<GraphicsPipelineIndex> graphicsPipelineIndices_{};
 		std::unordered_map<std::string, uint32_t> graphicsPipelineMap_{};
-		std::vector<GraphicsPipeline> graphicsPipelines_{};
 		std::vector<buffer::BufferRegionIndex> bufferRegionIndices_{};
 		std::vector<Buffer> buffers_{};
 };

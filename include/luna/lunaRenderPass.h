@@ -16,6 +16,8 @@ LunaRenderPass lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationIn
 LunaRenderPass lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo);
 LunaRenderPassSubpass lunaGetRenderPassSubpassByName(LunaRenderPass renderPass, const char *name);
 
+void lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo);
+
 #ifdef __cplusplus
 }
 #endif

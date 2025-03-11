@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <luna/lunaTypes.h>
+#include <luna/luna.h>
 #include <string>
 #include <vector>
 
@@ -17,9 +17,13 @@ struct GraphicsPipelineIndex
 class GraphicsPipeline
 {
 	public:
+		friend void ::lunaDrawFrame();
+
 		GraphicsPipeline() = default;
 		explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 		void destroy();
+
+		void bind();
 
 	private:
 		bool isDestroyed_ = true;
@@ -27,5 +31,6 @@ class GraphicsPipeline
 		std::string name_{};
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts_{};
 		VkPipelineLayout layout_{};
+		bool bound_{};
 };
 } // namespace luna::core

@@ -33,6 +33,31 @@ inline VmaAllocator Device::allocator() const
 {
 	return allocator_;
 }
+inline const FamilyValues<VkQueue> &Device::familyQueues() const
+{
+	return familyQueues_;
+}
+inline const FamilyValues<VkCommandPool> &Device::commandPools() const
+{
+	return commandPools_;
+}
+inline const FamilyValues<VkCommandBuffer> &Device::commandBuffers() const
+{
+	return commandBuffers_;
+}
+inline VkSemaphore Device::imageAvailableSemaphore() const
+{
+	return imageAvailableSemaphore_;
+}
+inline VkSemaphore Device::renderFinishedSemaphore() const
+{
+	return renderFinishedSemaphore_;
+}
+inline VkFence Device::frameFence() const
+{
+	return frameFence_;
+}
+
 
 // TODO: Better family finding logic to allow for
 //  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
@@ -87,7 +112,7 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 
 		if (hasFamily_.graphics && hasFamily_.transfer && presentationFound)
 		{
-			break;
+			return;
 		}
 	}
 	if (!hasFamily_.transfer && hasFamily_.graphics)
@@ -194,7 +219,8 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 	}
 	return true;
 }
-inline void Device::createCommandPoolsAndBuffers() {
+inline void Device::createCommandPoolsAndBuffers()
+{
 	if (hasFamily_.graphics)
 	{
 		const VkCommandPoolCreateInfo createInfo = {
@@ -243,5 +269,19 @@ inline void Device::createCommandPoolsAndBuffers() {
 		};
 		vkAllocateCommandBuffers(logicalDevice_, &allocateInfo, &commandBuffers_.presentation);
 	}
+}
+inline void Device::createSynchronizationObjects()
+{
+	constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+	};
+	vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore_);
+	vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &renderFinishedSemaphore_);
+
+	constexpr VkFenceCreateInfo fenceCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+		.flags = VK_FENCE_CREATE_SIGNALED_BIT,
+	};
+	vkCreateFence(logicalDevice_, &fenceCreateInfo, nullptr, &frameFence_);
 }
 } // namespace luna::core

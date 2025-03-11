@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <luna/lunaTypes.h>
+#include <luna/luna.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -29,13 +29,13 @@ struct RenderPassSubpassIndex
 class RenderPass
 {
 	public:
+		friend void ::lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo);
+
 		RenderPass() = default;
 		RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
 		RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
-		void destroy();
 
-		std::vector<uint32_t> pipelineIndices{};
-		[[nodiscard]] VkRenderPass renderPass() const;
+		void destroy();
 
 		const RenderPassSubpassIndex *getFirstSubpass() const;
 		const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
@@ -43,6 +43,10 @@ class RenderPass
 		void createSwapChainFramebuffers(VkRenderPass renderPass,
 										 uint32_t attachmentCount,
 										 std::vector<VkImageView> &attachmentImages) const;
+
+		[[nodiscard]] VkRenderPass renderPass() const;
+
+		std::vector<uint32_t> pipelineIndices{};
 
 	private:
 		bool isDestroyed_ = true;
