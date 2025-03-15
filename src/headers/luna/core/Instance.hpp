@@ -37,8 +37,8 @@ class Instance
 
 		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
 		void createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
-		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo &creationInfo);
-		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo);
+		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo *creationInfo);
+		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2);
 		const GraphicsPipelineIndex *createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 		uint32_t allocateBuffer(const LunaBufferCreationInfo &creationInfo);
 

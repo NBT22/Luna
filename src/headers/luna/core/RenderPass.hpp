@@ -32,8 +32,9 @@ class RenderPass
 		friend void ::lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo);
 
 		RenderPass() = default;
-		RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
-		RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
+		RenderPass(const LunaRenderPassCreationInfo *creationInfo,
+				   const LunaRenderPassCreationInfo2 *creationInfo2,
+				   const RenderPassIndex *renderPassIndex);
 
 		void destroy();
 

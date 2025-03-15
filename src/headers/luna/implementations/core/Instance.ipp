@@ -10,24 +10,38 @@ inline void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
 {
 	device_ = Device(creationInfo);
 }
-inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo &creationInfo)
+inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo *creationInfo)
 {
 	renderPassIndices_.emplace_back(renderPasses_.size());
-	if (creationInfo.uniqueName != nullptr)
+	if (creationInfo->uniqueName != nullptr)
 	{
-		renderPassMap_[creationInfo.uniqueName] = renderPasses_.size();
+		renderPassMap_[creationInfo->uniqueName] = renderPasses_.size();
 	}
-	renderPasses_.emplace_back(creationInfo, &renderPassIndices_.back());
+	renderPasses_.emplace_back(creationInfo, nullptr, &renderPassIndices_.back());
 	return &renderPassIndices_.back();
 }
-inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo)
+inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2)
 {
 	renderPassIndices_.emplace_back(renderPasses_.size());
-	if (creationInfo.uniqueName != nullptr)
+	if (creationInfo2->uniqueName != nullptr)
 	{
-		renderPassMap_[creationInfo.uniqueName] = renderPasses_.size();
+		renderPassMap_[creationInfo2->uniqueName] = renderPasses_.size();
 	}
-	renderPasses_.emplace_back(creationInfo, &renderPassIndices_.back());
+	const LunaRenderPassCreationInfo creationInfo = {
+		.samples = creationInfo2->samples,
+		.createColorAttachment = creationInfo2->createColorAttachment,
+		.colorAttachmentLoadMode = creationInfo2->colorAttachmentLoadMode,
+		.createDepthAttachment = creationInfo2->createDepthAttachment,
+		.depthAttachmentLoadMode = creationInfo2->depthAttachmentLoadMode,
+		.attachmentCount = creationInfo2->attachmentCount,
+		.subpassCount = creationInfo2->subpassCount,
+		.subpassNames = creationInfo2->subpassNames,
+		.dependencyCount = creationInfo2->dependencyCount,
+		.extent = creationInfo2->extent,
+		.framebufferAttachmentCount = creationInfo2->framebufferAttachmentCount,
+		.uniqueName = creationInfo2->uniqueName,
+	};
+	renderPasses_.emplace_back(&creationInfo, creationInfo2, &renderPassIndices_.back());
 	return &renderPassIndices_.back();
 }
 inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo

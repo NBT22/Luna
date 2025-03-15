@@ -9,250 +9,236 @@
 #include <luna/lunaRenderPass.h>
 #include <vk_mem_alloc.h>
 
-// TODO: This file has large amounts of duplicated code, which leads to changes having to be made in multiple places
-//  instead of just one. This is a major issue and should be addressed soon.
-
 namespace luna::helpers
 {
-// TODO: Both versions of this function will create validation messages if either attachment is set to preserve
-static void createAttachments(const LunaRenderPassCreationInfo &creationInfo,
-							  std::array<VkAttachmentReference, 3> &attachmentReferences,
-							  std::vector<VkAttachmentDescription> &attachmentDescriptions,
-							  const VkSampleCountFlagBits samples)
+static void createDepthAttachment(const VkSampleCountFlagBits samples,
+								  const LunaAttachmentLoadMode depthAttachmentLoadMode,
+								  std::array<VkAttachmentReference, 3> *attachmentReferences = nullptr,
+								  std::vector<VkAttachmentDescription> *attachmentDescriptions = nullptr,
+								  std::array<VkAttachmentReference2, 3> *attachmentReferences2 = nullptr,
+								  std::vector<VkAttachmentDescription2> *attachmentDescriptions2 = nullptr)
 {
-	if (creationInfo.createDepthAttachment)
+	VkAttachmentLoadOp loadOp;
+	switch (depthAttachmentLoadMode)
 	{
-		VkAttachmentLoadOp loadOp;
-		switch (creationInfo.depthAttachmentLoadMode)
-		{
-			case LUNA_ATTACHMENT_LOAD_CLEAR:
-				loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				break;
-			case LUNA_ATTACHMENT_LOAD_PRESERVE:
-				loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				break;
-			default:
-				loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				break;
-		}
-		attachmentReferences[0] = {
+		case LUNA_ATTACHMENT_LOAD_CLEAR:
+			loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			break;
+		case LUNA_ATTACHMENT_LOAD_PRESERVE:
+			loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			break;
+		default:
+			loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			break;
+	}
+	// ReSharper disable once CppDFAConstantConditions It's just wrong -_-
+	if (attachmentReferences2 != nullptr && attachmentDescriptions2 != nullptr)
+	{
+		(*attachmentReferences2)[0] = {
+			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
 			.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
-		attachmentDescriptions.emplace_back(0,
-											core::instance.depthImageFormat,
-											creationInfo.samples,
-											loadOp,
-											creationInfo.depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
-													? VK_ATTACHMENT_STORE_OP_STORE
-													: VK_ATTACHMENT_STORE_OP_DONT_CARE,
-											VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-											VK_ATTACHMENT_STORE_OP_DONT_CARE,
-											VK_IMAGE_LAYOUT_UNDEFINED,
-											VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-	}
-	if (creationInfo.createColorAttachment)
+		attachmentDescriptions2->emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+											  nullptr,
+											  0,
+											  core::instance.depthImageFormat,
+											  samples,
+											  loadOp,
+											  depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
+													  ? VK_ATTACHMENT_STORE_OP_STORE
+													  : VK_ATTACHMENT_STORE_OP_DONT_CARE,
+											  VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+											  VK_ATTACHMENT_STORE_OP_DONT_CARE,
+											  VK_IMAGE_LAYOUT_UNDEFINED,
+											  VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	} else
 	{
-		VkAttachmentLoadOp loadOp;
-		switch (creationInfo.colorAttachmentLoadMode)
-		{
-			case LUNA_ATTACHMENT_LOAD_CLEAR:
-				loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				break;
-			case LUNA_ATTACHMENT_LOAD_PRESERVE:
-				loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				break;
-			default:
-				loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				break;
-		}
-		attachmentReferences[1] = {
-			.attachment = 1,
-			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		(*attachmentReferences)[0] = {
+			.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		};
-		if (samples != VK_SAMPLE_COUNT_1_BIT)
-		{
-			attachmentReferences[2] = {
-				.attachment = 2,
-				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			};
-			attachmentDescriptions.emplace_back(0,
-												core::instance.swapChain.format.format,
-												samples,
-												loadOp,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_IMAGE_LAYOUT_UNDEFINED,
-												VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			attachmentDescriptions.emplace_back(0,
-												core::instance.swapChain.format.format,
-												VK_SAMPLE_COUNT_1_BIT,
-												loadOp,
-												VK_ATTACHMENT_STORE_OP_STORE,
-												VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_IMAGE_LAYOUT_UNDEFINED,
-												VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		} else
-		{
-			attachmentDescriptions.emplace_back(0,
-												core::instance.swapChain.format.format,
-												VK_SAMPLE_COUNT_1_BIT,
-												loadOp,
-												creationInfo.colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED
-														? VK_ATTACHMENT_STORE_OP_DONT_CARE
-														: VK_ATTACHMENT_STORE_OP_STORE,
-												VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_IMAGE_LAYOUT_UNDEFINED,
-												VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		}
+		attachmentDescriptions->emplace_back(0,
+											 core::instance.depthImageFormat,
+											 samples,
+											 loadOp,
+											 depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
+													 ? VK_ATTACHMENT_STORE_OP_STORE
+													 : VK_ATTACHMENT_STORE_OP_DONT_CARE,
+											 VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+											 VK_ATTACHMENT_STORE_OP_DONT_CARE,
+											 VK_IMAGE_LAYOUT_UNDEFINED,
+											 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	}
 }
-
-static void createAttachments(const LunaRenderPassCreationInfo2 &creationInfo,
-							  std::array<VkAttachmentReference2, 3> &attachmentReferences,
-							  std::vector<VkAttachmentDescription2> &attachmentDescriptions,
-							  const VkSampleCountFlagBits samples)
+static void createColorAttachment(const VkSampleCountFlagBits samples,
+								  const LunaAttachmentLoadMode colorAttachmentLoadMode,
+								  std::array<VkAttachmentReference, 3> *attachmentReferences = nullptr,
+								  std::vector<VkAttachmentDescription> *attachmentDescriptions = nullptr,
+								  std::array<VkAttachmentReference2, 3> *attachmentReferences2 = nullptr,
+								  std::vector<VkAttachmentDescription2> *attachmentDescriptions2 = nullptr)
 {
-	if (creationInfo.createDepthAttachment)
+	VkAttachmentLoadOp loadOp;
+	switch (colorAttachmentLoadMode)
 	{
-		VkAttachmentLoadOp loadOp;
-		switch (creationInfo.depthAttachmentLoadMode)
-		{
-			case LUNA_ATTACHMENT_LOAD_CLEAR:
-				loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				break;
-			case LUNA_ATTACHMENT_LOAD_PRESERVE:
-				loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				break;
-			default:
-				loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				break;
-		}
-		attachmentReferences[0] = {
-			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-			.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		};
-		attachmentDescriptions.emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-											nullptr,
-											0,
-											core::instance.depthImageFormat,
-											samples,
-											loadOp,
-											creationInfo.depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
-													? VK_ATTACHMENT_STORE_OP_STORE
-													: VK_ATTACHMENT_STORE_OP_DONT_CARE,
-											VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-											VK_ATTACHMENT_STORE_OP_DONT_CARE,
-											VK_IMAGE_LAYOUT_UNDEFINED,
-											VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		case LUNA_ATTACHMENT_LOAD_CLEAR:
+			loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			break;
+		case LUNA_ATTACHMENT_LOAD_PRESERVE:
+			loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			break;
+		default:
+			loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			break;
 	}
-	if (creationInfo.createColorAttachment)
+	// ReSharper disable once CppDFAConstantConditions It's just wrong -_-
+	if (attachmentReferences2 != nullptr && attachmentDescriptions2 != nullptr)
 	{
-		VkAttachmentLoadOp loadOp;
-		switch (creationInfo.colorAttachmentLoadMode)
-		{
-			case LUNA_ATTACHMENT_LOAD_CLEAR:
-				loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				break;
-			case LUNA_ATTACHMENT_LOAD_PRESERVE:
-				loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				break;
-			default:
-				loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				break;
-		}
-		attachmentReferences[1] = {
+		(*attachmentReferences2)[1] = {
 			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
 			.attachment = 1,
 			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		};
 		if (samples != VK_SAMPLE_COUNT_1_BIT)
 		{
-			attachmentReferences[2] = {
+			(*attachmentReferences2)[2] = {
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
 				.attachment = 2,
 				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			};
-			attachmentDescriptions.emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-												nullptr,
-												0,
-												core::instance.swapChain.format.format,
-												samples,
-												loadOp,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_IMAGE_LAYOUT_UNDEFINED,
-												VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			attachmentDescriptions.emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-												nullptr,
-												0,
-												core::instance.swapChain.format.format,
-												VK_SAMPLE_COUNT_1_BIT,
-												loadOp,
-												VK_ATTACHMENT_STORE_OP_STORE,
-												VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_IMAGE_LAYOUT_UNDEFINED,
-												VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+			attachmentDescriptions2->emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+												  nullptr,
+												  0,
+												  core::instance.swapChain.format.format,
+												  samples,
+												  loadOp,
+												  VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												  VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+												  VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												  VK_IMAGE_LAYOUT_UNDEFINED,
+												  VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			attachmentDescriptions2->emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+												  nullptr,
+												  0,
+												  core::instance.swapChain.format.format,
+												  VK_SAMPLE_COUNT_1_BIT,
+												  loadOp,
+												  VK_ATTACHMENT_STORE_OP_STORE,
+												  VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+												  VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												  VK_IMAGE_LAYOUT_UNDEFINED,
+												  VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		} else
 		{
-			attachmentDescriptions.emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-												nullptr,
-												0,
-												core::instance.swapChain.format.format,
-												VK_SAMPLE_COUNT_1_BIT,
-												loadOp,
-												creationInfo.colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED
-														? VK_ATTACHMENT_STORE_OP_DONT_CARE
-														: VK_ATTACHMENT_STORE_OP_STORE,
-												VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-												VK_ATTACHMENT_STORE_OP_DONT_CARE,
-												VK_IMAGE_LAYOUT_UNDEFINED,
-												VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+			attachmentDescriptions2->emplace_back(VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+												  nullptr,
+												  0,
+												  core::instance.swapChain.format.format,
+												  VK_SAMPLE_COUNT_1_BIT,
+												  loadOp,
+												  colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED
+														  ? VK_ATTACHMENT_STORE_OP_DONT_CARE
+														  : VK_ATTACHMENT_STORE_OP_STORE,
+												  VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+												  VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												  VK_IMAGE_LAYOUT_UNDEFINED,
+												  VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		}
+	} else
+	{
+		(*attachmentReferences)[1] = {
+			.attachment = 1,
+			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		};
+		if (samples != VK_SAMPLE_COUNT_1_BIT)
+		{
+			(*attachmentReferences)[2] = {
+				.attachment = 2,
+				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			};
+			attachmentDescriptions->emplace_back(0,
+												 core::instance.swapChain.format.format,
+												 samples,
+												 loadOp,
+												 VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												 VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+												 VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												 VK_IMAGE_LAYOUT_UNDEFINED,
+												 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			attachmentDescriptions->emplace_back(0,
+												 core::instance.swapChain.format.format,
+												 VK_SAMPLE_COUNT_1_BIT,
+												 loadOp,
+												 VK_ATTACHMENT_STORE_OP_STORE,
+												 VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+												 VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												 VK_IMAGE_LAYOUT_UNDEFINED,
+												 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		} else
+		{
+			attachmentDescriptions->emplace_back(0,
+												 core::instance.swapChain.format.format,
+												 VK_SAMPLE_COUNT_1_BIT,
+												 loadOp,
+												 colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED
+														 ? VK_ATTACHMENT_STORE_OP_DONT_CARE
+														 : VK_ATTACHMENT_STORE_OP_STORE,
+												 VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+												 VK_ATTACHMENT_STORE_OP_DONT_CARE,
+												 VK_IMAGE_LAYOUT_UNDEFINED,
+												 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		}
 	}
 }
-} // namespace luna::helpers
-
-namespace luna::core
+// TODO: Has issues with not clearing attachments
+static void createAttachments(const VkSampleCountFlagBits samples,
+							  const bool createColor,
+							  const LunaAttachmentLoadMode colorAttachmentLoadMode,
+							  const bool createDepth,
+							  const LunaAttachmentLoadMode depthAttachmentLoadMode,
+							  std::array<VkAttachmentReference, 3> *attachmentReferences = nullptr,
+							  std::vector<VkAttachmentDescription> *attachmentDescriptions = nullptr,
+							  std::array<VkAttachmentReference2, 3> *attachmentReferences2 = nullptr,
+							  std::vector<VkAttachmentDescription2> *attachmentDescriptions2 = nullptr)
 {
-RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex)
-{
-	assert(isDestroyed_);
-	extent_ = creationInfo.extent;
-	subpassIndices_.reserve(creationInfo.subpassCount);
-	if (creationInfo.subpassNames != nullptr)
+	assert((attachmentReferences && attachmentDescriptions) || (attachmentReferences2 && attachmentDescriptions2));
+	if (createDepth)
 	{
-		for (uint32_t i = 0; i < creationInfo.subpassCount; i++)
-		{
-			if (creationInfo.subpassNames[i] != nullptr)
-			{
-				subpassMap_[creationInfo.subpassNames[i]] = i;
-			}
-		}
+		createDepthAttachment(samples,
+							  depthAttachmentLoadMode,
+							  attachmentReferences,
+							  attachmentDescriptions,
+							  attachmentReferences2,
+							  attachmentDescriptions2);
 	}
-	for (uint32_t i = 0; i < creationInfo.subpassCount; i++)
+	if (createColor)
 	{
-		subpassIndices_.emplace_back(i, renderPassIndex);
+		createColorAttachment(samples,
+							  colorAttachmentLoadMode,
+							  attachmentReferences,
+							  attachmentDescriptions,
+							  attachmentReferences2,
+							  attachmentDescriptions2);
 	}
-	samples_ = creationInfo.samples != 0 ? creationInfo.samples : VK_SAMPLE_COUNT_1_BIT;
-	const uint32_t attachmentCount = creationInfo.attachmentCount +
-									 static_cast<uint32_t>(creationInfo.createDepthAttachment) +
-									 static_cast<uint32_t>(creationInfo.createColorAttachment) +
-									 static_cast<uint32_t>(creationInfo.createColorAttachment &&
-														   samples_ != VK_SAMPLE_COUNT_1_BIT);
+}
 
+static void createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
+							 const uint32_t attachmentCount,
+							 const VkSampleCountFlagBits samples,
+							 VkRenderPass &renderPass)
+{
 	std::array<VkAttachmentReference, 3> attachmentReferences{};
 	std::vector<VkAttachmentDescription> attachmentDescriptions;
 	attachmentDescriptions.reserve(attachmentCount);
 	if (creationInfo.attachmentCount > 0)
 	{
-		std::copy_n(creationInfo.attachments, attachmentCount, attachmentDescriptions.begin());
+		std::copy_n(creationInfo.attachments, creationInfo.attachmentCount, attachmentDescriptions.begin());
 	}
-	helpers::createAttachments(creationInfo, attachmentReferences, attachmentDescriptions, samples_);
+	createAttachments(samples,
+							   creationInfo.createColorAttachment,
+							   creationInfo.colorAttachmentLoadMode,
+							   creationInfo.createDepthAttachment,
+							   creationInfo.depthAttachmentLoadMode,
+							   &attachmentReferences,
+							   &attachmentDescriptions);
 
 	std::vector<VkSubpassDescription> subpasses;
 	subpasses.reserve(creationInfo.subpassCount);
@@ -267,7 +253,7 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo, const Ren
 							   subpassCreationInfo.inputAttachments,
 							   subpassCreationInfo.useColorAttachment ? 1u : 0,
 							   subpassCreationInfo.useColorAttachment ? &attachmentReferences[1] : nullptr,
-							   subpassCreationInfo.useColorAttachment && samples_ != VK_SAMPLE_COUNT_1_BIT
+							   subpassCreationInfo.useColorAttachment && samples != VK_SAMPLE_COUNT_1_BIT
 									   ? &attachmentReferences[2]
 									   : nullptr,
 							   subpassCreationInfo.useDepthAttachment ? &attachmentReferences[0] : nullptr,
@@ -283,55 +269,13 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo, const Ren
 		.dependencyCount = creationInfo.dependencyCount,
 		.pDependencies = creationInfo.dependencies,
 	};
-	vkCreateRenderPass(instance.device().logicalDevice(), &createInfo, nullptr, &renderPass_);
-
-	createAttachmentImages();
-	const uint32_t framebufferAttachmentCount = creationInfo.framebufferAttachmentCount +
-												static_cast<uint32_t>(creationInfo.createDepthAttachment) +
-												static_cast<uint32_t>(samples_ != VK_SAMPLE_COUNT_1_BIT);
-	std::vector framebufferAttachments(creationInfo.framebufferAttachments,
-									   creationInfo.framebufferAttachments + creationInfo.framebufferAttachmentCount);
-	framebufferAttachments.reserve(framebufferAttachmentCount + 1);
-
-	if (creationInfo.createDepthAttachment)
-	{
-		framebufferAttachments.emplace_back(depthImageView_);
-	}
-	if (samples_ != VK_SAMPLE_COUNT_1_BIT)
-	{
-		framebufferAttachments.emplace_back(colorImageView_);
-	}
-	framebufferAttachments.emplace_back(instance.swapChain.imageViews.at(0));
-	createSwapChainFramebuffers(renderPass_, framebufferAttachmentCount + 1, framebufferAttachments);
-	isDestroyed_ = false;
+	vkCreateRenderPass(core::instance.device().logicalDevice(), &createInfo, nullptr, &renderPass);
 }
-
-RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex)
+static void createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
+							  const uint32_t attachmentCount,
+							  const VkSampleCountFlagBits samples,
+							  VkRenderPass &renderPass)
 {
-	assert(isDestroyed_);
-	extent_ = creationInfo.extent;
-	subpassIndices_.reserve(creationInfo.subpassCount);
-	if (creationInfo.subpassNames != nullptr)
-	{
-		for (uint32_t i = 0; i < creationInfo.subpassCount; i++)
-		{
-			if (creationInfo.subpassNames[i] != nullptr)
-			{
-				subpassMap_[creationInfo.subpassNames[i]] = i;
-			}
-		}
-	}
-	for (uint32_t i = 0; i < creationInfo.subpassCount; i++)
-	{
-		subpassIndices_.emplace_back(i, renderPassIndex);
-	}
-	samples_ = creationInfo.samples != 0 ? creationInfo.samples : VK_SAMPLE_COUNT_1_BIT;
-	const uint32_t attachmentCount = creationInfo.attachmentCount +
-									 static_cast<uint32_t>(creationInfo.createColorAttachment) +
-									 static_cast<uint32_t>(creationInfo.createDepthAttachment) +
-									 static_cast<uint32_t>(creationInfo.createColorAttachment &&
-														   samples_ != VK_SAMPLE_COUNT_1_BIT);
-
 	std::array<VkAttachmentReference2, 3> attachmentReferences{};
 	std::vector<VkAttachmentDescription2> attachmentDescriptions(creationInfo.attachmentCount);
 	attachmentDescriptions.reserve(attachmentCount);
@@ -339,7 +283,15 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const Re
 	{
 		std::copy_n(creationInfo.attachments, attachmentCount, attachmentDescriptions.begin());
 	}
-	helpers::createAttachments(creationInfo, attachmentReferences, attachmentDescriptions, samples_);
+	createAttachments(samples,
+							   creationInfo.createColorAttachment,
+							   creationInfo.colorAttachmentLoadMode,
+							   creationInfo.createDepthAttachment,
+							   creationInfo.depthAttachmentLoadMode,
+							   nullptr,
+							   nullptr,
+							   &attachmentReferences,
+							   &attachmentDescriptions);
 
 	std::vector<VkSubpassDescription2> subpasses;
 	subpasses.reserve(creationInfo.subpassCount);
@@ -357,7 +309,7 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const Re
 							   subpassCreationInfo.inputAttachments,
 							   subpassCreationInfo.useColorAttachment ? 1u : 0,
 							   subpassCreationInfo.useColorAttachment ? &attachmentReferences[1] : nullptr,
-							   subpassCreationInfo.useColorAttachment && samples_ != VK_SAMPLE_COUNT_1_BIT
+							   subpassCreationInfo.useColorAttachment && samples != VK_SAMPLE_COUNT_1_BIT
 									   ? &attachmentReferences[2]
 									   : nullptr,
 							   subpassCreationInfo.useDepthAttachment ? &attachmentReferences[0] : nullptr,
@@ -375,17 +327,57 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const Re
 		.correlatedViewMaskCount = creationInfo.correlatedViewMaskCount,
 		.pCorrelatedViewMasks = creationInfo.correlatedViewMasks,
 	};
-	vkCreateRenderPass2(instance.device().logicalDevice(), &createInfo, nullptr, &renderPass_);
+	vkCreateRenderPass2(core::instance.device().logicalDevice(), &createInfo, nullptr, &renderPass);
+}
+} // namespace luna::helpers
+
+namespace luna::core
+{
+RenderPass::RenderPass(const LunaRenderPassCreationInfo *creationInfo,
+					   const LunaRenderPassCreationInfo2 *creationInfo2,
+					   const RenderPassIndex *renderPassIndex)
+{
+	assert(isDestroyed_ && creationInfo);
+	extent_ = creationInfo->extent;
+	subpassIndices_.reserve(creationInfo->subpassCount);
+	if (creationInfo->subpassNames != nullptr)
+	{
+		for (uint32_t i = 0; i < creationInfo->subpassCount; i++)
+		{
+			if (creationInfo->subpassNames[i] != nullptr)
+			{
+				subpassMap_[creationInfo->subpassNames[i]] = i;
+			}
+		}
+	}
+	for (uint32_t i = 0; i < creationInfo->subpassCount; i++)
+	{
+		subpassIndices_.emplace_back(i, renderPassIndex);
+	}
+	samples_ = creationInfo->samples != 0 ? creationInfo->samples : VK_SAMPLE_COUNT_1_BIT;
+	const uint32_t attachmentCount = creationInfo->attachmentCount +
+									 static_cast<uint32_t>(creationInfo->createDepthAttachment) +
+									 static_cast<uint32_t>(creationInfo->createColorAttachment) +
+									 static_cast<uint32_t>(creationInfo->createColorAttachment &&
+														   samples_ != VK_SAMPLE_COUNT_1_BIT);
+
+	if (creationInfo2 != nullptr)
+	{
+		helpers::createRenderPass2(*creationInfo2, attachmentCount, samples_, renderPass_);
+	} else
+	{
+		helpers::createRenderPass(*creationInfo, attachmentCount, samples_, renderPass_);
+	}
 
 	createAttachmentImages();
-	const uint32_t framebufferAttachmentCount = creationInfo.framebufferAttachmentCount +
-												static_cast<uint32_t>(creationInfo.createDepthAttachment) +
+	const uint32_t framebufferAttachmentCount = creationInfo->framebufferAttachmentCount +
+												static_cast<uint32_t>(creationInfo->createDepthAttachment) +
 												static_cast<uint32_t>(samples_ != VK_SAMPLE_COUNT_1_BIT);
-	std::vector framebufferAttachments(creationInfo.framebufferAttachments,
-									   creationInfo.framebufferAttachments + creationInfo.framebufferAttachmentCount);
+	std::vector framebufferAttachments(creationInfo->framebufferAttachments,
+									   creationInfo->framebufferAttachments + creationInfo->framebufferAttachmentCount);
 	framebufferAttachments.reserve(framebufferAttachmentCount + 1);
 
-	if (creationInfo.createDepthAttachment)
+	if (creationInfo->createDepthAttachment)
 	{
 		framebufferAttachments.emplace_back(depthImageView_);
 	}
@@ -509,13 +501,13 @@ inline void RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPas
 LunaRenderPass lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	return luna::core::instance.createRenderPass(*creationInfo);
+	return luna::core::instance.createRenderPass(creationInfo);
 }
 
 LunaRenderPass lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo)
 {
 	assert(creationInfo);
-	return luna::core::instance.createRenderPass(*creationInfo);
+	return luna::core::instance.createRenderPass(creationInfo);
 }
 
 LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass renderPass, const char *name)
