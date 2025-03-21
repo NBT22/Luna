@@ -5,8 +5,6 @@
 #pragma once
 
 #include <luna/luna.h>
-#include <string>
-#include <vector>
 
 namespace luna::core
 {
@@ -23,14 +21,15 @@ class GraphicsPipeline
 		explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 		void destroy();
 
-		void bind();
+		void bind(const LunaGraphicsPipelineBindInfo &bindInfo);
+		void unbind();
 
 	private:
 		bool isDestroyed_ = true;
 		VkPipeline pipeline_{};
-		std::string name_{};
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts_{};
 		VkPipelineLayout layout_{};
 		bool bound_{};
 };
 } // namespace luna::core
+
+#include <luna/implementations/core/GraphicsPipeline.ipp>

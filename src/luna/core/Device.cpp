@@ -163,7 +163,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	vmaCreateAllocator(&allocationCreateInfo, &allocator_);
 
 	createCommandPoolsAndBuffers();
-	createSynchronizationObjects();
+	createSemaphores();
 }
 
 void Device::initQueueFamilyIndices()

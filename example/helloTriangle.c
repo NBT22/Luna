@@ -27,7 +27,7 @@ typedef struct
  * }
  * @endcode
  */
-const uint32_t VERTEX_SHADER_SPIRV[280] = {
+static const uint32_t VERTEX_SHADER_SPIRV[280] = {
 	0x07230203, 0x00010000, 0x000d000b, 0x00000022, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, 0x00000001,
 	0x4c534c47, 0x6474732e, 0x3035342e, 0x00000000, 0x0003000e, 0x00000000, 0x00000001, 0x0009000f, 0x00000000,
 	0x00000004, 0x6e69616d, 0x00000000, 0x0000000d, 0x00000012, 0x0000001b, 0x0000001c, 0x00030003, 0x00000002,
@@ -71,7 +71,7 @@ const uint32_t VERTEX_SHADER_SPIRV[280] = {
  * }
  * @endcode
  */
-const uint32_t FRAGMENT_SHADER_SPIRV[112] = {
+static const uint32_t FRAGMENT_SHADER_SPIRV[112] = {
 	0x07230203, 0x00010000, 0x000d000b, 0x0000000d, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, 0x00000001,
 	0x4c534c47, 0x6474732e, 0x3035342e, 0x00000000, 0x0003000e, 0x00000000, 0x00000001, 0x0007000f, 0x00000004,
 	0x00000004, 0x6e69616d, 0x00000000, 0x00000009, 0x0000000b, 0x00030010, 0x00000004, 0x00000007, 0x00030003,
@@ -87,14 +87,14 @@ const uint32_t FRAGMENT_SHADER_SPIRV[112] = {
 	0x00000009, 0x0000000c, 0x000100fd, 0x00010038,
 };
 
-const Vertex vertices[3] = {
+static const Vertex vertices[3] = {
 	{.x = 0.0f, .y = -0.5f, .r = 1},
 	{.x = 0.5f, .y = 0.5f, .g = 1},
 	{.x = -0.5f, .y = 0.5f, .b = 1},
 };
 #pragma endregion constants
 
-LunaRenderPass createRenderPass(const VkExtent3D extent)
+static LunaRenderPass createRenderPass(const VkExtent3D extent)
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
 
@@ -122,7 +122,7 @@ LunaRenderPass createRenderPass(const VkExtent3D extent)
 	return lunaCreateRenderPass(&renderPassCreationInfo);
 }
 
-LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass)
+static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass)
 {
 	const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
 
@@ -239,22 +239,6 @@ LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass)
 		.pAttachments = &colorBlendAttachment,
 	};
 
-	const VkDescriptorSetLayoutBinding binding = {
-		.binding = 0,
-		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.descriptorCount = 1,
-		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-	};
-	const LunaDescriptorSetLayoutCreationInfo descriptorSetLayoutCreationInfo = {
-		.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
-		.bindingCount = 1,
-		.bindings = &binding,
-	};
-	const LunaPipelineLayoutCreationInfo layoutCreationInfo = {
-		.descriptorSetLayoutCount = 1,
-		.descriptorSetLayouts = &descriptorSetLayoutCreationInfo,
-	};
-
 	const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
 		.shaderStageCount = 2,
 		.shaderStages = shaderStages,
@@ -265,7 +249,6 @@ LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass)
 		.multisampleState = &multisampling,
 		.depthStencilState = &depthStencil,
 		.colorBlendState = &colorBlending,
-		.layoutCreationInfo = &layoutCreationInfo,
 		.subpass = subpass,
 	};
 	return lunaCreateGraphicsPipeline(&pipelineCreationInfo);
@@ -277,10 +260,7 @@ int main()
 	{
 		return 1;
 	}
-	SDL_Window *window = SDL_CreateWindow("Luna Example",
-										  1280,
-										  720,
-										  SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+	SDL_Window *window = SDL_CreateWindow("Luna Example", 1080, 720, SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 	if (window == NULL)
 	{
 		return 2;
@@ -295,7 +275,9 @@ int main()
 		.extensionCount = instanceExtensionCount,
 		.extensionNames = instanceExtensions,
 
+#ifndef NDEBUG
 		.enableValidation = true,
+#endif
 	};
 	lunaCreateInstance(&instanceCreationInfo);
 
@@ -317,7 +299,7 @@ int main()
 	lunaAddNewDevice(&deviceCreationInfo);
 
 	const VkExtent3D extent = {
-		.width = 1280,
+		.width = 1080,
 		.height = 720,
 		.depth = 1,
 	};

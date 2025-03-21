@@ -1,18 +1,17 @@
 //
-// Created by NBT22 on 2/17/25.
+// Created by NBT22 on 3/11/25.
 //
 
 #pragma once
 
 namespace luna::helpers
 {
-// TODO: VkImageViewCreateInfo can be extended with structs in the core spec
 inline void createImageView(const VkDevice logicalDevice,
 							const VkImage image,
 							const VkFormat format,
 							const VkImageAspectFlags aspectMask,
 							const uint8_t mipmapLevels,
-							VkImageView &imageView)
+							VkImageView *imageView)
 {
 	constexpr VkComponentMapping componentMapping = {
 		.r = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -33,6 +32,18 @@ inline void createImageView(const VkDevice logicalDevice,
 		.components = componentMapping,
 		.subresourceRange = subresourceRange,
 	};
-	vkCreateImageView(logicalDevice, &createInfo, nullptr, &imageView);
+	vkCreateImageView(logicalDevice, &createInfo, nullptr, imageView);
 }
 } // namespace luna::helpers
+
+namespace luna::core
+{
+inline VkImageView Image::imageView() const
+{
+	return imageView_;
+}
+inline VkSampler Image::sampler() const
+{
+	return sampler_;
+}
+} // namespace luna::core

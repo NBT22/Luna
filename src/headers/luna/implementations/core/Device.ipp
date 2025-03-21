@@ -36,11 +36,11 @@ inline const FamilyValues<VkQueue> &Device::familyQueues() const
 {
 	return familyQueues_;
 }
-inline const FamilyValues<VkCommandPool> &Device::commandPools() const
+inline FamilyValues<CommandBuffer> &Device::commandBuffers()
 {
-	return commandPools_;
+	return commandBuffers_;
 }
-inline const FamilyValues<VkCommandBuffer> &Device::commandBuffers() const
+inline const FamilyValues<CommandBuffer> &Device::commandBuffers() const
 {
 	return commandBuffers_;
 }
@@ -52,11 +52,6 @@ inline VkSemaphore Device::renderFinishedSemaphore() const
 {
 	return renderFinishedSemaphore_;
 }
-inline VkFence Device::frameFence() const
-{
-	return frameFence_;
-}
-
 
 // TODO: Better family finding logic to allow for
 //  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
@@ -227,14 +222,10 @@ inline void Device::createCommandPoolsAndBuffers()
 			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 			.queueFamilyIndex = familyIndices_.graphics,
 		};
-		vkCreateCommandPool(logicalDevice_, &createInfo, nullptr, &commandPools_.graphics);
-		const VkCommandBufferAllocateInfo allocateInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.commandPool = commandPools_.graphics,
-			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = 1,
-		};
-		vkAllocateCommandBuffers(logicalDevice_, &allocateInfo, &commandBuffers_.graphics);
+		commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
+													   createInfo,
+													   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+													   nullptr);
 	}
 	if (hasFamily_.transfer)
 	{
@@ -243,14 +234,10 @@ inline void Device::createCommandPoolsAndBuffers()
 			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 			.queueFamilyIndex = familyIndices_.transfer,
 		};
-		vkCreateCommandPool(logicalDevice_, &createInfo, nullptr, &commandPools_.transfer);
-		const VkCommandBufferAllocateInfo allocateInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.commandPool = commandPools_.transfer,
-			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = 1,
-		};
-		vkAllocateCommandBuffers(logicalDevice_, &allocateInfo, &commandBuffers_.transfer);
+		commandBuffers_.transfer.allocateCommandBuffer(logicalDevice_,
+													   createInfo,
+													   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+													   nullptr);
 	}
 	if (hasFamily_.presentation)
 	{
@@ -259,28 +246,18 @@ inline void Device::createCommandPoolsAndBuffers()
 			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 			.queueFamilyIndex = familyIndices_.presentation,
 		};
-		vkCreateCommandPool(logicalDevice_, &createInfo, nullptr, &commandPools_.presentation);
-		const VkCommandBufferAllocateInfo allocateInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.commandPool = commandPools_.presentation,
-			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = 1,
-		};
-		vkAllocateCommandBuffers(logicalDevice_, &allocateInfo, &commandBuffers_.presentation);
+		commandBuffers_.presentation.allocateCommandBuffer(logicalDevice_,
+														   createInfo,
+														   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+														   nullptr);
 	}
 }
-inline void Device::createSynchronizationObjects()
+inline void Device::createSemaphores()
 {
 	constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 	};
 	vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore_);
 	vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &renderFinishedSemaphore_);
-
-	constexpr VkFenceCreateInfo fenceCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-		.flags = VK_FENCE_CREATE_SIGNALED_BIT,
-	};
-	vkCreateFence(logicalDevice_, &fenceCreateInfo, nullptr, &frameFence_);
 }
 } // namespace luna::core

@@ -4,8 +4,8 @@
 
 #include <algorithm>
 #include <array>
+#include <luna/core/Image.hpp>
 #include <luna/core/RenderPass.hpp>
-#include <luna/helpers/Luna.hpp>
 #include <luna/lunaRenderPass.h>
 #include <vk_mem_alloc.h>
 
@@ -233,12 +233,12 @@ static void createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
 		std::copy_n(creationInfo.attachments, creationInfo.attachmentCount, attachmentDescriptions.begin());
 	}
 	createAttachments(samples,
-							   creationInfo.createColorAttachment,
-							   creationInfo.colorAttachmentLoadMode,
-							   creationInfo.createDepthAttachment,
-							   creationInfo.depthAttachmentLoadMode,
-							   &attachmentReferences,
-							   &attachmentDescriptions);
+					  creationInfo.createColorAttachment,
+					  creationInfo.colorAttachmentLoadMode,
+					  creationInfo.createDepthAttachment,
+					  creationInfo.depthAttachmentLoadMode,
+					  &attachmentReferences,
+					  &attachmentDescriptions);
 
 	std::vector<VkSubpassDescription> subpasses;
 	subpasses.reserve(creationInfo.subpassCount);
@@ -284,14 +284,14 @@ static void createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
 		std::copy_n(creationInfo.attachments, attachmentCount, attachmentDescriptions.begin());
 	}
 	createAttachments(samples,
-							   creationInfo.createColorAttachment,
-							   creationInfo.colorAttachmentLoadMode,
-							   creationInfo.createDepthAttachment,
-							   creationInfo.depthAttachmentLoadMode,
-							   nullptr,
-							   nullptr,
-							   &attachmentReferences,
-							   &attachmentDescriptions);
+					  creationInfo.createColorAttachment,
+					  creationInfo.colorAttachmentLoadMode,
+					  creationInfo.createDepthAttachment,
+					  creationInfo.depthAttachmentLoadMode,
+					  nullptr,
+					  nullptr,
+					  &attachmentReferences,
+					  &attachmentDescriptions);
 
 	std::vector<VkSubpassDescription2> subpasses;
 	subpasses.reserve(creationInfo.subpassCount);
@@ -397,10 +397,10 @@ inline void RenderPass::destroy()
 		return;
 	}
 
-	for (const uint32_t pipelineIndex: pipelineIndices)
-	{
-		instance.graphicsPipelines.at(pipelineIndex).destroy();
-	}
+	// for (const uint32_t pipelineIndex: pipelineIndices)
+	// {
+	// 	instance.graphicsPipelines.at(pipelineIndex).destroy();
+	// }
 	vkDestroyRenderPass(instance.device().logicalDevice(), renderPass_, nullptr);
 	isDestroyed_ = true;
 }
@@ -441,7 +441,7 @@ inline void RenderPass::createAttachmentImages()
 								 instance.swapChain.format.format,
 								 VK_IMAGE_ASPECT_COLOR_BIT,
 								 1,
-								 colorImageView_);
+								 &colorImageView_);
 	}
 
 	const VkImageCreateInfo depthImageCreateInfo = {
@@ -469,7 +469,7 @@ inline void RenderPass::createAttachmentImages()
 							 instance.depthImageFormat,
 							 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
 							 1,
-							 depthImageView_);
+							 &depthImageView_);
 }
 
 inline void RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPass,
@@ -523,28 +523,22 @@ void lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBe
 {
 	assert(renderPass);
 	const luna::core::Device &device = luna::core::instance.device();
-	const VkCommandBuffer commandBuffer = luna::core::instance.device().commandBuffers().graphics;
+	luna::core::CommandBuffer &commandBuffer = luna::core::instance.commandBuffers().graphics;
 	const luna::core::SwapChain &swapChain = luna::core::instance.swapChain;
 	const luna::core::RenderPass &renderPassObject = luna::core::instance.renderPass(renderPass);
 
 	if (swapChain.imageIndex == -1u)
 	{
-		// TODO: If one of these fails it blocks the render thread, which is unacceptable, so there should be handling
-		vkWaitForFences(device.logicalDevice_, 1, &device.frameFence_, VK_TRUE, UINT64_MAX);
-		vkResetFences(device.logicalDevice_, 1, &device.frameFence_);
+		// TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
+		commandBuffer.waitForFence(device.logicalDevice_);
+		vkResetFences(device.logicalDevice_, 1, &commandBuffer.fence);
 		vkAcquireNextImageKHR(device.logicalDevice_,
 							  swapChain.swapChain,
 							  UINT64_MAX,
 							  device.imageAvailableSemaphore_,
 							  VK_NULL_HANDLE,
 							  &luna::core::instance.swapChain.imageIndex);
-		vkResetCommandBuffer(commandBuffer, 0);
-
-		constexpr VkCommandBufferBeginInfo commandBufferBeginInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		};
-		vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+		commandBuffer.beginSingleUseCommandBuffer();
 
 		uint32_t clearValueCount = 1;
 		std::vector<VkClearValue> clearValues;
@@ -568,6 +562,6 @@ void lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBe
 			.clearValueCount = clearValueCount,
 			.pClearValues = clearValues.data(),
 		};
-		vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(commandBuffer.commandBuffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 }

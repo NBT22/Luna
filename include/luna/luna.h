@@ -6,6 +6,7 @@
 #define LUNA_H
 
 #include <luna/lunaDevice.h>
+#include <luna/lunaImage.h>
 #include <luna/lunaInstance.h>
 #include <luna/lunaPipeline.h>
 #include <luna/lunaRenderPass.h>
@@ -15,6 +16,12 @@
 extern "C"
 {
 #endif
+
+LunaDescriptorPool lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo);
+LunaDescriptorSetLayout lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo);
+void lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
+								LunaDescriptorSet *descriptorSets);
+void lunaWriteDescriptorSets(uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites);
 
 VkShaderModule lunaCreateShaderModule(const uint32_t *spirv, size_t bytes);
 

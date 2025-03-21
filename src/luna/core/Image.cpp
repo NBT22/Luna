@@ -1,0 +1,499 @@
+//
+// Created by NBT22 on 3/11/25.
+//
+
+#include <algorithm>
+#include <luna/core/Image.hpp>
+#include <luna/core/Instance.hpp>
+#include <luna/luna.h>
+
+namespace luna::helpers
+{
+static uint8_t bytesPerPixel(const VkFormat format)
+{
+	switch (format)
+	{
+		case VK_FORMAT_R4G4_UNORM_PACK8:
+		case VK_FORMAT_R8_UNORM:
+		case VK_FORMAT_R8_SNORM:
+		case VK_FORMAT_R8_USCALED:
+		case VK_FORMAT_R8_SSCALED:
+		case VK_FORMAT_R8_UINT:
+		case VK_FORMAT_R8_SINT:
+		case VK_FORMAT_R8_SRGB:
+		case VK_FORMAT_S8_UINT:
+			return 1;
+		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+		case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
+		case VK_FORMAT_R5G6B5_UNORM_PACK16:
+		case VK_FORMAT_B5G6R5_UNORM_PACK16:
+		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
+		case VK_FORMAT_B5G5R5A1_UNORM_PACK16:
+		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+		case VK_FORMAT_R8G8_UNORM:
+		case VK_FORMAT_R8G8_SNORM:
+		case VK_FORMAT_R8G8_USCALED:
+		case VK_FORMAT_R8G8_SSCALED:
+		case VK_FORMAT_R8G8_UINT:
+		case VK_FORMAT_R8G8_SINT:
+		case VK_FORMAT_R8G8_SRGB:
+		case VK_FORMAT_R16_UNORM:
+		case VK_FORMAT_R16_SNORM:
+		case VK_FORMAT_R16_USCALED:
+		case VK_FORMAT_R16_SSCALED:
+		case VK_FORMAT_R16_UINT:
+		case VK_FORMAT_R16_SINT:
+		case VK_FORMAT_R16_SFLOAT:
+		case VK_FORMAT_D16_UNORM:
+			return 2;
+		case VK_FORMAT_R8G8B8_UNORM:
+		case VK_FORMAT_R8G8B8_SNORM:
+		case VK_FORMAT_R8G8B8_USCALED:
+		case VK_FORMAT_R8G8B8_SSCALED:
+		case VK_FORMAT_R8G8B8_UINT:
+		case VK_FORMAT_R8G8B8_SINT:
+		case VK_FORMAT_R8G8B8_SRGB:
+		case VK_FORMAT_B8G8R8_UNORM:
+		case VK_FORMAT_B8G8R8_SNORM:
+		case VK_FORMAT_B8G8R8_USCALED:
+		case VK_FORMAT_B8G8R8_SSCALED:
+		case VK_FORMAT_B8G8R8_UINT:
+		case VK_FORMAT_B8G8R8_SINT:
+		case VK_FORMAT_B8G8R8_SRGB:
+		case VK_FORMAT_D16_UNORM_S8_UINT:
+			return 3;
+		case VK_FORMAT_R8G8B8A8_UNORM:
+		case VK_FORMAT_R8G8B8A8_SNORM:
+		case VK_FORMAT_R8G8B8A8_USCALED:
+		case VK_FORMAT_R8G8B8A8_SSCALED:
+		case VK_FORMAT_R8G8B8A8_UINT:
+		case VK_FORMAT_R8G8B8A8_SINT:
+		case VK_FORMAT_R8G8B8A8_SRGB:
+		case VK_FORMAT_B8G8R8A8_UNORM:
+		case VK_FORMAT_B8G8R8A8_SNORM:
+		case VK_FORMAT_B8G8R8A8_USCALED:
+		case VK_FORMAT_B8G8R8A8_SSCALED:
+		case VK_FORMAT_B8G8R8A8_UINT:
+		case VK_FORMAT_B8G8R8A8_SINT:
+		case VK_FORMAT_B8G8R8A8_SRGB:
+		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+		case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+		case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
+		case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
+		case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+		case VK_FORMAT_A8B8G8R8_SINT_PACK32:
+		case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+		case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+		case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
+		case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
+		case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
+		case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+		case VK_FORMAT_A2R10G10B10_SINT_PACK32:
+		case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+		case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
+		case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
+		case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
+		case VK_FORMAT_A2B10G10R10_UINT_PACK32:
+		case VK_FORMAT_A2B10G10R10_SINT_PACK32:
+		case VK_FORMAT_R16G16_UNORM:
+		case VK_FORMAT_R16G16_SNORM:
+		case VK_FORMAT_R16G16_USCALED:
+		case VK_FORMAT_R16G16_SSCALED:
+		case VK_FORMAT_R16G16_UINT:
+		case VK_FORMAT_R16G16_SINT:
+		case VK_FORMAT_R16G16_SFLOAT:
+		case VK_FORMAT_R32_UINT:
+		case VK_FORMAT_R32_SINT:
+		case VK_FORMAT_R32_SFLOAT:
+		case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+		case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+		case VK_FORMAT_X8_D24_UNORM_PACK32:
+		case VK_FORMAT_D32_SFLOAT:
+		case VK_FORMAT_D24_UNORM_S8_UINT:
+			return 4;
+		case VK_FORMAT_R16G16B16_UNORM:
+		case VK_FORMAT_R16G16B16_SNORM:
+		case VK_FORMAT_R16G16B16_USCALED:
+		case VK_FORMAT_R16G16B16_SSCALED:
+		case VK_FORMAT_R16G16B16_UINT:
+		case VK_FORMAT_R16G16B16_SINT:
+		case VK_FORMAT_R16G16B16_SFLOAT:
+			return 6;
+		case VK_FORMAT_R16G16B16A16_UNORM:
+		case VK_FORMAT_R16G16B16A16_SNORM:
+		case VK_FORMAT_R16G16B16A16_USCALED:
+		case VK_FORMAT_R16G16B16A16_SSCALED:
+		case VK_FORMAT_R16G16B16A16_UINT:
+		case VK_FORMAT_R16G16B16A16_SINT:
+		case VK_FORMAT_R16G16B16A16_SFLOAT:
+		case VK_FORMAT_R32G32_UINT:
+		case VK_FORMAT_R32G32_SINT:
+		case VK_FORMAT_R32G32_SFLOAT:
+		case VK_FORMAT_R64_UINT:
+		case VK_FORMAT_R64_SINT:
+		case VK_FORMAT_R64_SFLOAT:
+			return 8;
+		case VK_FORMAT_R32G32B32_UINT:
+		case VK_FORMAT_R32G32B32_SINT:
+		case VK_FORMAT_R32G32B32_SFLOAT:
+			return 12;
+		case VK_FORMAT_R32G32B32A32_UINT:
+		case VK_FORMAT_R32G32B32A32_SINT:
+		case VK_FORMAT_R32G32B32A32_SFLOAT:
+		case VK_FORMAT_R64G64_UINT:
+		case VK_FORMAT_R64G64_SINT:
+		case VK_FORMAT_R64G64_SFLOAT:
+			return 16;
+		case VK_FORMAT_R64G64B64_UINT:
+		case VK_FORMAT_R64G64B64_SINT:
+		case VK_FORMAT_R64G64B64_SFLOAT:
+			return 24;
+		case VK_FORMAT_R64G64B64A64_UINT:
+		case VK_FORMAT_R64G64B64A64_SINT:
+		case VK_FORMAT_R64G64B64A64_SFLOAT:
+			return 32;
+		case VK_FORMAT_UNDEFINED:
+		case VK_FORMAT_D32_SFLOAT_S8_UINT:
+		case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+		case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+		case VK_FORMAT_BC2_UNORM_BLOCK:
+		case VK_FORMAT_BC2_SRGB_BLOCK:
+		case VK_FORMAT_BC3_UNORM_BLOCK:
+		case VK_FORMAT_BC3_SRGB_BLOCK:
+		case VK_FORMAT_BC4_UNORM_BLOCK:
+		case VK_FORMAT_BC4_SNORM_BLOCK:
+		case VK_FORMAT_BC5_UNORM_BLOCK:
+		case VK_FORMAT_BC5_SNORM_BLOCK:
+		case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+		case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+		case VK_FORMAT_BC7_UNORM_BLOCK:
+		case VK_FORMAT_BC7_SRGB_BLOCK:
+		case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
+		case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+		case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
+		case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+		case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+		case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+		case VK_FORMAT_EAC_R11_UNORM_BLOCK:
+		case VK_FORMAT_EAC_R11_SNORM_BLOCK:
+		case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
+		case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
+		case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+		case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+		case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+		default:
+			throw std::runtime_error("Unhandled image format!");
+	}
+}
+static void transitionImageLayout(const VkImage image,
+								  const VkImageLayout oldLayout,
+								  const VkImageLayout newLayout,
+								  const VkImageAspectFlags aspectFlags,
+								  const uint32_t mipmapLevels,
+								  const uint32_t arrayLayers,
+								  const VkPipelineStageFlags sourceStageMask,
+								  const VkAccessFlags sourceAccessMask,
+								  const VkPipelineStageFlags destinationStageMask,
+								  const VkAccessFlags destinationAccessMask)
+{
+	VkImageAspectFlags aspectMask = aspectFlags;
+	if (aspectMask == 0)
+	{
+		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+			newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+		{
+			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		} else
+		{
+			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+	}
+	const VkImageSubresourceRange subresourceRange = {
+		.aspectMask = aspectMask,
+		.levelCount = mipmapLevels,
+		.layerCount = arrayLayers,
+	};
+	const VkImageMemoryBarrier memoryBarrier = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		.srcAccessMask = sourceAccessMask,
+		.dstAccessMask = destinationAccessMask,
+		.oldLayout = oldLayout,
+		.newLayout = newLayout,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = image,
+		.subresourceRange = subresourceRange,
+	};
+	vkCmdPipelineBarrier(core::instance.commandBuffers().transfer.commandBuffer(),
+						 sourceStageMask,
+						 destinationStageMask,
+						 0,
+						 0,
+						 nullptr,
+						 0,
+						 nullptr,
+						 1,
+						 &memoryBarrier);
+}
+static void transitionImageLayout2(const VkImage image,
+								   const VkImageLayout oldLayout,
+								   const VkImageLayout newLayout,
+								   const VkImageAspectFlags aspectFlags,
+								   const uint32_t mipmapLevels,
+								   const uint32_t arrayLayers,
+								   const VkPipelineStageFlags2 sourceStageMask,
+								   const VkAccessFlags2 sourceAccessMask,
+								   const VkPipelineStageFlags2 destinationStageMask,
+								   const VkAccessFlags2 destinationAccessMask)
+{
+	VkImageAspectFlags aspectMask = aspectFlags;
+	if (aspectMask == 0)
+	{
+		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+			newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+		{
+			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		} else
+		{
+			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+	}
+	const VkImageSubresourceRange subresourceRange = {
+		.aspectMask = aspectMask,
+		.levelCount = mipmapLevels,
+		.layerCount = arrayLayers,
+	};
+	const VkImageMemoryBarrier2 memoryBarrier = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+		.srcStageMask = sourceStageMask,
+		.srcAccessMask = sourceAccessMask,
+		.dstStageMask = destinationStageMask,
+		.dstAccessMask = destinationAccessMask,
+		.oldLayout = oldLayout,
+		.newLayout = newLayout,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = image,
+		.subresourceRange = subresourceRange,
+	};
+	const VkDependencyInfo dependencyInfo = {
+		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+		.imageMemoryBarrierCount = 1,
+		.pImageMemoryBarriers = &memoryBarrier,
+	};
+	vkCmdPipelineBarrier2(core::instance.commandBuffers().transfer.commandBuffer(), &dependencyInfo);
+}
+static void writeImage(const VkImage image,
+					   const VkExtent3D &extent,
+					   const uint32_t arrayLayers,
+					   const LunaSampledImageCreationInfo &creationInfo)
+{
+	core::CommandBuffer transferCommandBuffer = core::instance.commandBuffers().transfer;
+	if (!transferCommandBuffer.isRecording())
+	{
+		const VkDevice logicalDevice = core::instance.device().logicalDevice();
+		transferCommandBuffer.waitForFence(logicalDevice);
+		vkResetFences(logicalDevice, 1, &transferCommandBuffer.fence);
+		transferCommandBuffer.beginSingleUseCommandBuffer();
+	}
+
+	if (core::instance.stagingBufferOffset() == -1ull)
+	{
+		core::instance.createStagingBuffer(extent.width *
+										   extent.height *
+										   extent.depth *
+										   bytesPerPixel(creationInfo.format));
+	}
+	core::instance.copyToStagingBuffer(static_cast<const uint8_t *>(creationInfo.pixels),
+									   extent.width *
+											   extent.height *
+											   extent.depth *
+											   bytesPerPixel(creationInfo.format));
+
+	const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
+	if (core::instance.minorVersion() >= 3)
+	{
+		transitionImageLayout2(image,
+							   VK_IMAGE_LAYOUT_UNDEFINED,
+							   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							   creationInfo.aspectFlags,
+							   mipmapLevels,
+							   arrayLayers,
+							   creationInfo.sourceStageMask,
+							   VK_ACCESS_NONE,
+							   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+							   VK_ACCESS_2_TRANSFER_WRITE_BIT);
+	} else
+	{
+		transitionImageLayout(image,
+							  VK_IMAGE_LAYOUT_UNDEFINED,
+							  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							  creationInfo.aspectFlags,
+							  mipmapLevels,
+							  arrayLayers,
+							  creationInfo.sourceStageMask,
+							  VK_ACCESS_NONE,
+							  VK_PIPELINE_STAGE_TRANSFER_BIT,
+							  VK_ACCESS_TRANSFER_WRITE_BIT);
+	}
+
+	constexpr VkImageSubresourceLayers subresourceLayers = {
+		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		.layerCount = 1,
+	};
+	const VkBufferImageCopy bufferCopyInfo = {
+		.bufferOffset = core::instance.stagingBufferOffset(),
+		.imageSubresource = subresourceLayers,
+		.imageExtent = extent,
+	};
+	vkCmdCopyBufferToImage(transferCommandBuffer.commandBuffer(),
+						   core::instance.stagingBuffer(),
+						   image,
+						   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						   1,
+						   &bufferCopyInfo);
+
+	if (core::instance.minorVersion() >= 3)
+	{
+		transitionImageLayout2(image,
+							   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							   creationInfo.layout,
+							   creationInfo.aspectFlags,
+							   mipmapLevels,
+							   arrayLayers,
+							   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+							   VK_ACCESS_2_TRANSFER_WRITE_BIT,
+							   creationInfo.destinationStageMask,
+							   creationInfo.destinationAccessMask);
+	} else
+	{
+		transitionImageLayout(image,
+							  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							  creationInfo.layout,
+							  creationInfo.aspectFlags,
+							  mipmapLevels,
+							  arrayLayers,
+							  VK_PIPELINE_STAGE_TRANSFER_BIT,
+							  VK_ACCESS_TRANSFER_WRITE_BIT,
+							  creationInfo.destinationStageMask,
+							  creationInfo.destinationAccessMask);
+	}
+
+	const VkSubmitInfo queueSubmitInfo = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &transferCommandBuffer.commandBuffer(),
+	};
+	transferCommandBuffer.submitCommandBuffer(core::instance.device().familyQueues().transfer, queueSubmitInfo);
+}
+} // namespace luna::helpers
+
+namespace luna::core
+{
+Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t depth, const uint32_t arrayLayers)
+{
+	assert(creationInfo.sampler == nullptr || creationInfo.samplerCreationInfo == nullptr);
+	const VkExtent3D extent = {
+		.width = creationInfo.width,
+		.height = creationInfo.height,
+		.depth = depth == 0 ? 1 : depth,
+	};
+	const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
+	const VkImageCreateInfo imageCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.flags = creationInfo.flags,
+		.imageType = depth == 0 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D,
+		.format = creationInfo.format,
+		.extent = extent,
+		.mipLevels = mipmapLevels,
+		.arrayLayers = arrayLayers,
+		.samples = creationInfo.samples == 0 ? VK_SAMPLE_COUNT_1_BIT : creationInfo.samples,
+		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.usage = creationInfo.usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+		.sharingMode = instance.device().sharingMode(),
+		.queueFamilyIndexCount = instance.device().familyCount(),
+		.pQueueFamilyIndices = instance.device().queueFamilyIndices(),
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	};
+	constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+		.usage = VMA_MEMORY_USAGE_AUTO,
+	};
+	VmaAllocationInfo allocationInfo;
+	vmaCreateImage(instance.device().allocator(),
+				   &imageCreateInfo,
+				   &allocationCreateInfo,
+				   &image_,
+				   &allocation_,
+				   &allocationInfo);
+	helpers::createImageView(instance.device().logicalDevice(),
+							 image_,
+							 creationInfo.format,
+							 creationInfo.aspectMask == 0 ? VK_IMAGE_ASPECT_COLOR_BIT : creationInfo.aspectMask,
+							 mipmapLevels,
+							 &imageView_);
+	if (creationInfo.sampler != nullptr)
+	{
+		sampler_ = instance.sampler(creationInfo.sampler);
+	} else if (creationInfo.samplerCreationInfo != nullptr)
+	{
+		sampler_ = instance.sampler(instance.createSampler(*creationInfo.samplerCreationInfo));
+	}
+
+	helpers::writeImage(image_, extent, arrayLayers, creationInfo);
+}
+} // namespace luna::core
+
+LunaSampler lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo)
+{
+	assert(creationInfo);
+	return luna::core::instance.createSampler(*creationInfo);
+}
+LunaImage lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo)
+{
+	assert(creationInfo);
+	return luna::core::instance.createImage(*creationInfo, 0, 1);
+}
+LunaImage lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo, const uint32_t arrayLayers)
+{
+	assert(creationInfo && arrayLayers);
+	return luna::core::instance.createImage(*creationInfo, 0, arrayLayers);
+}
+LunaImage lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, const uint32_t depth)
+{
+	assert(creationInfo);
+	return luna::core::instance.createImage(*creationInfo, depth, 1);
+}
+LunaImage lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
+								 const uint32_t depth,
+								 const uint32_t arrayLayers)
+{
+	assert(creationInfo && arrayLayers);
+	return luna::core::instance.createImage(*creationInfo, depth, arrayLayers);
+}

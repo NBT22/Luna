@@ -66,7 +66,7 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 void lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	luna::core::instance.allocateBuffer(*creationInfo); // NOLINT(*-unused-return-value)
+	(void)luna::core::instance.allocateBuffer(*creationInfo);
 }
 
 LunaBuffer lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo)
@@ -90,12 +90,17 @@ void lunaDrawBuffer(const LunaVertexBufferDrawInfo *drawInfo)
 	assert(drawInfo && drawInfo->vertexBuffer && drawInfo->pipeline);
 	const auto bufferRegionIndex = *static_cast<const luna::core::buffer::BufferRegionIndex *>(drawInfo->vertexBuffer);
 	const auto pipelineIndex = *static_cast<const luna::core::GraphicsPipelineIndex *>(drawInfo->pipeline);
-	const VkCommandBuffer commandBuffer = luna::core::instance.device().commandBuffers().graphics;
-	luna::core::instance.graphicsPipelines.at(pipelineIndex.index).bind();
-	vkCmdBindVertexBuffers(commandBuffer,
+	const luna::core::CommandBuffer &commandBuffer = luna::core::instance.commandBuffers().graphics;
+	luna::core::instance.graphicsPipelines_.at(pipelineIndex.index).bind(drawInfo->pipelineBindInfo);
+	assert(commandBuffer.isRecording());
+	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
 						   1,
 						   &luna::core::instance.buffers_.at(bufferRegionIndex.bufferIndex).buffer(),
 						   &luna::core::instance.bufferRegion(bufferRegionIndex).offset());
-	vkCmdDraw(commandBuffer, drawInfo->vertexCount, drawInfo->instanceCount, drawInfo->firstVertex, drawInfo->firstInstance);
+	vkCmdDraw(commandBuffer.commandBuffer(),
+			  drawInfo->vertexCount,
+			  drawInfo->instanceCount,
+			  drawInfo->firstVertex,
+			  drawInfo->firstInstance);
 }

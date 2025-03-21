@@ -14,10 +14,24 @@ extern "C"
 #include <stdbool.h>
 #endif
 
-typedef const void *LunaRenderPass;
-typedef const void *LunaRenderPassSubpass;
-typedef const void *LunaGraphicsPipeline;
-typedef const void *LunaBuffer;
+// TODO: Currently Luna is providing the application with a pointer to an an internal object that is stored within a
+//  vector. This is not going to work, because if the vector resizes then the pointer could become invalid. These should
+//  instead simply be an index. This could mean that they directly index the object vector, or that they index some
+//  vector containing indices with more data in them. These index handles could also be more complex than just storing a
+//  number. For example, they could have some form of duplication to ensure that the handle is valid, or be able to
+//  encode indices for multiple vectors within the same handle. Also if a simple index is used then that would make
+//  nullptr a valid handle, since it would then be just index 0, so that should be addressed somehow.
+#define LUNA_DEFINE_HANDLE(object) typedef const void *object;
+
+LUNA_DEFINE_HANDLE(LunaRenderPass);
+LUNA_DEFINE_HANDLE(LunaRenderPassSubpass);
+LUNA_DEFINE_HANDLE(LunaDescriptorPool);
+LUNA_DEFINE_HANDLE(LunaDescriptorSetLayout);
+LUNA_DEFINE_HANDLE(LunaDescriptorSet);
+LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
+LUNA_DEFINE_HANDLE(LunaBuffer);
+LUNA_DEFINE_HANDLE(LunaSampler);
+LUNA_DEFINE_HANDLE(LunaImage);
 
 typedef enum
 {
@@ -105,7 +119,6 @@ typedef struct
 		VkExtent3D extent;
 		uint32_t framebufferAttachmentCount;
 		const VkImageView *framebufferAttachments;
-		const char *uniqueName;
 } LunaRenderPassCreationInfo;
 
 typedef struct
@@ -146,21 +159,56 @@ typedef struct
 		VkExtent3D extent;
 		uint32_t framebufferAttachmentCount;
 		const VkImageView *framebufferAttachments;
-		const char *uniqueName;
 } LunaRenderPassCreationInfo2;
+
+typedef struct
+{
+		VkDescriptorPoolCreateFlags flags;
+		uint32_t maxSets;
+		uint32_t poolSizeCount;
+		const VkDescriptorPoolSize *poolSizes;
+} LunaDescriptorPoolCreationInfo;
+
+typedef struct
+{
+		const char *bindingName;
+		VkDescriptorType descriptorType;
+		uint32_t descriptorCount;
+		VkShaderStageFlags stageFlags;
+		const VkSampler *immutableSamplers;
+		const VkDescriptorBindingFlags bindingFlags;
+} LunaDescriptorSetLayoutBinding;
 
 typedef struct
 {
 		VkDescriptorSetLayoutCreateFlags flags;
 		uint32_t bindingCount;
-		const VkDescriptorSetLayoutBinding *bindings;
+		const LunaDescriptorSetLayoutBinding *bindings;
 } LunaDescriptorSetLayoutCreationInfo;
+
+typedef struct
+{
+		LunaDescriptorPool descriptorPool;
+		uint32_t descriptorSetCount;
+		const LunaDescriptorSetLayout *setLayouts;
+} LunaDescriptorSetAllocationInfo;
+
+typedef struct
+{
+		LunaDescriptorSet descriptorSet;
+		const char *bindingName;
+		uint32_t descriptorArrayElement;
+		uint32_t descriptorCount;
+		const VkDescriptorImageInfo *imageInfo;
+		const VkDescriptorBufferInfo *bufferInfo;
+		const VkBufferView *texelBufferView;
+} LunaWriteDescriptorSet;
 
 typedef struct
 {
 		VkPipelineLayoutCreateFlags flags;
 		uint32_t descriptorSetLayoutCount;
-		const LunaDescriptorSetLayoutCreationInfo *descriptorSetLayouts;
+		const LunaDescriptorSetLayout *descriptorSetLayouts;
 		uint32_t pushConstantRangeCount;
 		const VkPushConstantRange *pushConstantRanges;
 } LunaPipelineLayoutCreationInfo;
@@ -181,16 +229,68 @@ typedef struct
 		const VkPipelineDynamicStateCreateInfo *dynamicState;
 		const LunaPipelineLayoutCreationInfo *layoutCreationInfo;
 		LunaRenderPassSubpass subpass;
-
-		const char *uniqueName;
 } LunaGraphicsPipelineCreationInfo;
 
 typedef struct
 {
-		size_t size;
+		uint32_t firstSet;
+		uint32_t descriptorSetCount;
+		const LunaDescriptorSet *descriptorSets;
+		uint32_t dynamicOffsetCount;
+		const uint32_t *dynamicOffsets;
+} LunaGraphicsPipelineBindInfo;
+
+typedef struct
+{
+		VkDeviceSize size;
 		VkBufferCreateFlags flags;
 		VkBufferUsageFlags usage;
 } LunaBufferCreationInfo;
+
+typedef struct
+{
+		VkSamplerCreateFlags flags;
+		VkFilter magFilter;
+		VkFilter minFilter;
+		VkSamplerMipmapMode mipmapMode;
+		VkSamplerAddressMode addressModeU;
+		VkSamplerAddressMode addressModeV;
+		VkSamplerAddressMode addressModeW;
+		float mipLodBias;
+		VkBool32 anisotropyEnable;
+		float maxAnisotropy;
+		VkBool32 compareEnable;
+		VkCompareOp compareOp;
+		float minLod;
+		float maxLod;
+		VkBorderColor borderColor;
+		VkBool32 unnormalizedCoordinates;
+} LunaSamplerCreationInfo;
+
+typedef struct
+{
+		VkImageCreateFlags flags;
+		VkFormat format;
+		uint32_t width;
+		uint32_t height;
+		uint32_t mipmapLevels;
+		VkSampleCountFlagBits samples;
+		VkImageUsageFlags usage;
+
+		void *pixels;
+		VkImageLayout layout;
+		VkImageAspectFlags aspectMask;
+		LunaDescriptorSet descriptorSet;
+		const char *descriptorLayoutBindingName;
+
+		LunaSampler sampler;
+		const LunaSamplerCreationInfo *samplerCreationInfo;
+
+		VkImageAspectFlags aspectFlags;
+		VkPipelineStageFlags sourceStageMask;
+		VkPipelineStageFlags destinationStageMask;
+		VkAccessFlags destinationAccessMask;
+} LunaSampledImageCreationInfo;
 
 typedef struct
 {
@@ -203,6 +303,7 @@ typedef struct
 {
 		LunaBuffer vertexBuffer;
 		LunaGraphicsPipeline pipeline;
+		LunaGraphicsPipelineBindInfo pipelineBindInfo;
 		uint32_t vertexCount;
 		uint32_t instanceCount;
 		uint32_t firstVertex;

@@ -3,8 +3,8 @@
 //
 
 #include <cstring>
+#include <luna/core/Image.hpp>
 #include <luna/core/Instance.hpp>
-#include <luna/helpers/Luna.hpp>
 #include <luna/lunaInstance.h>
 #include <stdexcept>
 
@@ -105,7 +105,7 @@ static void createSwapChainImages(const VkDevice logicalDevice, core::SwapChain 
 						swapChain.format.format,
 						VK_IMAGE_ASPECT_COLOR_BIT,
 						1,
-						swapChain.imageViews[i]);
+						&swapChain.imageViews[i]);
 	}
 }
 } // namespace luna::helpers
@@ -215,6 +215,75 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 	helpers::createSwapChainImages(device_.logicalDevice(), swapChain);
 
 	swapChain.imageIndex = -1u;
+}
+const ImageIndex *Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
+										uint32_t depth,
+										uint32_t arrayLayers)
+{
+	assert(!creationInfo.descriptorSet || creationInfo.descriptorLayoutBindingName);
+	LunaDescriptorSet descriptorSetIndex;
+	const char *bindingName = creationInfo.descriptorLayoutBindingName != nullptr
+									  ? creationInfo.descriptorLayoutBindingName
+									  : "Image";
+	imageIndices_.emplace_back(images_.size());
+	images_.emplace_back(creationInfo, depth, arrayLayers);
+	const Image image = images_.back();
+	if (creationInfo.descriptorSet != nullptr)
+	{
+		descriptorSetIndex = creationInfo.descriptorSet;
+	} else
+	{
+		const VkDescriptorType descriptorType = image.sampler() == nullptr ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+																		   : VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		const LunaDescriptorSetLayoutBinding binding = {
+			.bindingName = bindingName,
+			.descriptorType = descriptorType,
+			.descriptorCount = 1,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+		};
+		const LunaDescriptorSetLayoutCreationInfo descriptorSetLayoutCreationInfo = {
+			.bindingCount = 1,
+			.bindings = &binding,
+		};
+		LunaDescriptorSetLayout descriptorSetLayout = createDescriptorSetLayout(descriptorSetLayoutCreationInfo);
+
+		const VkDescriptorPoolSize poolSize = {
+			.type = descriptorType,
+			.descriptorCount = 1,
+		};
+		// ReSharper disable once CppVariableCanBeMadeConstexpr It's wrong again; memory locations are not constant -_-
+		const LunaDescriptorPoolCreationInfo descriptorPoolCreationInfo = {
+			.maxSets = 1,
+			.poolSizeCount = 1,
+			.poolSizes = &poolSize,
+		};
+		const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
+			.descriptorPool = createDescriptorPool(descriptorPoolCreationInfo),
+			.descriptorSetCount = 1,
+			.setLayouts = &descriptorSetLayout,
+		};
+		allocateDescriptorSets(descriptorSetAllocationInfo, &descriptorSetIndex);
+	}
+
+	const VkDescriptorImageInfo imageInfo = {
+		.sampler = image.sampler(),
+		.imageView = image.imageView(),
+		.imageLayout = creationInfo.layout,
+	};
+	DescriptorSetLayout descriptorSetLayout;
+	VkDescriptorSet descriptorSet;
+	Instance::descriptorSet(descriptorSetIndex, nullptr, &descriptorSetLayout, &descriptorSet);
+	const DescriptorSetLayout::Binding binding = descriptorSetLayout.binding(bindingName);
+	const VkWriteDescriptorSet writeDescriptor = {
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = descriptorSet,
+		.dstBinding = binding.index,
+		.descriptorCount = 1,
+		.descriptorType = binding.type,
+		.pImageInfo = &imageInfo,
+	};
+	vkUpdateDescriptorSets(device_.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
+	return &imageIndices_.back();
 }
 } // namespace luna::core
 
