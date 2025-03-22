@@ -12,6 +12,7 @@
 #include <luna/core/Luna.hpp>
 #include <luna/core/RenderPass.hpp>
 #include <vector>
+#include <list>
 
 namespace luna::core
 {
@@ -76,26 +77,26 @@ class Instance
 		VkSurfaceKHR surface_{};
 
 		[[nodiscard]] RenderPass &renderPass_(LunaRenderPass index);
-		std::vector<RenderPassIndex> renderPassIndices_{};
+		std::list<RenderPassIndex> renderPassIndices_{};
 		std::vector<RenderPass> renderPasses_{};
 
-		std::vector<DescriptorPoolIndex> descriptorPoolIndices_{};
-		std::vector<DescriptorSetLayoutIndex> descriptorSetLayoutIndices_{};
-		std::vector<DescriptorSetIndex> descriptorSetIndices_{};
+		std::list<DescriptorPoolIndex> descriptorPoolIndices_{};
+		std::list<DescriptorSetLayoutIndex> descriptorSetLayoutIndices_{};
+		std::list<DescriptorSetIndex> descriptorSetIndices_{};
 		std::vector<VkDescriptorPool> descriptorPools_{};
 		std::vector<DescriptorSetLayout> descriptorSetLayouts_{};
 		std::vector<VkDescriptorSet> descriptorSets_{};
 
-		std::vector<GraphicsPipelineIndex> graphicsPipelineIndices_{};
+		std::list<GraphicsPipelineIndex> graphicsPipelineIndices_{};
 		std::vector<GraphicsPipeline> graphicsPipelines_{};
 
-		std::vector<buffer::BufferRegionIndex> bufferRegionIndices_{};
+		std::list<buffer::BufferRegionIndex> bufferRegionIndices_{};
 		std::vector<Buffer> buffers_{};
 		LunaBuffer stagingBuffer_{};
 
-		std::vector<SamplerIndex> samplerIndices_{};
+		std::list<SamplerIndex> samplerIndices_{};
 		std::vector<VkSampler> samplers_{};
-		std::vector<ImageIndex> imageIndices_{};
+		std::list<ImageIndex> imageIndices_{};
 		std::vector<Image> images_{};
 };
 } // namespace luna::core

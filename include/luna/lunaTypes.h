@@ -14,14 +14,7 @@ extern "C"
 #include <stdbool.h>
 #endif
 
-// TODO: Currently Luna is providing the application with a pointer to an an internal object that is stored within a
-//  vector. This is not going to work, because if the vector resizes then the pointer could become invalid. These should
-//  instead simply be an index. This could mean that they directly index the object vector, or that they index some
-//  vector containing indices with more data in them. These index handles could also be more complex than just storing a
-//  number. For example, they could have some form of duplication to ensure that the handle is valid, or be able to
-//  encode indices for multiple vectors within the same handle. Also if a simple index is used then that would make
-//  nullptr a valid handle, since it would then be just index 0, so that should be addressed somehow.
-#define LUNA_DEFINE_HANDLE(object) typedef const void *object;
+#define LUNA_DEFINE_HANDLE(object) typedef const void *object
 
 LUNA_DEFINE_HANDLE(LunaRenderPass);
 LUNA_DEFINE_HANDLE(LunaRenderPassSubpass);
