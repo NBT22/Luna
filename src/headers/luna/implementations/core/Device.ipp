@@ -109,13 +109,14 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 			return;
 		}
 	}
-	if (!hasFamily_.transfer && hasFamily_.graphics)
-	{
-		familyIndices_.transfer = familyIndices_.graphics;
-	}
-	if (!presentationFound)
+	if (!presentationFound || !hasFamily_.graphics)
 	{
 		familyCount_ = 0;
+		return;
+	}
+	if (!hasFamily_.transfer)
+	{
+		familyIndices_.transfer = familyIndices_.graphics;
 	}
 }
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
@@ -215,39 +216,33 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 }
 inline void Device::createCommandPoolsAndBuffers()
 {
-	if (hasFamily_.graphics)
-	{
-		const VkCommandPoolCreateInfo createInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-			.queueFamilyIndex = familyIndices_.graphics,
-		};
-		commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
-													   createInfo,
-													   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-													   nullptr);
-	}
-	if (hasFamily_.transfer)
-	{
-		const VkCommandPoolCreateInfo createInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-			.queueFamilyIndex = familyIndices_.transfer,
-		};
-		commandBuffers_.transfer.allocateCommandBuffer(logicalDevice_,
-													   createInfo,
-													   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-													   nullptr);
-	}
+	const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = familyIndices_.graphics,
+	};
+	commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
+												   graphicsCommandPoolCreateInfo,
+												   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+												   nullptr);
+	const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = familyIndices_.transfer,
+	};
+	commandBuffers_.transfer.allocateCommandBuffer(logicalDevice_,
+												   transferCommandPoolCreateInfo,
+												   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+												   nullptr);
 	if (hasFamily_.presentation)
 	{
-		const VkCommandPoolCreateInfo createInfo = {
+		const VkCommandPoolCreateInfo presentationCommandPoolCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 			.queueFamilyIndex = familyIndices_.presentation,
 		};
 		commandBuffers_.presentation.allocateCommandBuffer(logicalDevice_,
-														   createInfo,
+														   presentationCommandPoolCreateInfo,
 														   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 														   nullptr);
 	}
