@@ -8,6 +8,24 @@
 
 namespace luna::core
 {
+inline CommandBuffer::CommandBuffer()
+{
+	assert(isDestroyed_);
+	isDestroyed_ = false;
+}
+
+inline void CommandBuffer::destroy(const VkDevice logicalDevice)
+{
+	if (isDestroyed_)
+	{
+		return;
+	}
+	assert(!isRecording_);
+	vkDestroyFence(logicalDevice, fence_, nullptr);
+	vkDestroyCommandPool(logicalDevice, commandPool_, nullptr);
+	isDestroyed_ = true;
+}
+
 inline void CommandBuffer::allocateCommandBuffer(const VkDevice logicalDevice,
 												 const VkCommandPoolCreateInfo &poolCreateInfo,
 												 const VkCommandBufferLevel commandBufferLevel,
@@ -27,7 +45,7 @@ inline void CommandBuffer::allocateCommandBuffer(const VkDevice logicalDevice,
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 		.flags = VK_FENCE_CREATE_SIGNALED_BIT,
 	};
-	vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence);
+	vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence_);
 }
 inline void CommandBuffer::beginSingleUseCommandBuffer()
 {
@@ -44,7 +62,7 @@ inline void CommandBuffer::beginSingleUseCommandBuffer()
 inline void CommandBuffer::submitCommandBuffer(const VkQueue queue, const VkSubmitInfo &submitInfo)
 {
 	vkEndCommandBuffer(commandBuffer_);
-	vkQueueSubmit(queue, 1, &submitInfo, fence);
+	vkQueueSubmit(queue, 1, &submitInfo, fence_);
 	isRecording_ = false;
 }
 inline void CommandBuffer::setRecording(const bool value)
@@ -56,7 +74,11 @@ inline VkResult CommandBuffer::waitForFence(const VkDevice logicalDevice, const 
 	// TODO: If this fails with the default timeout it will block the the render thread for 585 years,
 	//  which is unacceptable. While it is not the responsibility of this method to handle this problem,
 	//  all usages of this method currently use the default timeout.
-	return vkWaitForFences(logicalDevice, 1, &fence, VK_TRUE, timeout);
+	return vkWaitForFences(logicalDevice, 1, &fence_, VK_TRUE, timeout);
+}
+inline VkResult CommandBuffer::resetFence(const VkDevice logicalDevice) const
+{
+	return vkResetFences(logicalDevice, 1, &fence_);
 }
 
 inline const VkCommandBuffer &CommandBuffer::commandBuffer() const

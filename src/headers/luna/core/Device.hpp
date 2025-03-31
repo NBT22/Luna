@@ -26,6 +26,10 @@ class Device
 		Device() = default;
 		explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
 
+		void destroy();
+
+		VkShaderModule addShaderModule(const VkShaderModuleCreateInfo *creationInfo);
+
 		/// A getter for the @c physicalDevice_ value
 		/// @return The Vulkan handle for the physical device described in this instance
 		[[nodiscard]] VkPhysicalDevice physicalDevice() const;
@@ -49,11 +53,11 @@ class Device
 		void initQueueFamilyIndices();
 		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
-		[[nodiscard]] bool checkUsability(VkSurfaceKHR surface);
+		[[nodiscard]] bool checkUsability(VkPhysicalDevice device, VkSurfaceKHR surface);
 		void createCommandPoolsAndBuffers();
 		void createSemaphores();
 
-		/// The actual device
+		bool isDestroyed_{true};
 		VkPhysicalDevice physicalDevice_{};
 		VkDevice logicalDevice_{};
 		VkPhysicalDeviceVulkan14Features vulkan14Features_{};
@@ -72,6 +76,9 @@ class Device
 		FamilyValues<CommandBuffer> commandBuffers_{};
 		VkSemaphore imageAvailableSemaphore_{};
 		VkSemaphore renderFinishedSemaphore_{};
+
+		// TODO: Fix pipelines so that shader modules can be created and destroyed in a cleaner fashion
+		std::vector<VkShaderModule> shaderModules_{};
 };
 } // namespace luna::core
 

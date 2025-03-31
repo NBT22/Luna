@@ -256,7 +256,7 @@ static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass
 
 int main()
 {
-	if (!SDL_Init(SDL_INIT_VIDEO))
+	if (!SDL_Init(SDL_INIT_EVENTS))
 	{
 		return 1;
 	}
@@ -265,7 +265,6 @@ int main()
 	{
 		return 2;
 	}
-
 
 	uint32_t instanceExtensionCount = 0;
 	const char *const *instanceExtensions = SDL_Vulkan_GetInstanceExtensions(&instanceExtensionCount);
@@ -347,10 +346,12 @@ int main()
 			switch (event.type)
 			{
 				case SDL_EVENT_QUIT:
+					lunaCleanup();
 					return 0;
 				case SDL_EVENT_KEY_UP:
 					if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					{
+						lunaCleanup();
 						return 0;
 					}
 					break;
@@ -368,10 +369,12 @@ int main()
 		switch (event.type)
 		{
 			case SDL_EVENT_QUIT:
+				lunaDestroyInstance();
 				return 0;
 			case SDL_EVENT_KEY_UP:
 				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 				{
+					lunaDestroyInstance();
 					return 0;
 				}
 				break;
@@ -382,6 +385,4 @@ int main()
 		lunaDrawFrame();
 	}
 #endif
-
-	return 0;
 }

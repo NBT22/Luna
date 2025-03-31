@@ -10,6 +10,7 @@ namespace luna::core
 {
 DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo)
 {
+	assert(isDestroyed_);
 	std::vector<VkDescriptorBindingFlags> bindingFlags;
 	bindingFlags.reserve(creationInfo.bindingCount);
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -40,6 +41,18 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
 		.pBindings = bindings.data(),
 	};
 	vkCreateDescriptorSetLayout(instance.device().logicalDevice(), &createInfo, nullptr, &layout_);
+	isDestroyed_ = false;
+}
+
+void DescriptorSetLayout::destroy()
+{
+	if (isDestroyed_)
+	{
+		return;
+	}
+	vkDestroyDescriptorSetLayout(instance.device().logicalDevice(), layout_, nullptr);
+	bindingIndexMap_.clear();
+	isDestroyed_ = true;
 }
 } // namespace luna::core
 

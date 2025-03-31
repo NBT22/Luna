@@ -390,18 +390,23 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo *creationInfo,
 	isDestroyed_ = false;
 }
 
-inline void RenderPass::destroy()
+void RenderPass::destroy()
 {
 	if (isDestroyed_)
 	{
 		return;
 	}
-
-	// for (const uint32_t pipelineIndex: pipelineIndices)
-	// {
-	// 	instance.graphicsPipelines.at(pipelineIndex).destroy();
-	// }
+	vkDestroyImageView(instance.device().logicalDevice(), colorImageView_, nullptr);
+	vkDestroyImageView(instance.device().logicalDevice(), depthImageView_, nullptr);
+	vmaDestroyImage(instance.device().allocator(), colorImage_, colorImageAllocation_);
+	vmaDestroyImage(instance.device().allocator(), depthImage_, depthImageAllocation_);
 	vkDestroyRenderPass(instance.device().logicalDevice(), renderPass_, nullptr);
+	name_.clear();
+	name_.shrink_to_fit();
+	subpassIndices_.clear();
+	subpassIndices_.shrink_to_fit();
+	subpassMap_.clear();
+
 	isDestroyed_ = true;
 }
 
@@ -477,7 +482,7 @@ inline void RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPas
 													std::vector<VkImageView> &attachmentImages) const
 {
 	SwapChain &swapChain = instance.swapChain;
-	swapChain.framebuffers.reserve(swapChain.imageCount);
+	swapChain.framebuffers.resize(swapChain.imageCount);
 	for (uint32_t i = 0; i < swapChain.imageCount; i++)
 	{
 		attachmentImages.back() = instance.swapChain.imageViews.at(i);
@@ -531,7 +536,7 @@ void lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBe
 	{
 		// TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
 		commandBuffer.waitForFence(device.logicalDevice_);
-		vkResetFences(device.logicalDevice_, 1, &commandBuffer.fence);
+		commandBuffer.resetFence(device.logicalDevice_);
 		vkAcquireNextImageKHR(device.logicalDevice_,
 							  swapChain.swapChain,
 							  UINT64_MAX,

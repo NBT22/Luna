@@ -5,9 +5,42 @@
 #pragma once
 
 #include <cassert>
+#include <cstring>
 
 namespace luna::core
 {
+inline void Device::destroy()
+{
+	if (isDestroyed_)
+	{
+		return;
+	}
+	for (const VkShaderModule shaderModule: shaderModules_)
+	{
+		vkDestroyShaderModule(logicalDevice_, shaderModule, nullptr);
+	}
+	commandBuffers_.graphics.destroy(logicalDevice_);
+	commandBuffers_.transfer.destroy(logicalDevice_);
+	commandBuffers_.presentation.destroy(logicalDevice_);
+	vkDestroySemaphore(logicalDevice_, imageAvailableSemaphore_, nullptr);
+	vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore_, nullptr);
+	vmaDestroyAllocator(allocator_);
+	vkDestroyDevice(logicalDevice_, nullptr);
+
+	shaderModules_.clear();
+	shaderModules_.shrink_to_fit();
+	queueFamilyIndices_.clear();
+	queueFamilyIndices_.shrink_to_fit();
+	isDestroyed_ = true;
+}
+
+inline VkShaderModule Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo)
+{
+	shaderModules_.emplace_back();
+	vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back());
+	return shaderModules_.back();
+}
+
 inline VkPhysicalDevice Device::physicalDevice() const
 {
 	return physicalDevice_;
@@ -119,6 +152,25 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 		familyIndices_.transfer = familyIndices_.graphics;
 	}
 }
+inline void Device::initQueueFamilyIndices()
+{
+	assert(queueFamilyIndices_.empty());
+	queueFamilyIndices_.reserve(familyCount_);
+	queueFamilyIndices_.emplace_back(familyIndices_.graphics);
+	switch (familyCount_)
+	{
+		case 2:
+			queueFamilyIndices_.emplace_back(hasFamily_.transfer ? familyIndices_.transfer
+																 : familyIndices_.presentation);
+			break;
+		case 3:
+			queueFamilyIndices_.emplace_back(familyIndices_.presentation);
+			queueFamilyIndices_.emplace_back(familyIndices_.transfer);
+			break;
+		default:
+			assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
+	}
+}
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
 	const VkBool32 *requiredFeatureArray = std::bit_cast<const VkBool32 *,
@@ -213,6 +265,47 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 		return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));
 	}
 	return true;
+}
+inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfaceKHR surface)
+{
+	uint32_t count;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, nullptr);
+	if (count == 0)
+	{
+		return false;
+	}
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, nullptr);
+	if (count == 0)
+	{
+		return false;
+	}
+
+	findQueueFamilyIndices(device, surface);
+	if (familyCount_ == 0)
+	{
+		return false;
+	}
+
+	vkGetPhysicalDeviceProperties(device, &properties_);
+	vkGetPhysicalDeviceMemoryProperties(device, &memoryProperties_);
+
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+	if (extensionCount == 0)
+	{
+		return false;
+	}
+	std::vector<VkExtensionProperties> availableExtensions;
+	availableExtensions.reserve(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+	for (uint32_t j = 0; j < extensionCount; j++)
+	{
+		if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 inline void Device::createCommandPoolsAndBuffers()
 {

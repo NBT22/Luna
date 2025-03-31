@@ -14,7 +14,7 @@ include_directories(${Vulkan_INCLUDE_DIRS})
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 file(GLOB_RECURSE PRIVATE_HEADERS "src/headers/luna/*.hpp")
-file(GLOB_RECURSE PRIVATE_IMPLEMENTATIONS "src/headers/luna/implementations/*.[it]pp")
+file(GLOB_RECURSE PRIVATE_IMPLEMENTATIONS "src/headers/luna/implementations/*.ipp")
 file(GLOB_RECURSE PUBLIC_HEADERS "include/luna/*.h")
 
 add_subdirectory(vma)

@@ -31,10 +31,13 @@ class Image
 	public:
 		explicit Image(const LunaSampledImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
 
+		void destroy();
+
 		[[nodiscard]] VkImageView imageView() const;
 		[[nodiscard]] VkSampler sampler() const;
 
 	private:
+		bool isDestroyed_{true};
 		VkImage image_{};
 		VkImageView imageView_{};
 		VmaAllocation allocation_{};

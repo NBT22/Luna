@@ -15,17 +15,20 @@ struct GraphicsPipelineIndex
 class GraphicsPipeline
 {
 	public:
+		static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
+
 		friend void ::lunaDrawFrame();
 
 		GraphicsPipeline() = default;
 		explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
+
 		void destroy();
 
 		void bind(const LunaGraphicsPipelineBindInfo &bindInfo);
 		void unbind();
 
 	private:
-		bool isDestroyed_ = true;
+		bool isDestroyed_{true};
 		VkPipeline pipeline_{};
 		VkPipelineLayout layout_{};
 		bool bound_{};

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <list>
 #include <luna/core/Buffer.hpp>
 #include <luna/core/DescriptorSetLayout.hpp>
 #include <luna/core/Device.hpp>
@@ -12,7 +13,6 @@
 #include <luna/core/Luna.hpp>
 #include <luna/core/RenderPass.hpp>
 #include <vector>
-#include <list>
 
 namespace luna::core
 {
@@ -22,10 +22,13 @@ class Instance
 {
 	public:
 		friend const buffer::BufferRegionIndex *buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &);
-		friend void ::lunaDrawBuffer(const LunaVertexBufferDrawInfo *drawInfo);
+		friend void ::lunaDrawBuffer(const LunaVertexBufferDrawInfo *);
+		friend VkShaderModule ::lunaCreateShaderModule(const uint32_t *, size_t);
 
 		Instance() = default;
 		explicit Instance(const LunaInstanceCreationInfo &creationInfo);
+
+		void destroy();
 
 		void unbindAllPipelines();
 		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
@@ -38,7 +41,7 @@ class Instance
 		void allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
 									LunaDescriptorSet *descriptorSets);
 		const GraphicsPipelineIndex *createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
-		uint32_t allocateBuffer(const LunaBufferCreationInfo &creationInfo);
+		std::vector<Buffer>::iterator allocateBuffer(const LunaBufferCreationInfo &creationInfo);
 		void createStagingBuffer(size_t size);
 		void copyToStagingBuffer(const uint8_t *data, size_t size) const;
 		const SamplerIndex *createSampler(const LunaSamplerCreationInfo &creationInfo);
@@ -60,6 +63,7 @@ class Instance
 						   VkDescriptorPool *pool,
 						   DescriptorSetLayout *layout,
 						   VkDescriptorSet *descriptorSet) const;
+		[[nodiscard]] Buffer &buffer(uint32_t index);
 		[[nodiscard]] const buffer::BufferRegion &bufferRegion(LunaBuffer buffer) const;
 		[[nodiscard]] const buffer::BufferRegion &bufferRegion(buffer::BufferRegionIndex index) const;
 		[[nodiscard]] VkBuffer stagingBuffer() const;

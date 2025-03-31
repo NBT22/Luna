@@ -6,6 +6,92 @@
 
 namespace luna::core
 {
+inline void Instance::destroy()
+{
+	const VkDevice logicalDevice = device_.logicalDevice();
+	vkDeviceWaitIdle(logicalDevice);
+
+
+	for (uint32_t i = 0; i < swapChain.imageCount; i++)
+	{
+		vkDestroyFramebuffer(logicalDevice, swapChain.framebuffers.at(i), nullptr);
+		vkDestroyImageView(logicalDevice, swapChain.imageViews.at(i), nullptr);
+	}
+	vkDestroySwapchainKHR(logicalDevice, swapChain.swapChain, nullptr);
+
+	for (const VkSampler sampler: samplers_)
+	{
+		vkDestroySampler(logicalDevice, sampler, nullptr);
+	}
+	for (Image image: images_)
+	{
+		image.destroy();
+	}
+
+	for (GraphicsPipeline pipeline: graphicsPipelines_)
+	{
+		pipeline.destroy();
+	}
+	for (RenderPass renderPass: renderPasses_)
+	{
+		renderPass.destroy();
+	}
+
+	for (const VkDescriptorPool descriptorPool: descriptorPools_)
+	{
+		vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+	}
+	for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts_)
+	{
+		descriptorSetLayout.destroy();
+	}
+
+	for (Buffer buffer: buffers_)
+	{
+		buffer.destroy();
+	}
+
+	device_.destroy();
+	vkDestroySurfaceKHR(instance_, surface_, nullptr);
+	vkDestroyInstance(instance_, nullptr);
+
+
+	swapChain.images.clear();
+	swapChain.images.shrink_to_fit();
+	swapChain.imageViews.clear();
+	swapChain.imageViews.shrink_to_fit();
+	swapChain.framebuffers.clear();
+	swapChain.framebuffers.shrink_to_fit();
+
+	samplerIndices_.clear();
+	samplers_.clear();
+	samplers_.shrink_to_fit();
+	imageIndices_.clear();
+	images_.clear();
+	images_.shrink_to_fit();
+
+	graphicsPipelineIndices_.clear();
+	graphicsPipelines_.clear();
+	graphicsPipelines_.shrink_to_fit();
+	renderPassIndices_.clear();
+	renderPasses_.clear();
+	renderPasses_.shrink_to_fit();
+
+	descriptorPoolIndices_.clear();
+	descriptorSetLayoutIndices_.clear();
+	descriptorSetIndices_.clear();
+	descriptorPools_.clear();
+	descriptorPools_.shrink_to_fit();
+	descriptorSetLayouts_.clear();
+	descriptorSetLayouts_.shrink_to_fit();
+	descriptorSets_.clear();
+	descriptorSets_.shrink_to_fit();
+
+	bufferRegionIndices_.clear();
+	buffers_.clear();
+	buffers_.shrink_to_fit();
+}
+
 inline void Instance::unbindAllPipelines()
 {
 	for (GraphicsPipeline &pipeline: graphicsPipelines_)
@@ -19,13 +105,20 @@ inline void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
 }
 inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo *creationInfo)
 {
-	renderPassIndices_.emplace_back(renderPasses_.size());
-	renderPasses_.emplace_back(creationInfo, nullptr, &renderPassIndices_.back());
+	const std::vector<RenderPass>::iterator &renderPassIterator = std::find_if(renderPasses_.begin(),
+																			   renderPasses_.end(),
+																			   RenderPass::isDestroyed);
+
+	renderPassIndices_.emplace_back(renderPassIterator - renderPasses_.begin());
+	renderPasses_.emplace(renderPassIterator, creationInfo, nullptr, &renderPassIndices_.back());
 	return &renderPassIndices_.back();
 }
 inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2)
 {
-	renderPassIndices_.emplace_back(renderPasses_.size());
+	const std::vector<RenderPass>::iterator &renderPassIterator = std::find_if(renderPasses_.begin(),
+																			   renderPasses_.end(),
+																			   RenderPass::isDestroyed);
+
 	const LunaRenderPassCreationInfo creationInfo = {
 		.samples = creationInfo2->samples,
 		.createColorAttachment = creationInfo2->createColorAttachment,
@@ -39,13 +132,17 @@ inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCre
 		.extent = creationInfo2->extent,
 		.framebufferAttachmentCount = creationInfo2->framebufferAttachmentCount,
 	};
-	renderPasses_.emplace_back(&creationInfo, creationInfo2, &renderPassIndices_.back());
+	renderPassIndices_.emplace_back(renderPassIterator - renderPasses_.begin());
+	renderPasses_.emplace(renderPassIterator, &creationInfo, creationInfo2, &renderPassIndices_.back());
 	return &renderPassIndices_.back();
 }
 inline const DescriptorPoolIndex *Instance::createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo)
 {
-	descriptorPoolIndices_.emplace_back(descriptorPools_.size());
-	descriptorPools_.emplace_back();
+	descriptorPools_.reserve(descriptorPools_.size() + 1);
+	const std::vector<VkDescriptorPool>::iterator poolIterator = std::find(descriptorPools_.begin(),
+																		   descriptorPools_.end(),
+																		   VK_NULL_HANDLE);
+	descriptorPools_.emplace(poolIterator);
 	const VkDescriptorPoolCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.flags = creationInfo.flags,
@@ -53,54 +150,85 @@ inline const DescriptorPoolIndex *Instance::createDescriptorPool(const LunaDescr
 		.poolSizeCount = creationInfo.poolSizeCount,
 		.pPoolSizes = creationInfo.poolSizes,
 	};
-	vkCreateDescriptorPool(device_.logicalDevice(), &createInfo, nullptr, &descriptorPools_.back());
+	vkCreateDescriptorPool(device_.logicalDevice(), &createInfo, nullptr, poolIterator.base());
+	descriptorPoolIndices_.emplace_back(poolIterator - descriptorPools_.begin());
 	return &descriptorPoolIndices_.back();
 }
 inline const DescriptorSetLayoutIndex *Instance::createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo
 																				   &creationInfo)
 {
-	descriptorSetLayoutIndices_.emplace_back(descriptorSetLayouts_.size());
-	descriptorSetLayouts_.emplace_back(creationInfo);
+	const std::vector<DescriptorSetLayout>::iterator &layoutIterator = std::find_if(descriptorSetLayouts_.begin(),
+																					descriptorSetLayouts_.end(),
+																					DescriptorSetLayout::isDestroyed);
+	descriptorSetLayoutIndices_.emplace_back(layoutIterator - descriptorSetLayouts_.begin());
+	descriptorSetLayouts_.emplace(layoutIterator, creationInfo);
 	return &descriptorSetLayoutIndices_.back();
 }
 inline void Instance::allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
 											 LunaDescriptorSet *descriptorSets)
 {
+	uint32_t slotsFound = 0;
 	std::vector<VkDescriptorSetLayout> layouts;
 	layouts.reserve(allocationInfo.descriptorSetCount);
+	const auto *poolIndex = static_cast<const DescriptorPoolIndex *>(allocationInfo.descriptorPool);
 	for (uint32_t i = 0; i < allocationInfo.descriptorSetCount; i++)
 	{
-		const LunaDescriptorSetLayout layout = allocationInfo.setLayouts[i];
-		layouts.emplace_back(descriptorSetLayout(layout).layout());
+		const VkDescriptorSetLayout layout = descriptorSetLayout(allocationInfo.setLayouts[i]).layout();
+		const auto *layoutIndex = static_cast<const DescriptorSetLayoutIndex *>(allocationInfo.setLayouts[i]);
+		layouts.emplace_back(layout);
 
-		descriptorSetIndices_.emplace_back(descriptorSets_.size() + i,
-										   static_cast<const DescriptorSetLayoutIndex *>(layout),
-										   static_cast<const DescriptorPoolIndex *>(allocationInfo.descriptorPool));
+		if (slotsFound == i)
+		{
+			const std::vector<VkDescriptorSet>::iterator descriptorSetIterator = std::find(descriptorSets_.begin(),
+																						   descriptorSets_.end(),
+																						   VK_NULL_HANDLE);
+			if (descriptorSetIterator != descriptorSets_.end())
+			{
+				descriptorSetIndices_.emplace_back(descriptorSetIterator - descriptorSets_.begin(),
+												   layoutIndex,
+												   poolIndex);
+				descriptorSets[i] = &descriptorSetIndices_.back();
+
+				const VkDescriptorSetAllocateInfo allocateInfo = {
+					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+					.descriptorPool = descriptorPool(allocationInfo.descriptorPool),
+					.descriptorSetCount = 1,
+					.pSetLayouts = &layout,
+				};
+				vkAllocateDescriptorSets(device_.logicalDevice(), &allocateInfo, descriptorSetIterator.base());
+				slotsFound++;
+				continue;
+			}
+		}
+		descriptorSetIndices_.emplace_back(descriptorSets_.size() + i - slotsFound, layoutIndex, poolIndex);
 		descriptorSets[i] = &descriptorSetIndices_.back();
 	}
 	const VkDescriptorSetAllocateInfo allocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 		.descriptorPool = descriptorPool(allocationInfo.descriptorPool),
-		.descriptorSetCount = allocationInfo.descriptorSetCount,
-		.pSetLayouts = layouts.data(),
+		.descriptorSetCount = allocationInfo.descriptorSetCount - slotsFound,
+		.pSetLayouts = layouts.data() + slotsFound,
 	};
 	const size_t oldSize = descriptorSets_.size();
-	descriptorSets_.resize(oldSize + allocationInfo.descriptorSetCount);
+	descriptorSets_.resize(oldSize + allocationInfo.descriptorSetCount - slotsFound);
 	vkAllocateDescriptorSets(device_.logicalDevice(), &allocateInfo, descriptorSets_.data() + oldSize);
 }
 inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo
 																			 &creationInfo)
 {
-	const RenderPassIndex *index = static_cast<const RenderPassSubpassIndex *>(creationInfo.subpass)->renderPassIndex;
-	// TODO: Create a method on RenderPass to do this that can make RenderPass::pipelineIndices private again (and make it take a LunaRenderPassSubpass so that we don't need index)
-	renderPass_(index).pipelineIndices.emplace_back(graphicsPipelines_.size());
-
-	graphicsPipelineIndices_.emplace_back(graphicsPipelines_.size());
-	graphicsPipelines_.emplace_back(creationInfo);
+	const std::vector<GraphicsPipeline>::iterator &pipelineIterator = std::find_if(graphicsPipelines_.begin(),
+																				   graphicsPipelines_.end(),
+																				   GraphicsPipeline::isDestroyed);
+	graphicsPipelineIndices_.emplace_back(pipelineIterator - graphicsPipelines_.begin());
+	graphicsPipelines_.emplace(pipelineIterator, creationInfo);
 	return &graphicsPipelineIndices_.back();
 }
-inline uint32_t Instance::allocateBuffer(const LunaBufferCreationInfo &creationInfo)
+inline std::vector<Buffer>::iterator Instance::allocateBuffer(const LunaBufferCreationInfo &creationInfo)
 {
+	buffers_.reserve(buffers_.size() + 1);
+	const std::vector<Buffer>::iterator &bufferIterator = std::find_if(buffers_.begin(),
+																	   buffers_.end(),
+																	   Buffer::isDestroyed);
 	const VkBufferCreateInfo bufferCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.flags = creationInfo.flags,
@@ -110,8 +238,8 @@ inline uint32_t Instance::allocateBuffer(const LunaBufferCreationInfo &creationI
 		.queueFamilyIndexCount = device().familyCount(),
 		.pQueueFamilyIndices = device().queueFamilyIndices(),
 	};
-	buffers_.emplace_back(bufferCreateInfo);
-	return buffers_.size() - 1;
+	buffers_.emplace(bufferIterator, bufferCreateInfo);
+	return bufferIterator;
 }
 inline void Instance::createStagingBuffer(const size_t size)
 {
@@ -127,8 +255,12 @@ inline void Instance::copyToStagingBuffer(const uint8_t *data, const size_t size
 }
 inline const SamplerIndex *Instance::createSampler(const LunaSamplerCreationInfo &creationInfo)
 {
-	samplerIndices_.emplace_back(samplers_.size());
-	samplers_.emplace_back();
+	samplers_.reserve(samplers_.size() + 1);
+	const std::vector<VkSampler>::iterator samplerIterator = std::find(samplers_.begin(),
+																	   samplers_.end(),
+																	   VK_NULL_HANDLE);
+	samplerIndices_.emplace_back(samplerIterator - samplers_.begin());
+	samplers_.emplace(samplerIterator);
 	const VkSamplerCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 		.flags = creationInfo.flags,
@@ -148,7 +280,7 @@ inline const SamplerIndex *Instance::createSampler(const LunaSamplerCreationInfo
 		.borderColor = creationInfo.borderColor,
 		.unnormalizedCoordinates = creationInfo.unnormalizedCoordinates,
 	};
-	vkCreateSampler(device_.logicalDevice(), &createInfo, nullptr, &samplers_.back());
+	vkCreateSampler(device_.logicalDevice(), &createInfo, nullptr, samplerIterator.base());
 	return &samplerIndices_.back();
 }
 
@@ -210,6 +342,10 @@ inline void Instance::descriptorSet(const LunaDescriptorSet index,
 	{
 		*descriptorSet = descriptorSets_.at(descriptorSetIndex.index);
 	}
+}
+inline Buffer &Instance::buffer(const uint32_t index)
+{
+	return buffers_.at(index);
 }
 inline const buffer::BufferRegion &Instance::bufferRegion(const LunaBuffer buffer) const
 {

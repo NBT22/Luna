@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <luna/core/DescriptorSetLayout.hpp>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -21,16 +20,6 @@ struct SwapChain
 		std::vector<VkImage> images;
 		std::vector<VkImageView> imageViews;
 		std::vector<VkFramebuffer> framebuffers;
-};
-struct DescriptorPoolIndex
-{
-		uint32_t index;
-};
-struct DescriptorSetIndex
-{
-		uint32_t index;
-		const DescriptorSetLayoutIndex *layoutIndex;
-		const DescriptorPoolIndex *poolIndex;
 };
 struct SamplerIndex
 {

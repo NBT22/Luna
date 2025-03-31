@@ -17,6 +17,8 @@ extern "C"
 {
 #endif
 
+void lunaDestroyInstance();
+
 LunaDescriptorPool lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo);
 LunaDescriptorSetLayout lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo);
 void lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,

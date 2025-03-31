@@ -7,6 +7,11 @@
 
 namespace luna::core
 {
+inline bool DescriptorSetLayout::isDestroyed(const DescriptorSetLayout &layout)
+{
+	return layout.isDestroyed_;
+}
+
 inline VkDescriptorSetLayout DescriptorSetLayout::layout() const
 {
 	return layout_;

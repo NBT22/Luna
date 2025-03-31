@@ -8,6 +8,11 @@
 
 namespace luna::core
 {
+inline bool RenderPass::isDestroyed(const RenderPass &renderPass)
+{
+	return renderPass.isDestroyed_;
+}
+
 inline VkRenderPass RenderPass::renderPass() const
 {
 	return renderPass_;

@@ -64,8 +64,8 @@ void GraphicsPipeline::destroy()
 	{
 		return;
 	}
-
 	vkDestroyPipeline(instance.device().logicalDevice(), pipeline_, nullptr);
+	vkDestroyPipelineLayout(instance.device().logicalDevice(), layout_, nullptr);
 	isDestroyed_ = true;
 }
 void GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo)

@@ -7,6 +7,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #pragma region typedefs
 typedef struct
@@ -399,6 +400,7 @@ int main()
 		.destinationStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
 	};
 	(void)lunaCreateImage(&imageCreationInfo);
+	free(pixels);
 
 	LunaGraphicsPipeline graphicsPipeline = createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
 																   &descriptorSetLayout);
@@ -432,10 +434,12 @@ int main()
 			switch (event.type)
 			{
 				case SDL_EVENT_QUIT:
+					lunaDestroyInstance();
 					return 0;
 				case SDL_EVENT_KEY_UP:
 					if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					{
+						lunaDestroyInstance();
 						return 0;
 					}
 					break;
@@ -446,6 +450,4 @@ int main()
 		lunaDrawBuffer(&drawInfo);
 		lunaDrawFrame();
 	}
-
-	return 0;
 }

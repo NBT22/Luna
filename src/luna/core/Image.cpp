@@ -320,7 +320,7 @@ static void writeImage(const VkImage image,
 	{
 		const VkDevice logicalDevice = core::instance.device().logicalDevice();
 		transferCommandBuffer.waitForFence(logicalDevice);
-		vkResetFences(logicalDevice, 1, &transferCommandBuffer.fence);
+		transferCommandBuffer.resetFence(logicalDevice);
 		transferCommandBuffer.beginSingleUseCommandBuffer();
 	}
 
@@ -419,6 +419,7 @@ namespace luna::core
 {
 Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t depth, const uint32_t arrayLayers)
 {
+	assert(isDestroyed_);
 	assert(creationInfo.sampler == nullptr || creationInfo.samplerCreationInfo == nullptr);
 	const VkExtent3D extent = {
 		.width = creationInfo.width,
@@ -467,7 +468,20 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
 	}
 
 	helpers::writeImage(image_, extent, arrayLayers, creationInfo);
+	isDestroyed_ = false;
 }
+
+void Image::destroy()
+{
+	if (isDestroyed_)
+	{
+		return;
+	}
+	vkDestroyImageView(instance.device().logicalDevice(), imageView_, nullptr);
+	vmaDestroyImage(instance.device().allocator(), image_, allocation_);
+	isDestroyed_ = true;
+}
+
 } // namespace luna::core
 
 LunaSampler lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo)

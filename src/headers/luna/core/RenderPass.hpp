@@ -29,6 +29,8 @@ struct RenderPassSubpassIndex
 class RenderPass
 {
 	public:
+		static bool isDestroyed(const RenderPass &renderPass);
+
 		friend void ::lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo);
 
 		RenderPass() = default;
@@ -47,10 +49,8 @@ class RenderPass
 
 		[[nodiscard]] VkRenderPass renderPass() const;
 
-		std::vector<uint32_t> pipelineIndices{};
-
 	private:
-		bool isDestroyed_ = true;
+		bool isDestroyed_{true};
 		VkRenderPass renderPass_{};
 		std::string name_{};
 		std::vector<RenderPassSubpassIndex> subpassIndices_{};

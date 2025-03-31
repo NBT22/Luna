@@ -11,31 +11,47 @@ namespace luna::core::buffer
 {
 const BufferRegionIndex *BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo)
 {
-	uint32_t index = -1u;
-	for (size_t i = 0; i < instance.buffers_.size(); i++)
+	const auto hasFreeSpace = [creationInfo](const Buffer &buffer) -> bool {
+		return creationInfo.size <= buffer.freeBytes_ &&
+			   (creationInfo.flags & buffer.creationFlags_) == creationInfo.flags &&
+			   (creationInfo.usage & buffer.usageFlags_) == creationInfo.usage;
+	};
+	std::vector<Buffer>::iterator &&bufferIterator = std::find_if(instance.buffers_.begin(),
+																  instance.buffers_.end(),
+																  hasFreeSpace);
+	if (bufferIterator == instance.buffers_.end())
 	{
-		const Buffer &buffer = instance.buffers_.at(i);
-		if (creationInfo.size <= buffer.freeBytes_ &&
-			(creationInfo.flags & buffer.creationFlags_) == creationInfo.flags &&
-			(creationInfo.usage & buffer.usageFlags_) == creationInfo.usage)
-		{
-			index = i;
-			break;
-		}
+		bufferIterator = instance.allocateBuffer(creationInfo);
 	}
-	if (index == -1u)
-	{
-		index = instance.allocateBuffer(creationInfo);
-	}
-	Buffer &buffer = instance.buffers_.at(index);
-	buffer.regions_.emplace_back(creationInfo.size,
-								 static_cast<uint8_t *>(buffer.data_) + buffer.usedBytes_,
-								 buffer.usedBytes_);
-	buffer.usedBytes_ += creationInfo.size;
-	buffer.freeBytes_ -= creationInfo.size;
+	const uint32_t bufferIndex = bufferIterator - instance.buffers_.begin();
+	Buffer *buffer = bufferIterator.base();
 
-	instance.bufferRegionIndices_.emplace_back(index, buffer.regions_.size() - 1);
+	buffer->regions_.reserve(buffer->regions_.size() + 1);
+	const std::vector<BufferRegion>::iterator &bufferRegionIterator = std::find_if(buffer->regions_.begin(),
+																				   buffer->regions_.end(),
+																				   isDestroyed);
+	buffer->regions_.emplace(bufferRegionIterator,
+							 creationInfo.size,
+							 static_cast<uint8_t *>(buffer->data_) + buffer->usedBytes_,
+							 buffer->usedBytes_,
+							 bufferIndex);
+	buffer->usedBytes_ += creationInfo.size;
+	buffer->freeBytes_ -= creationInfo.size;
+
+	instance.bufferRegionIndices_.emplace_back(bufferIndex, bufferRegionIterator - buffer->regions_.begin());
 	return &instance.bufferRegionIndices_.back();
+}
+
+void BufferRegion::destroy()
+{
+	if (isDestroyed_)
+	{
+		return;
+	}
+	Buffer &buffer = instance.buffer(bufferIndex_);
+	buffer.freeBytes_ += size_;
+	buffer.usedBytes_ -= size_;
+	isDestroyed_ = true;
 }
 } // namespace luna::core::buffer
 
@@ -43,6 +59,7 @@ namespace luna::core
 {
 Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 {
+	assert(isDestroyed_);
 	creationFlags_ = bufferCreateInfo.flags;
 	usageFlags_ = bufferCreateInfo.usage;
 	freeBytes_ = bufferCreateInfo.size;
@@ -60,6 +77,20 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 					&allocation_,
 					&allocationInfo);
 	data_ = allocationInfo.pMappedData;
+	isDestroyed_ = false;
+}
+
+void Buffer::destroy()
+{
+	if (isDestroyed_)
+	{
+		return;
+	}
+	vmaDestroyBuffer(instance.device().allocator(), buffer_, allocation_);
+	usedBytes_ = 0;
+	regions_.clear();
+	regions_.shrink_to_fit();
+	isDestroyed_ = true;
 }
 } // namespace luna::core
 

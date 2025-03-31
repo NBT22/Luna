@@ -3,7 +3,7 @@ project(examples C)
 
 set(CMAKE_C_STANDARD 11)
 
-set(CMAKE_C_FLAGS "-Wall -Wno-discarded-qualifiers -fvisibility=hidden")
+set(CMAKE_C_FLAGS "-Wall -fvisibility=hidden")
 
 set(CMAKE_C_FLAGS_DEBUG "-g -O0")
 set(CMAKE_C_FLAGS_RELEASE "-g0 -O3 -s -DNDEBUG -Wl,--gc-sections -fdata-sections -ffunction-sections")

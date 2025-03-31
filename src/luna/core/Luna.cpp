@@ -8,18 +8,19 @@
 
 namespace luna::core
 {}
-
+void lunaDestroyInstance()
+{
+	luna::core::instance.destroy();
+}
 VkShaderModule lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes)
 {
-	const VkShaderModuleCreateInfo createInfo = {
+	const VkShaderModuleCreateInfo creationInfo = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 		.codeSize = bytes,
 		.pCode = spirv,
 	};
 
-	VkShaderModule shaderModule;
-	vkCreateShaderModule(luna::core::instance.device().logicalDevice(), &createInfo, nullptr, &shaderModule);
-	return shaderModule;
+	return luna::core::instance.device_.addShaderModule(&creationInfo);
 }
 void lunaDrawFrame()
 {
