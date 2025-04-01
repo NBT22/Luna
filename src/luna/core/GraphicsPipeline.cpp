@@ -14,7 +14,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 	assert(isDestroyed_);
 
 	const LunaPipelineLayoutCreationInfo layoutCreationInfo = creationInfo.layoutCreationInfo == nullptr
-																	  ? (LunaPipelineLayoutCreationInfo){}
+																	  ? LunaPipelineLayoutCreationInfo{}
 																	  : *creationInfo.layoutCreationInfo;
 	const uint32_t descriptorSetLayoutCount = layoutCreationInfo.descriptorSetLayoutCount;
 	std::vector<VkDescriptorSetLayout> descriptorSetLayouts;

@@ -111,21 +111,21 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	switch (familyCount_)
 	{
 		case 3:
-			queuesCreateInfo[2] = (VkDeviceQueueCreateInfo){
+			queuesCreateInfo[2] = VkDeviceQueueCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 				.queueFamilyIndex = familyIndices_.presentation,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
 		case 2:
-			queuesCreateInfo[1] = (VkDeviceQueueCreateInfo){
+			queuesCreateInfo[1] = VkDeviceQueueCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 				.queueFamilyIndex = hasFamily_.transfer ? familyIndices_.transfer : familyIndices_.presentation,
 				.queueCount = 1,
 				.pQueuePriorities = &queuePriority,
 			};
 		case 1:
-			queuesCreateInfo[0] = (VkDeviceQueueCreateInfo){
+			queuesCreateInfo[0] = VkDeviceQueueCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 				.queueFamilyIndex = familyIndices_.graphics,
 				.queueCount = 1,

@@ -23,7 +23,10 @@ class Instance
 	public:
 		friend const buffer::BufferRegionIndex *buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &);
 		friend void ::lunaDrawBuffer(const LunaVertexBufferDrawInfo *);
-		friend VkShaderModule ::lunaCreateShaderModule(const uint32_t *, size_t);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wparentheses"
+		friend VkShaderModule(::lunaCreateShaderModule(const uint32_t *, size_t));
+#pragma GCC diagnostic pop
 
 		Instance() = default;
 		explicit Instance(const LunaInstanceCreationInfo &creationInfo);

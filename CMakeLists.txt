@@ -3,7 +3,7 @@ project(Luna CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_CXX_FLAGS "-Wall -isystem ${CMAKE_SOURCE_DIR}/vma/include")
+set(CMAKE_CXX_FLAGS "-Wpedantic -Wall -isystem ${CMAKE_SOURCE_DIR}/vma/include")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-g0 -O3 -DNDEBUG -Wl,--gc-sections -fdata-sections -ffunction-sections")
