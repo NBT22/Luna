@@ -6,6 +6,7 @@
 #define LUNA_H
 
 #include <luna/lunaDevice.h>
+#include <luna/lunaDrawing.h>
 #include <luna/lunaImage.h>
 #include <luna/lunaInstance.h>
 #include <luna/lunaPipeline.h>
@@ -30,9 +31,6 @@ VkShaderModule lunaCreateShaderModule(const uint32_t *spirv, size_t bytes);
 void lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo);
 LunaBuffer lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo);
 void lunaWriteDataToBuffer(LunaBuffer buffer, const void *data, size_t bytes);
-
-void lunaDrawBuffer(const LunaVertexBufferDrawInfo *drawInfo);
-void lunaDrawFrame();
 
 #ifdef __cplusplus
 }

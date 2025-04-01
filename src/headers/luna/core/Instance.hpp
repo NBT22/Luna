@@ -22,7 +22,62 @@ class Instance
 {
 	public:
 		friend const buffer::BufferRegionIndex *buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &);
-		friend void ::lunaDrawBuffer(const LunaVertexBufferDrawInfo *);
+		friend void ::lunaDrawBuffer(LunaBuffer,
+									 LunaGraphicsPipeline,
+									 const LunaGraphicsPipelineBindInfo *,
+									 uint32_t,
+									 uint32_t,
+									 uint32_t,
+									 uint32_t);
+		friend void ::lunaDrawBufferIndirect(LunaBuffer,
+											 LunaGraphicsPipeline,
+											 const LunaGraphicsPipelineBindInfo *,
+											 LunaBuffer,
+											 VkDeviceSize,
+											 uint32_t,
+											 uint32_t);
+		friend void ::lunaDrawBufferIndirectCount(LunaBuffer,
+												  LunaGraphicsPipeline,
+												  const LunaGraphicsPipelineBindInfo *,
+												  LunaBuffer,
+												  VkDeviceSize,
+												  LunaBuffer,
+												  VkDeviceSize,
+												  uint32_t,
+												  uint32_t);
+		friend void ::lunaDrawBufferIndexed(LunaBuffer,
+											LunaBuffer,
+											VkDeviceSize,
+											VkIndexType,
+											LunaGraphicsPipeline,
+											const LunaGraphicsPipelineBindInfo *,
+											uint32_t,
+											uint32_t,
+											uint32_t,
+											int32_t,
+											uint32_t);
+		friend void ::lunaDrawBufferIndexedIndirect(LunaBuffer,
+													LunaBuffer,
+													VkDeviceSize,
+													VkIndexType,
+													LunaGraphicsPipeline,
+													const LunaGraphicsPipelineBindInfo *,
+													LunaBuffer,
+													VkDeviceSize,
+													uint32_t,
+													uint32_t);
+		friend void ::lunaDrawBufferIndexedIndirectCount(LunaBuffer,
+														 LunaBuffer,
+														 VkDeviceSize indexOffset,
+														 VkIndexType indexType,
+														 LunaGraphicsPipeline,
+														 const LunaGraphicsPipelineBindInfo *,
+														 LunaBuffer,
+														 VkDeviceSize,
+														 LunaBuffer,
+														 VkDeviceSize,
+														 uint32_t,
+														 uint32_t);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wparentheses"
 		friend VkShaderModule(::lunaCreateShaderModule(const uint32_t *, size_t));

@@ -330,12 +330,6 @@ int main()
 		.renderArea.extent.height = extent.height,
 		.depthAttachmentClearValue.depthStencil.depth = 1,
 	};
-	const LunaVertexBufferDrawInfo drawInfo = {
-		.vertexBuffer = vertexBuffer,
-		.pipeline = graphicsPipeline,
-		.vertexCount = sizeof(vertices) / sizeof(*vertices),
-		.instanceCount = 1,
-	};
 
 #ifdef ALWAYS_UPDATE
 	SDL_Event event;
@@ -381,7 +375,13 @@ int main()
 			default:;
 		}
 		lunaBeginRenderPass(renderPass, &beginInfo);
-		lunaDrawBuffer(&drawInfo);
+		lunaDrawBuffer(vertexBuffer,
+					   graphicsPipeline,
+					   (LunaGraphicsPipelineBindInfo[]){0},
+					   sizeof(vertices) / sizeof(*vertices),
+					   1,
+					   0,
+					   0);
 		lunaDrawFrame();
 	}
 #endif

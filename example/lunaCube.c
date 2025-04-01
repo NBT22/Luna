@@ -98,9 +98,15 @@ static const Vertex vertices[] = {
 	{.x = -0.5f, .y = -0.5f},
 	{.x = 0.5f, .y = -0.5f, .u = 1},
 	{.x = 0.5f, .y = 0.5f, .u = 1, .v = 1},
-	{.x = 0.5f, .y = 0.5f, .u = 1, .v = 1},
 	{.x = -0.5f, .y = 0.5f, .v = 1},
-	{.x = -0.5f, .y = -0.5f},
+};
+static const uint32_t indices[] = {
+	0,
+	1,
+	2,
+	2,
+	3,
+	0,
 };
 #pragma endregion constants
 
@@ -405,25 +411,28 @@ int main()
 	LunaGraphicsPipeline graphicsPipeline = createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
 																   &descriptorSetLayout);
 
-	LunaBufferCreationInfo bufferCreationInfo = {
+	LunaBufferCreationInfo vertexBufferCreationInfo = {
 		.size = sizeof(vertices),
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 	};
-	LunaBuffer vertexBuffer = lunaCreateBuffer(&bufferCreationInfo);
+	LunaBuffer vertexBuffer = lunaCreateBuffer(&vertexBufferCreationInfo);
 	lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
+
+	LunaBufferCreationInfo indexBufferCreationInfo = {
+		.size = sizeof(indices),
+		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+	};
+	LunaBuffer indexBuffer = lunaCreateBuffer(&indexBufferCreationInfo);
+	lunaWriteDataToBuffer(indexBuffer, indices, sizeof(indices));
 
 	const LunaRenderPassBeginInfo beginInfo = {
 		.renderArea.extent.width = extent.width,
 		.renderArea.extent.height = extent.height,
 		.depthAttachmentClearValue.depthStencil.depth = 1,
 	};
-	const LunaVertexBufferDrawInfo drawInfo = {
-		.vertexBuffer = vertexBuffer,
-		.pipeline = graphicsPipeline,
-		.pipelineBindInfo.descriptorSetCount = 1,
-		.pipelineBindInfo.descriptorSets = &descriptorSet,
-		.vertexCount = sizeof(vertices) / sizeof(*vertices),
-		.instanceCount = 1,
+	const LunaGraphicsPipelineBindInfo bindInfo = {
+		.descriptorSetCount = 1,
+		.descriptorSets = &descriptorSet,
 	};
 
 	SDL_Event event;
@@ -447,7 +456,17 @@ int main()
 			}
 		}
 		lunaBeginRenderPass(renderPass, &beginInfo);
-		lunaDrawBuffer(&drawInfo);
+		lunaDrawBufferIndexed(vertexBuffer,
+							  indexBuffer,
+							  0,
+							  VK_INDEX_TYPE_UINT32,
+							  graphicsPipeline,
+							  &bindInfo,
+							  sizeof(indices) / sizeof(*indices),
+							  1,
+							  0,
+							  0,
+							  0);
 		lunaDrawFrame();
 	}
 }

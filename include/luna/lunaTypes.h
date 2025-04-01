@@ -16,6 +16,8 @@ extern "C"
 
 #define LUNA_DEFINE_HANDLE(object) typedef const void *object
 
+#define LUNA_NULL_HANDLE VK_NULL_HANDLE
+
 LUNA_DEFINE_HANDLE(LunaRenderPass);
 LUNA_DEFINE_HANDLE(LunaRenderPassSubpass);
 LUNA_DEFINE_HANDLE(LunaDescriptorPool);
@@ -291,17 +293,6 @@ typedef struct
 		VkClearValue depthAttachmentClearValue;
 		VkClearValue colorAttachmentClearValue;
 } LunaRenderPassBeginInfo;
-
-typedef struct
-{
-		LunaBuffer vertexBuffer;
-		LunaGraphicsPipeline pipeline;
-		LunaGraphicsPipelineBindInfo pipelineBindInfo;
-		uint32_t vertexCount;
-		uint32_t instanceCount;
-		uint32_t firstVertex;
-		uint32_t firstInstance;
-} LunaVertexBufferDrawInfo;
 
 #ifdef __cplusplus
 }
