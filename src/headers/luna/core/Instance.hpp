@@ -78,6 +78,7 @@ class Instance
 														 VkDeviceSize,
 														 uint32_t,
 														 uint32_t);
+		friend void ::lunaPushConstants(LunaGraphicsPipeline);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wparentheses"
 		friend VkShaderModule(::lunaCreateShaderModule(const uint32_t *, size_t));

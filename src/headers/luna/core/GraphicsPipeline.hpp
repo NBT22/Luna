@@ -5,6 +5,7 @@
 #pragma once
 
 #include <luna/luna.h>
+#include <vector>
 
 namespace luna::core
 {
@@ -18,6 +19,7 @@ class GraphicsPipeline
 		static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
 
 		friend void ::lunaDrawFrame();
+		friend void ::lunaPushConstants(LunaGraphicsPipeline);
 
 		GraphicsPipeline() = default;
 		explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
@@ -31,6 +33,7 @@ class GraphicsPipeline
 		bool isDestroyed_{true};
 		VkPipeline pipeline_{};
 		VkPipelineLayout layout_{};
+		std::vector<LunaPushConstantsRange> pushConstantsRanges_{};
 		bool bound_{};
 };
 } // namespace luna::core

@@ -70,6 +70,7 @@ void lunaDrawBufferIndexedIndirectCount(LunaBuffer vertexBuffer,
 										uint32_t maxDrawCount,
 										uint32_t stride);
 
+void lunaPushConstants(LunaGraphicsPipeline pipeline);
 void lunaDrawFrame();
 
 #ifdef __cplusplus

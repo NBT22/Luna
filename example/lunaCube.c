@@ -2,6 +2,7 @@
 // Created by NBT22 on 3/11/25.
 //
 
+#include <cglm/cglm.h>
 #include <lodepng.h>
 #include <luna/luna.h>
 #include <SDL3/SDL.h>
@@ -12,7 +13,7 @@
 #pragma region typedefs
 typedef struct
 {
-		float x, y;
+		float x, y, z;
 		float u, v;
 } Vertex;
 #pragma endregion typedefs
@@ -21,46 +22,55 @@ typedef struct
 /**
  * Compiled SPIRV, generated from the following GLSL
  * @code{'GLSL'}
+ * layout (push_constant) uniform PushConstants {mat4 translationMatrix;} pushConstants;
  * layout (location = 0) in vec3 inPos;
  * layout (location = 1) in vec2 inUV;
  * layout (location = 0) out vec2 outUV;
  * void main() {
- *     gl_Position = vec4(inPos, 1.0);
+ *     gl_Position = pushConstants.translationMatrix * vec4(inPos, 1.0);
  *     outUV = inUV;
  * }
  * @endcode
  */
-static const uint32_t VERTEX_SHADER_SPIRV[269] = {
-	0x07230203, 0x00010000, 0x000d000b, 0x00000021, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, 0x00000001,
+static const uint32_t VERTEX_SHADER_SPIRV[339] = {
+	0x07230203, 0x00010000, 0x000d000b, 0x00000029, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, 0x00000001,
 	0x4c534c47, 0x6474732e, 0x3035342e, 0x00000000, 0x0003000e, 0x00000000, 0x00000001, 0x0009000f, 0x00000000,
-	0x00000004, 0x6e69616d, 0x00000000, 0x0000000d, 0x00000012, 0x0000001d, 0x0000001f, 0x00030003, 0x00000002,
+	0x00000004, 0x6e69616d, 0x00000000, 0x0000000d, 0x00000019, 0x00000025, 0x00000027, 0x00030003, 0x00000002,
 	0x000001cc, 0x000a0004, 0x475f4c47, 0x4c474f4f, 0x70635f45, 0x74735f70, 0x5f656c79, 0x656e696c, 0x7269645f,
 	0x69746365, 0x00006576, 0x00080004, 0x475f4c47, 0x4c474f4f, 0x6e695f45, 0x64756c63, 0x69645f65, 0x74636572,
 	0x00657669, 0x00040005, 0x00000004, 0x6e69616d, 0x00000000, 0x00060005, 0x0000000b, 0x505f6c67, 0x65567265,
 	0x78657472, 0x00000000, 0x00060006, 0x0000000b, 0x00000000, 0x505f6c67, 0x7469736f, 0x006e6f69, 0x00070006,
 	0x0000000b, 0x00000001, 0x505f6c67, 0x746e696f, 0x657a6953, 0x00000000, 0x00070006, 0x0000000b, 0x00000002,
 	0x435f6c67, 0x4470696c, 0x61747369, 0x0065636e, 0x00070006, 0x0000000b, 0x00000003, 0x435f6c67, 0x446c6c75,
-	0x61747369, 0x0065636e, 0x00030005, 0x0000000d, 0x00000000, 0x00040005, 0x00000012, 0x6f506e69, 0x00000073,
-	0x00040005, 0x0000001d, 0x5574756f, 0x00000056, 0x00040005, 0x0000001f, 0x56556e69, 0x00000000, 0x00030047,
-	0x0000000b, 0x00000002, 0x00050048, 0x0000000b, 0x00000000, 0x0000000b, 0x00000000, 0x00050048, 0x0000000b,
-	0x00000001, 0x0000000b, 0x00000001, 0x00050048, 0x0000000b, 0x00000002, 0x0000000b, 0x00000003, 0x00050048,
-	0x0000000b, 0x00000003, 0x0000000b, 0x00000004, 0x00040047, 0x00000012, 0x0000001e, 0x00000000, 0x00040047,
-	0x0000001d, 0x0000001e, 0x00000000, 0x00040047, 0x0000001f, 0x0000001e, 0x00000001, 0x00020013, 0x00000002,
-	0x00030021, 0x00000003, 0x00000002, 0x00030016, 0x00000006, 0x00000020, 0x00040017, 0x00000007, 0x00000006,
-	0x00000004, 0x00040015, 0x00000008, 0x00000020, 0x00000000, 0x0004002b, 0x00000008, 0x00000009, 0x00000001,
-	0x0004001c, 0x0000000a, 0x00000006, 0x00000009, 0x0006001e, 0x0000000b, 0x00000007, 0x00000006, 0x0000000a,
-	0x0000000a, 0x00040020, 0x0000000c, 0x00000003, 0x0000000b, 0x0004003b, 0x0000000c, 0x0000000d, 0x00000003,
-	0x00040015, 0x0000000e, 0x00000020, 0x00000001, 0x0004002b, 0x0000000e, 0x0000000f, 0x00000000, 0x00040017,
-	0x00000010, 0x00000006, 0x00000003, 0x00040020, 0x00000011, 0x00000001, 0x00000010, 0x0004003b, 0x00000011,
-	0x00000012, 0x00000001, 0x0004002b, 0x00000006, 0x00000014, 0x3f800000, 0x00040020, 0x00000019, 0x00000003,
-	0x00000007, 0x00040017, 0x0000001b, 0x00000006, 0x00000002, 0x00040020, 0x0000001c, 0x00000003, 0x0000001b,
-	0x0004003b, 0x0000001c, 0x0000001d, 0x00000003, 0x00040020, 0x0000001e, 0x00000001, 0x0000001b, 0x0004003b,
-	0x0000001e, 0x0000001f, 0x00000001, 0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003, 0x000200f8,
-	0x00000005, 0x0004003d, 0x00000010, 0x00000013, 0x00000012, 0x00050051, 0x00000006, 0x00000015, 0x00000013,
-	0x00000000, 0x00050051, 0x00000006, 0x00000016, 0x00000013, 0x00000001, 0x00050051, 0x00000006, 0x00000017,
-	0x00000013, 0x00000002, 0x00070050, 0x00000007, 0x00000018, 0x00000015, 0x00000016, 0x00000017, 0x00000014,
-	0x00050041, 0x00000019, 0x0000001a, 0x0000000d, 0x0000000f, 0x0003003e, 0x0000001a, 0x00000018, 0x0004003d,
-	0x0000001b, 0x00000020, 0x0000001f, 0x0003003e, 0x0000001d, 0x00000020, 0x000100fd, 0x00010038,
+	0x61747369, 0x0065636e, 0x00030005, 0x0000000d, 0x00000000, 0x00060005, 0x00000011, 0x68737550, 0x736e6f43,
+	0x746e6174, 0x00000073, 0x00080006, 0x00000011, 0x00000000, 0x6e617274, 0x74616c73, 0x4d6e6f69, 0x69727461,
+	0x00000078, 0x00060005, 0x00000013, 0x68737570, 0x736e6f43, 0x746e6174, 0x00000073, 0x00040005, 0x00000019,
+	0x6f506e69, 0x00000073, 0x00040005, 0x00000025, 0x5574756f, 0x00000056, 0x00040005, 0x00000027, 0x56556e69,
+	0x00000000, 0x00030047, 0x0000000b, 0x00000002, 0x00050048, 0x0000000b, 0x00000000, 0x0000000b, 0x00000000,
+	0x00050048, 0x0000000b, 0x00000001, 0x0000000b, 0x00000001, 0x00050048, 0x0000000b, 0x00000002, 0x0000000b,
+	0x00000003, 0x00050048, 0x0000000b, 0x00000003, 0x0000000b, 0x00000004, 0x00030047, 0x00000011, 0x00000002,
+	0x00040048, 0x00000011, 0x00000000, 0x00000005, 0x00050048, 0x00000011, 0x00000000, 0x00000007, 0x00000010,
+	0x00050048, 0x00000011, 0x00000000, 0x00000023, 0x00000000, 0x00040047, 0x00000019, 0x0000001e, 0x00000000,
+	0x00040047, 0x00000025, 0x0000001e, 0x00000000, 0x00040047, 0x00000027, 0x0000001e, 0x00000001, 0x00020013,
+	0x00000002, 0x00030021, 0x00000003, 0x00000002, 0x00030016, 0x00000006, 0x00000020, 0x00040017, 0x00000007,
+	0x00000006, 0x00000004, 0x00040015, 0x00000008, 0x00000020, 0x00000000, 0x0004002b, 0x00000008, 0x00000009,
+	0x00000001, 0x0004001c, 0x0000000a, 0x00000006, 0x00000009, 0x0006001e, 0x0000000b, 0x00000007, 0x00000006,
+	0x0000000a, 0x0000000a, 0x00040020, 0x0000000c, 0x00000003, 0x0000000b, 0x0004003b, 0x0000000c, 0x0000000d,
+	0x00000003, 0x00040015, 0x0000000e, 0x00000020, 0x00000001, 0x0004002b, 0x0000000e, 0x0000000f, 0x00000000,
+	0x00040018, 0x00000010, 0x00000007, 0x00000004, 0x0003001e, 0x00000011, 0x00000010, 0x00040020, 0x00000012,
+	0x00000009, 0x00000011, 0x0004003b, 0x00000012, 0x00000013, 0x00000009, 0x00040020, 0x00000014, 0x00000009,
+	0x00000010, 0x00040017, 0x00000017, 0x00000006, 0x00000003, 0x00040020, 0x00000018, 0x00000001, 0x00000017,
+	0x0004003b, 0x00000018, 0x00000019, 0x00000001, 0x0004002b, 0x00000006, 0x0000001b, 0x3f800000, 0x00040020,
+	0x00000021, 0x00000003, 0x00000007, 0x00040017, 0x00000023, 0x00000006, 0x00000002, 0x00040020, 0x00000024,
+	0x00000003, 0x00000023, 0x0004003b, 0x00000024, 0x00000025, 0x00000003, 0x00040020, 0x00000026, 0x00000001,
+	0x00000023, 0x0004003b, 0x00000026, 0x00000027, 0x00000001, 0x00050036, 0x00000002, 0x00000004, 0x00000000,
+	0x00000003, 0x000200f8, 0x00000005, 0x00050041, 0x00000014, 0x00000015, 0x00000013, 0x0000000f, 0x0004003d,
+	0x00000010, 0x00000016, 0x00000015, 0x0004003d, 0x00000017, 0x0000001a, 0x00000019, 0x00050051, 0x00000006,
+	0x0000001c, 0x0000001a, 0x00000000, 0x00050051, 0x00000006, 0x0000001d, 0x0000001a, 0x00000001, 0x00050051,
+	0x00000006, 0x0000001e, 0x0000001a, 0x00000002, 0x00070050, 0x00000007, 0x0000001f, 0x0000001c, 0x0000001d,
+	0x0000001e, 0x0000001b, 0x00050091, 0x00000007, 0x00000020, 0x00000016, 0x0000001f, 0x00050041, 0x00000021,
+	0x00000022, 0x0000000d, 0x0000000f, 0x0003003e, 0x00000022, 0x00000020, 0x0004003d, 0x00000023, 0x00000028,
+	0x00000027, 0x0003003e, 0x00000025, 0x00000028, 0x000100fd, 0x00010038,
 };
 /**
  * Compiled SPIRV, generated from the following GLSL
@@ -95,18 +105,36 @@ static const uint32_t FRAGMENT_SHADER_SPIRV[159] = {
 };
 
 static const Vertex vertices[] = {
-	{.x = -0.5f, .y = -0.5f},
-	{.x = 0.5f, .y = -0.5f, .u = 1},
-	{.x = 0.5f, .y = 0.5f, .u = 1, .v = 1},
-	{.x = -0.5f, .y = 0.5f, .v = 1},
+	{.x = -0.5f, .y = -0.5f, .z = 0.5f},
+	{.x = 0.5f, .y = -0.5f, .z = 0.5f, .u = 1},
+	{.x = 0.5f, .y = 0.5f, .z = 0.5f, .u = 1, .v = 1},
+	{.x = -0.5f, .y = 0.5f, .z = 0.5f, .v = 1},
+	{.x = -0.5f, .y = -0.5f, .z = -0.5f, .u = 1},
+	{.x = 0.5f, .y = -0.5f, .z = -0.5f},
+	{.x = 0.5f, .y = 0.5f, .z = -0.5f, .v = 1},
+	{.x = -0.5f, .y = 0.5f, .z = -0.5f, .u = 1, .v = 1},
+
+	{.x = -0.5f, .y = 0.5f, .z = -0.5f, .v = 1},
+	{.x = 0.5f, .y = 0.5f, .z = -0.5f, .u = 1, .v = 1},
+	{.x = 0.5f, .y = 0.5f, .z = 0.5f, .u = 1},
+	{.x = -0.5f, .y = 0.5f, .z = 0.5f},
+	{.x = -0.5f, .y = -0.5f, .z = -0.5f, .u = 1, .v = 1},
+	{.x = 0.5f, .y = -0.5f, .z = -0.5f, .v = 1},
+	{.x = 0.5f, .y = -0.5f, .z = 0.5f},
+	{.x = -0.5f, .y = -0.5f, .z = 0.5f, .u = 1},
+
+	{.x = 0.5f, .y = -0.5f, .z = -0.5f, .u = 1, .v = 1},
+	{.x = 0.5f, .y = 0.5f, .z = -0.5f, .v = 1},
+	{.x = 0.5f, .y = 0.5f, .z = 0.5f},
+	{.x = 0.5f, .y = -0.5f, .z = 0.5f, .u = 1},
+	{.x = -0.5f, .y = -0.5f, .z = -0.5f, .v = 1},
+	{.x = -0.5f, .y = 0.5f, .z = -0.5f, .u = 1, .v = 1},
+	{.x = -0.5f, .y = 0.5f, .z = 0.5f, .u = 1},
+	{.x = -0.5f, .y = -0.5f, .z = 0.5f},
 };
 static const uint32_t indices[] = {
-	0,
-	1,
-	2,
-	2,
-	3,
-	0,
+	0,	1,	2,	2,	3,	0,	4,	5,	6,	6,	7,	4,	8,	9,	10, 10, 11, 8,
+	12, 13, 14, 14, 15, 12, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20,
 };
 #pragma endregion constants
 
@@ -139,7 +167,8 @@ static LunaRenderPass createRenderPass(const VkExtent3D extent)
 }
 
 static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass,
-												   const LunaDescriptorSetLayout *descriptorSetLayouts)
+												   const LunaDescriptorSetLayout *descriptorSetLayouts,
+												   mat4 *const pushConstantData)
 {
 	const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
 
@@ -175,7 +204,7 @@ static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass
 		{
 			.location = 0,
 			.binding = 0,
-			.format = VK_FORMAT_R32G32_SFLOAT,
+			.format = VK_FORMAT_R32G32B32_SFLOAT,
 			.offset = offsetof(Vertex, x),
 		},
 		{
@@ -256,9 +285,16 @@ static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass
 		.pAttachments = &colorBlendAttachment,
 	};
 
+	const LunaPushConstantsRange pushConstantsRange = {
+		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+		.size = 64,
+		.dataPointer = pushConstantData,
+	};
 	const LunaPipelineLayoutCreationInfo layoutCreationInfo = {
 		.descriptorSetLayoutCount = 1,
 		.descriptorSetLayouts = descriptorSetLayouts,
+		.pushConstantRangeCount = 1,
+		.pushConstantsRanges = &pushConstantsRange,
 	};
 
 	const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
@@ -408,8 +444,16 @@ int main()
 	(void)lunaCreateImage(&imageCreationInfo);
 	free(pixels);
 
+	mat4 viewMatrix = GLM_MAT4_IDENTITY_INIT;
+	glm_lookat((vec3){2.0f, 2.0f, 2.0f}, GLM_VEC3_ZERO, (vec3){0.0f, 0.0f, -1.0f}, viewMatrix);
+	mat4 projectionMatrix = GLM_MAT4_IDENTITY_INIT;
+	glm_perspective(0.7853981633974483f, 1, 0.1f, 4.25f, projectionMatrix);
+	mat4 transformMatrix = GLM_MAT4_IDENTITY_INIT;
+	glm_mul(projectionMatrix, viewMatrix, transformMatrix);
+
 	LunaGraphicsPipeline graphicsPipeline = createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
-																   &descriptorSetLayout);
+																   &descriptorSetLayout,
+																   &transformMatrix);
 
 	LunaBufferCreationInfo vertexBufferCreationInfo = {
 		.size = sizeof(vertices),
@@ -455,7 +499,9 @@ int main()
 				default:;
 			}
 		}
+		glm_rotate(transformMatrix, 0.00015f, GLM_ZUP);
 		lunaBeginRenderPass(renderPass, &beginInfo);
+		lunaPushConstants(graphicsPipeline);
 		lunaDrawBufferIndexed(vertexBuffer,
 							  indexBuffer,
 							  0,

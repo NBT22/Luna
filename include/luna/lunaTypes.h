@@ -73,9 +73,9 @@ typedef struct
 		uint32_t minImageCount;
 
 		uint32_t formatCount;
-		VkSurfaceFormatKHR *formatPriorityList;
+		const VkSurfaceFormatKHR *formatPriorityList;
 		uint32_t presentModeCount;
-		VkPresentModeKHR *presentModePriorityList;
+		const VkPresentModeKHR *presentModePriorityList;
 
 		VkImageUsageFlags imageUsage;
 		VkCompositeAlphaFlagBitsKHR compositeAlpha;
@@ -201,11 +201,20 @@ typedef struct
 
 typedef struct
 {
+		VkShaderStageFlags stageFlags;
+		uint32_t size;
+
+		void *const dataPointer;
+		uint32_t dataPointerOffset;
+} LunaPushConstantsRange;
+
+typedef struct
+{
 		VkPipelineLayoutCreateFlags flags;
 		uint32_t descriptorSetLayoutCount;
 		const LunaDescriptorSetLayout *descriptorSetLayouts;
 		uint32_t pushConstantRangeCount;
-		const VkPushConstantRange *pushConstantRanges;
+		const LunaPushConstantsRange *pushConstantsRanges;
 } LunaPipelineLayoutCreationInfo;
 
 typedef struct
@@ -272,7 +281,7 @@ typedef struct
 		VkSampleCountFlagBits samples;
 		VkImageUsageFlags usage;
 
-		void *pixels;
+		const void *pixels;
 		VkImageLayout layout;
 		VkImageAspectFlags aspectMask;
 		LunaDescriptorSet descriptorSet;
