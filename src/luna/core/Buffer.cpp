@@ -9,7 +9,7 @@
 
 namespace luna::core::buffer
 {
-const BufferRegionIndex *BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo)
+void BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index)
 {
 	const auto hasFreeSpace = [creationInfo](const Buffer &buffer) -> bool {
 		return creationInfo.size <= buffer.freeBytes_ &&
@@ -39,7 +39,10 @@ const BufferRegionIndex *BufferRegion::createBuffer(const LunaBufferCreationInfo
 	buffer->freeBytes_ -= creationInfo.size;
 
 	instance.bufferRegionIndices_.emplace_back(bufferIndex, bufferRegionIterator - buffer->regions_.begin());
-	return &instance.bufferRegionIndices_.back();
+	if (index != nullptr)
+	{
+		*index = &instance.bufferRegionIndices_.back();
+	}
 }
 
 void BufferRegion::destroy()
@@ -100,10 +103,10 @@ void lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo)
 	(void)luna::core::instance.allocateBuffer(*creationInfo);
 }
 
-LunaBuffer lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo)
+void lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer)
 {
 	assert(creationInfo);
-	return luna::core::buffer::BufferRegion::createBuffer(*creationInfo);
+	luna::core::buffer::BufferRegion::createBuffer(*creationInfo, buffer);
 }
 
 void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes)

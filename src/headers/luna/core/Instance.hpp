@@ -21,7 +21,7 @@ extern class Instance instance;
 class Instance
 {
 	public:
-		friend const buffer::BufferRegionIndex *buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &);
+		friend void buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &, LunaBuffer *index);
 		friend void ::lunaDrawBuffer(LunaBuffer,
 									 LunaGraphicsPipeline,
 									 const LunaGraphicsPipelineBindInfo *,
@@ -81,7 +81,7 @@ class Instance
 		friend void ::lunaPushConstants(LunaGraphicsPipeline);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wparentheses"
-		friend VkShaderModule(::lunaCreateShaderModule(const uint32_t *, size_t));
+		friend void ::lunaCreateShaderModule(const uint32_t *, size_t, VkShaderModule *shaderModule);
 #pragma GCC diagnostic pop
 
 		Instance() = default;
@@ -92,21 +92,24 @@ class Instance
 		void unbindAllPipelines();
 		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
 		void createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
-		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo *creationInfo);
-		const RenderPassIndex *createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2);
-		const DescriptorPoolIndex *createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo);
-		const DescriptorSetLayoutIndex *createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo
-																		  &creationInfo);
+		void createRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass);
+		void createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2, LunaRenderPass *renderPass);
+		void createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo,
+								  LunaDescriptorPool *descriptorPool);
+		void createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo,
+									   LunaDescriptorSetLayout *descriptorSetLayout);
 		void allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
 									LunaDescriptorSet *descriptorSets);
-		const GraphicsPipelineIndex *createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
+		void createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
+									LunaGraphicsPipeline *pipeline);
 		std::vector<Buffer>::iterator allocateBuffer(const LunaBufferCreationInfo &creationInfo);
 		void createStagingBuffer(size_t size);
 		void copyToStagingBuffer(const uint8_t *data, size_t size) const;
-		const SamplerIndex *createSampler(const LunaSamplerCreationInfo &creationInfo);
-		const ImageIndex *createImage(const LunaSampledImageCreationInfo &creationInfo,
-									  uint32_t depth,
-									  uint32_t arrayLayers);
+		void createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler);
+		void createImage(const LunaSampledImageCreationInfo &creationInfo,
+						 uint32_t depth,
+						 uint32_t arrayLayers,
+						 LunaImage *imageIndex);
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;

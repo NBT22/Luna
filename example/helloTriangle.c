@@ -94,7 +94,7 @@ static const Vertex vertices[3] = {
 };
 #pragma endregion constants
 
-static LunaRenderPass createRenderPass(const VkExtent3D extent)
+static void createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
 
@@ -119,20 +119,21 @@ static LunaRenderPass createRenderPass(const VkExtent3D extent)
 		}},
 		.extent = extent,
 	};
-	return lunaCreateRenderPass(&renderPassCreationInfo);
+	lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
 }
 
-static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass)
+static void createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphicsPipeline *pipeline)
 {
 	const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
 
-	const VkShaderModule vertexShaderModule = lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV));
-	const VkShaderModule fragmentShaderModule = lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV,
-																	   sizeof(FRAGMENT_SHADER_SPIRV));
+	VkShaderModule vertexShaderModule;
+	VkShaderModule fragmentShaderModule;
+	lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule);
+	lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV, sizeof(FRAGMENT_SHADER_SPIRV), &fragmentShaderModule);
 	if (!vertexShaderModule || !fragmentShaderModule)
 	{
 		// TODO: Figure out how to handle Luna functions failing
-		return NULL;
+		return;
 	}
 	const VkPipelineShaderStageCreateInfo shaderStages[2] = {
 		{
@@ -251,7 +252,7 @@ static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass
 		.colorBlendState = &colorBlending,
 		.subpass = subpass,
 	};
-	return lunaCreateGraphicsPipeline(&pipelineCreationInfo);
+	lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
 }
 
 int main()
@@ -314,15 +315,18 @@ int main()
 	};
 	lunaCreateSwapChain(&swapChainCreationInfo);
 
-	LunaRenderPass renderPass = createRenderPass(extent);
+	LunaRenderPass renderPass;
+	createRenderPass(extent, &renderPass);
 
-	LunaGraphicsPipeline graphicsPipeline = createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL));
+	LunaGraphicsPipeline graphicsPipeline;
+	createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline);
 
 	LunaBufferCreationInfo bufferCreationInfo = {
 		.size = sizeof(vertices),
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 	};
-	LunaBuffer vertexBuffer = lunaCreateBuffer(&bufferCreationInfo);
+	LunaBuffer vertexBuffer;
+	lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer);
 	lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
 
 	const LunaRenderPassBeginInfo beginInfo = {

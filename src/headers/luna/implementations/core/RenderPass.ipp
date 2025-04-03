@@ -30,7 +30,8 @@ inline const RenderPassSubpassIndex *RenderPass::getSubpassIndexByName(const std
 		return &subpassIndices_.at(subpassMap_.at(name));
 	} catch (const std::out_of_range &)
 	{
-		return &subpassIndices_.at(0);
+		assert(subpassMap_.contains(name));
+		return nullptr;
 	}
 }
 } // namespace luna::core

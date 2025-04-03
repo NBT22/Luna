@@ -124,21 +124,17 @@ static const Vertex vertices[] = {
 	{.x = -0.5f, .y = -0.5f, .z = 0.5f, .u = 1},
 
 	{.x = 0.5f, .y = -0.5f, .z = -0.5f, .u = 1, .v = 1},
-	{.x = 0.5f, .y = 0.5f, .z = -0.5f, .v = 1},
 	{.x = 0.5f, .y = 0.5f, .z = 0.5f},
-	{.x = 0.5f, .y = -0.5f, .z = 0.5f, .u = 1},
 	{.x = -0.5f, .y = -0.5f, .z = -0.5f, .v = 1},
-	{.x = -0.5f, .y = 0.5f, .z = -0.5f, .u = 1, .v = 1},
 	{.x = -0.5f, .y = 0.5f, .z = 0.5f, .u = 1},
-	{.x = -0.5f, .y = -0.5f, .z = 0.5f},
 };
 static const uint32_t indices[] = {
-	0,	1,	2,	2,	3,	0,	4,	5,	6,	6,	7,	4,	8,	9,	10, 10, 11, 8,
-	12, 13, 14, 14, 15, 12, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20,
+	0,	1,	2,	2,	3,	0,	4,	5, 6,  6,  7, 4,  8,  9, 10, 10, 11, 8,
+	12, 13, 14, 14, 15, 12, 16, 6, 17, 17, 1, 16, 18, 7, 19, 19, 0,	 18,
 };
 #pragma endregion constants
 
-static LunaRenderPass createRenderPass(const VkExtent3D extent)
+static void createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
 
@@ -163,22 +159,24 @@ static LunaRenderPass createRenderPass(const VkExtent3D extent)
 		}},
 		.extent = extent,
 	};
-	return lunaCreateRenderPass(&renderPassCreationInfo);
+	lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
 }
 
-static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass,
-												   const LunaDescriptorSetLayout *descriptorSetLayouts,
-												   mat4 *const pushConstantData)
+static void createGraphicsPipeline(LunaRenderPassSubpass subpass,
+								   const LunaDescriptorSetLayout *descriptorSetLayouts,
+								   mat4 *const pushConstantData,
+								   LunaGraphicsPipeline *pipeline)
 {
 	const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
 
-	const VkShaderModule vertexShaderModule = lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV));
-	const VkShaderModule fragmentShaderModule = lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV,
-																	   sizeof(FRAGMENT_SHADER_SPIRV));
+	VkShaderModule vertexShaderModule;
+	VkShaderModule fragmentShaderModule;
+	lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule);
+	lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV, sizeof(FRAGMENT_SHADER_SPIRV), &fragmentShaderModule);
 	if (!vertexShaderModule || !fragmentShaderModule)
 	{
 		// TODO: Figure out how to handle Luna functions failing
-		return NULL;
+		return;
 	}
 	const VkPipelineShaderStageCreateInfo shaderStages[2] = {
 		{
@@ -310,7 +308,7 @@ static LunaGraphicsPipeline createGraphicsPipeline(LunaRenderPassSubpass subpass
 		.layoutCreationInfo = &layoutCreationInfo,
 		.subpass = subpass,
 	};
-	return lunaCreateGraphicsPipeline(&pipelineCreationInfo);
+	lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
 }
 
 int main()
@@ -374,7 +372,8 @@ int main()
 	};
 	lunaCreateSwapChain(&swapChainCreationInfo);
 
-	LunaRenderPass renderPass = createRenderPass(extent);
+	LunaRenderPass renderPass;
+	createRenderPass(extent, &renderPass);
 
 	const LunaDescriptorSetLayoutBinding binding = {
 		.bindingName = "Texture",
@@ -386,7 +385,8 @@ int main()
 		.bindingCount = 1,
 		.bindings = &binding,
 	};
-	LunaDescriptorSetLayout descriptorSetLayout = lunaCreateDescriptorSetLayout(&descriptorSetLayoutCreationInfo);
+	LunaDescriptorSetLayout descriptorSetLayout;
+	lunaCreateDescriptorSetLayout(&descriptorSetLayoutCreationInfo, &descriptorSetLayout);
 
 	const LunaDescriptorPoolCreationInfo descriptorPoolCreationInfo = {
 		.maxSets = 1,
@@ -396,7 +396,8 @@ int main()
 			.descriptorCount = 1,
 		}},
 	};
-	const LunaDescriptorPool descriptorPool = lunaCreateDescriptorPool(&descriptorPoolCreationInfo);
+	LunaDescriptorPool descriptorPool;
+	lunaCreateDescriptorPool(&descriptorPoolCreationInfo, &descriptorPool);
 	const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
 		.descriptorPool = descriptorPool,
 		.descriptorSetCount = 1,
@@ -441,7 +442,7 @@ int main()
 		.sourceStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		.destinationStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
 	};
-	(void)lunaCreateImage(&imageCreationInfo);
+	lunaCreateImage(&imageCreationInfo, NULL);
 	free(pixels);
 
 	mat4 viewMatrix = GLM_MAT4_IDENTITY_INIT;
@@ -451,22 +452,26 @@ int main()
 	mat4 transformMatrix = GLM_MAT4_IDENTITY_INIT;
 	glm_mul(projectionMatrix, viewMatrix, transformMatrix);
 
-	LunaGraphicsPipeline graphicsPipeline = createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
-																   &descriptorSetLayout,
-																   &transformMatrix);
+	LunaGraphicsPipeline graphicsPipeline;
+	createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
+						   &descriptorSetLayout,
+						   &transformMatrix,
+						   &graphicsPipeline);
 
 	LunaBufferCreationInfo vertexBufferCreationInfo = {
 		.size = sizeof(vertices),
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 	};
-	LunaBuffer vertexBuffer = lunaCreateBuffer(&vertexBufferCreationInfo);
+	LunaBuffer vertexBuffer;
+	lunaCreateBuffer(&vertexBufferCreationInfo, &vertexBuffer);
 	lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
 
 	LunaBufferCreationInfo indexBufferCreationInfo = {
 		.size = sizeof(indices),
 		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 	};
-	LunaBuffer indexBuffer = lunaCreateBuffer(&indexBufferCreationInfo);
+	LunaBuffer indexBuffer;
+	lunaCreateBuffer(&indexBufferCreationInfo, &indexBuffer);
 	lunaWriteDataToBuffer(indexBuffer, indices, sizeof(indices));
 
 	const LunaRenderPassBeginInfo beginInfo = {

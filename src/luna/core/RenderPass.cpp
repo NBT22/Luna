@@ -503,16 +503,16 @@ inline void RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPas
 }
 } // namespace luna::core
 
-LunaRenderPass lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo)
+void lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass)
 {
 	assert(creationInfo);
-	return luna::core::instance.createRenderPass(creationInfo);
+	luna::core::instance.createRenderPass(creationInfo, renderPass);
 }
 
-LunaRenderPass lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo)
+void lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass)
 {
 	assert(creationInfo);
-	return luna::core::instance.createRenderPass(creationInfo);
+	luna::core::instance.createRenderPass(creationInfo, renderPass);
 }
 
 LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass renderPass, const char *name)

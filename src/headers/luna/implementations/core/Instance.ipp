@@ -103,7 +103,7 @@ inline void Instance::addNewDevice(const LunaDeviceCreationInfo2 &creationInfo)
 {
 	device_ = Device(creationInfo);
 }
-inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo *creationInfo)
+inline void Instance::createRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass)
 {
 	const std::vector<RenderPass>::iterator &renderPassIterator = std::find_if(renderPasses_.begin(),
 																			   renderPasses_.end(),
@@ -111,9 +111,12 @@ inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCre
 
 	renderPassIndices_.emplace_back(renderPassIterator - renderPasses_.begin());
 	renderPasses_.emplace(renderPassIterator, creationInfo, nullptr, &renderPassIndices_.back());
-	return &renderPassIndices_.back();
+	if (renderPass != nullptr)
+	{
+		*renderPass = &renderPassIndices_.back();
+	}
 }
-inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2)
+inline void Instance::createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2, LunaRenderPass *renderPass)
 {
 	const std::vector<RenderPass>::iterator &renderPassIterator = std::find_if(renderPasses_.begin(),
 																			   renderPasses_.end(),
@@ -134,9 +137,13 @@ inline const RenderPassIndex *Instance::createRenderPass(const LunaRenderPassCre
 	};
 	renderPassIndices_.emplace_back(renderPassIterator - renderPasses_.begin());
 	renderPasses_.emplace(renderPassIterator, &creationInfo, creationInfo2, &renderPassIndices_.back());
-	return &renderPassIndices_.back();
+	if (renderPass != nullptr)
+	{
+		*renderPass = &renderPassIndices_.back();
+	}
 }
-inline const DescriptorPoolIndex *Instance::createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo)
+inline void Instance::createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo,
+										   LunaDescriptorPool *descriptorPool)
 {
 	descriptorPools_.reserve(descriptorPools_.size() + 1);
 	const std::vector<VkDescriptorPool>::iterator poolIterator = std::find(descriptorPools_.begin(),
@@ -152,17 +159,23 @@ inline const DescriptorPoolIndex *Instance::createDescriptorPool(const LunaDescr
 	};
 	vkCreateDescriptorPool(device_.logicalDevice(), &createInfo, nullptr, poolIterator.base());
 	descriptorPoolIndices_.emplace_back(poolIterator - descriptorPools_.begin());
-	return &descriptorPoolIndices_.back();
+	if (descriptorPool != nullptr)
+	{
+		*descriptorPool = &descriptorPoolIndices_.back();
+	}
 }
-inline const DescriptorSetLayoutIndex *Instance::createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo
-																				   &creationInfo)
+inline void Instance::createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo,
+												LunaDescriptorSetLayout *descriptorSetLayout)
 {
 	const std::vector<DescriptorSetLayout>::iterator &layoutIterator = std::find_if(descriptorSetLayouts_.begin(),
 																					descriptorSetLayouts_.end(),
 																					DescriptorSetLayout::isDestroyed);
 	descriptorSetLayoutIndices_.emplace_back(layoutIterator - descriptorSetLayouts_.begin());
 	descriptorSetLayouts_.emplace(layoutIterator, creationInfo);
-	return &descriptorSetLayoutIndices_.back();
+	if (descriptorSetLayout != nullptr)
+	{
+		*descriptorSetLayout = &descriptorSetLayoutIndices_.back();
+	}
 }
 inline void Instance::allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
 											 LunaDescriptorSet *descriptorSets)
@@ -213,15 +226,18 @@ inline void Instance::allocateDescriptorSets(const LunaDescriptorSetAllocationIn
 	descriptorSets_.resize(oldSize + allocationInfo.descriptorSetCount - slotsFound);
 	vkAllocateDescriptorSets(device_.logicalDevice(), &allocateInfo, descriptorSets_.data() + oldSize);
 }
-inline const GraphicsPipelineIndex *Instance::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo
-																			 &creationInfo)
+inline void Instance::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
+											 LunaGraphicsPipeline *pipeline)
 {
 	const std::vector<GraphicsPipeline>::iterator &pipelineIterator = std::find_if(graphicsPipelines_.begin(),
 																				   graphicsPipelines_.end(),
 																				   GraphicsPipeline::isDestroyed);
 	graphicsPipelineIndices_.emplace_back(pipelineIterator - graphicsPipelines_.begin());
 	graphicsPipelines_.emplace(pipelineIterator, creationInfo);
-	return &graphicsPipelineIndices_.back();
+	if (pipeline != nullptr)
+	{
+		*pipeline = &graphicsPipelineIndices_.back();
+	}
 }
 inline std::vector<Buffer>::iterator Instance::allocateBuffer(const LunaBufferCreationInfo &creationInfo)
 {
@@ -247,13 +263,13 @@ inline void Instance::createStagingBuffer(const size_t size)
 		.size = size,
 		.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 	};
-	stagingBuffer_ = buffer::BufferRegion::createBuffer(bufferCreationInfo);
+	buffer::BufferRegion::createBuffer(bufferCreationInfo, &stagingBuffer_);
 }
 inline void Instance::copyToStagingBuffer(const uint8_t *data, const size_t size) const
 {
 	bufferRegion(stagingBuffer_).copyToBuffer(data, size);
 }
-inline const SamplerIndex *Instance::createSampler(const LunaSamplerCreationInfo &creationInfo)
+inline void Instance::createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler)
 {
 	samplers_.reserve(samplers_.size() + 1);
 	const std::vector<VkSampler>::iterator samplerIterator = std::find(samplers_.begin(),
@@ -281,7 +297,10 @@ inline const SamplerIndex *Instance::createSampler(const LunaSamplerCreationInfo
 		.unnormalizedCoordinates = creationInfo.unnormalizedCoordinates,
 	};
 	vkCreateSampler(device_.logicalDevice(), &createInfo, nullptr, samplerIterator.base());
-	return &samplerIndices_.back();
+	if (sampler != nullptr)
+	{
+		*sampler = &samplerIndices_.back();
+	}
 }
 
 inline uint32_t Instance::minorVersion() const
@@ -330,15 +349,15 @@ inline void Instance::descriptorSet(const LunaDescriptorSet index,
 									VkDescriptorSet *descriptorSet) const
 {
 	const DescriptorSetIndex descriptorSetIndex = *static_cast<const DescriptorSetIndex *>(index);
-	if (pool)
+	if (pool != nullptr)
 	{
 		*pool = descriptorPool(descriptorSetIndex.poolIndex);
 	}
-	if (layout)
+	if (layout != nullptr)
 	{
 		*layout = descriptorSetLayout(descriptorSetIndex.layoutIndex);
 	}
-	if (descriptorSet)
+	if (descriptorSet != nullptr)
 	{
 		*descriptorSet = descriptorSets_.at(descriptorSetIndex.index);
 	}

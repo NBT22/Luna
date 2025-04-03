@@ -12,8 +12,7 @@ extern "C"
 {
 #endif
 
-LunaGraphicsPipeline lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo);
-LunaGraphicsPipeline lunaGetGraphicsPipelineByName(const char *name);
+void lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo, LunaGraphicsPipeline *pipeline);
 
 #ifdef __cplusplus
 }

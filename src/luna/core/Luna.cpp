@@ -6,21 +6,18 @@
 #include <luna/core/Luna.hpp>
 #include <luna/luna.h>
 
-namespace luna::core
-{}
 void lunaDestroyInstance()
 {
 	luna::core::instance.destroy();
 }
-VkShaderModule lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes)
+void lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkShaderModule *shaderModule)
 {
 	const VkShaderModuleCreateInfo creationInfo = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 		.codeSize = bytes,
 		.pCode = spirv,
 	};
-
-	return luna::core::instance.device_.addShaderModule(&creationInfo);
+	luna::core::instance.device_.addShaderModule(&creationInfo, shaderModule);
 }
 void lunaDrawFrame()
 {
@@ -56,10 +53,10 @@ void lunaDrawFrame()
 	luna::core::instance.swapChain.imageIndex = -1u;
 	luna::core::instance.unbindAllPipelines();
 }
-LunaDescriptorPool lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo)
+void lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo, LunaDescriptorPool *descriptorPool)
 {
 	assert(creationInfo);
-	return luna::core::instance.createDescriptorPool(*creationInfo);
+	luna::core::instance.createDescriptorPool(*creationInfo, descriptorPool);
 }
 void lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
 								LunaDescriptorSet *descriptorSets)

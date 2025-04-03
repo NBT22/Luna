@@ -116,10 +116,10 @@ void GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo)
 }
 } // namespace luna::core
 
-LunaGraphicsPipeline lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo)
+void lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo, LunaGraphicsPipeline *pipeline)
 {
 	assert(creationInfo);
-	return luna::core::instance.createGraphicsPipeline(*creationInfo);
+	luna::core::instance.createGraphicsPipeline(*creationInfo, pipeline);
 }
 
 void lunaPushConstants(const LunaGraphicsPipeline pipeline)

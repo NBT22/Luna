@@ -216,9 +216,10 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 
 	swapChain.imageIndex = -1u;
 }
-const ImageIndex *Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
-										uint32_t depth,
-										uint32_t arrayLayers)
+void Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
+						   uint32_t depth,
+						   uint32_t arrayLayers,
+						   LunaImage *imageIndex)
 {
 	assert(!creationInfo.descriptorSet || creationInfo.descriptorLayoutBindingName);
 	LunaDescriptorSet descriptorSetIndex;
@@ -245,7 +246,8 @@ const ImageIndex *Instance::createImage(const LunaSampledImageCreationInfo &crea
 			.bindingCount = 1,
 			.bindings = &binding,
 		};
-		LunaDescriptorSetLayout descriptorSetLayout = createDescriptorSetLayout(descriptorSetLayoutCreationInfo);
+		LunaDescriptorSetLayout descriptorSetLayout;
+		createDescriptorSetLayout(descriptorSetLayoutCreationInfo, &descriptorSetLayout);
 
 		const VkDescriptorPoolSize poolSize = {
 			.type = descriptorType,
@@ -257,8 +259,10 @@ const ImageIndex *Instance::createImage(const LunaSampledImageCreationInfo &crea
 			.poolSizeCount = 1,
 			.poolSizes = &poolSize,
 		};
+		LunaDescriptorPool descriptorPool;
+		createDescriptorPool(descriptorPoolCreationInfo, &descriptorPool);
 		const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
-			.descriptorPool = createDescriptorPool(descriptorPoolCreationInfo),
+			.descriptorPool = descriptorPool,
 			.descriptorSetCount = 1,
 			.setLayouts = &descriptorSetLayout,
 		};
@@ -283,7 +287,10 @@ const ImageIndex *Instance::createImage(const LunaSampledImageCreationInfo &crea
 		.pImageInfo = &imageInfo,
 	};
 	vkUpdateDescriptorSets(device_.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
-	return &imageIndices_.back();
+	if (imageIndex != nullptr)
+	{
+		*imageIndex = &imageIndices_.back();
+	}
 }
 } // namespace luna::core
 
@@ -309,12 +316,11 @@ VkExtent2D lunaGetSwapChainExtent()
 {
 	return luna::core::instance.swapChain.extent;
 }
-VkSurfaceCapabilitiesKHR lunaGetSurfaceCapabilities(const VkSurfaceKHR surface)
+void lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities)
 {
-	VkSurfaceCapabilitiesKHR capabilities;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::instance.device().physicalDevice(), surface, &capabilities);
-	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
-	return capabilities;
+	assert(capabilities);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::instance.device().physicalDevice(), surface, capabilities);
+	capabilities->maxImageCount = capabilities->maxImageCount == 0 ? UINT32_MAX : capabilities->maxImageCount;
 }
 void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatPriorityList)
 {

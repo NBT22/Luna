@@ -15,7 +15,7 @@ extern "C"
 void lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
 VkInstance lunaGetInstance();
 
-VkSurfaceCapabilitiesKHR lunaGetSurfaceCapabilities(VkSurfaceKHR surface);
+void lunaGetSurfaceCapabilities(VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 
 void lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo);
 VkFormat lunaGetSwapChainFormat();

@@ -56,8 +56,9 @@ void DescriptorSetLayout::destroy()
 }
 } // namespace luna::core
 
-LunaDescriptorSetLayout lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo)
+void lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
+								   LunaDescriptorSetLayout *descriptorSetLayout)
 {
 	assert(creationInfo);
-	return luna::core::instance.createDescriptorSetLayout(*creationInfo);
+	luna::core::instance.createDescriptorSetLayout(*creationInfo, descriptorSetLayout);
 }

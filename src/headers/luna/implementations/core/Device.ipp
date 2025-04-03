@@ -34,11 +34,14 @@ inline void Device::destroy()
 	isDestroyed_ = true;
 }
 
-inline VkShaderModule Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo)
+inline void Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule)
 {
 	shaderModules_.emplace_back();
 	vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back());
-	return shaderModules_.back();
+	if (shaderModule != nullptr)
+	{
+		*shaderModule = shaderModules_.back();
+	}
 }
 
 inline VkPhysicalDevice Device::physicalDevice() const

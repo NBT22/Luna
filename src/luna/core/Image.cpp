@@ -464,7 +464,9 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
 		sampler_ = instance.sampler(creationInfo.sampler);
 	} else if (creationInfo.samplerCreationInfo != nullptr)
 	{
-		sampler_ = instance.sampler(instance.createSampler(*creationInfo.samplerCreationInfo));
+		LunaSampler sampler;
+		instance.createSampler(*creationInfo.samplerCreationInfo, &sampler);
+		sampler_ = instance.sampler(sampler);
 	}
 
 	helpers::writeImage(image_, extent, arrayLayers, creationInfo);
@@ -484,30 +486,33 @@ void Image::destroy()
 
 } // namespace luna::core
 
-LunaSampler lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo)
+void lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
 {
 	assert(creationInfo);
-	return luna::core::instance.createSampler(*creationInfo);
+	luna::core::instance.createSampler(*creationInfo, sampler);
 }
-LunaImage lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo)
+void lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image)
 {
 	assert(creationInfo);
-	return luna::core::instance.createImage(*creationInfo, 0, 1);
+	luna::core::instance.createImage(*creationInfo, 0, 1, image);
 }
-LunaImage lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo, const uint32_t arrayLayers)
+void lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo,
+						  const uint32_t arrayLayers,
+						  LunaImage *image)
 {
 	assert(creationInfo && arrayLayers);
-	return luna::core::instance.createImage(*creationInfo, 0, arrayLayers);
+	luna::core::instance.createImage(*creationInfo, 0, arrayLayers, image);
 }
-LunaImage lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, const uint32_t depth)
+void lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
 {
 	assert(creationInfo);
-	return luna::core::instance.createImage(*creationInfo, depth, 1);
+	luna::core::instance.createImage(*creationInfo, depth, 1, image);
 }
-LunaImage lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
-								 const uint32_t depth,
-								 const uint32_t arrayLayers)
+void lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
+							const uint32_t depth,
+							const uint32_t arrayLayers,
+							LunaImage *image)
 {
 	assert(creationInfo && arrayLayers);
-	return luna::core::instance.createImage(*creationInfo, depth, arrayLayers);
+	luna::core::instance.createImage(*creationInfo, depth, arrayLayers, image);
 }

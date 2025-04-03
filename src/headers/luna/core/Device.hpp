@@ -28,7 +28,7 @@ class Device
 
 		void destroy();
 
-		VkShaderModule addShaderModule(const VkShaderModuleCreateInfo *creationInfo);
+		void addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule);
 
 		/// A getter for the @c physicalDevice_ value
 		/// @return The Vulkan handle for the physical device described in this instance

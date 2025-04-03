@@ -21,7 +21,7 @@ class BufferRegion
 {
 	public:
 		// TODO: Maybe move this to Instance where the others live and friend it here?
-		static const BufferRegionIndex *createBuffer(const LunaBufferCreationInfo &creationInfo);
+		static void createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index);
 		static bool isDestroyed(const BufferRegion &region);
 
 		friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t);

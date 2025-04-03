@@ -20,16 +20,17 @@ extern "C"
 
 void lunaDestroyInstance();
 
-LunaDescriptorPool lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo);
-LunaDescriptorSetLayout lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo);
+void lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo, LunaDescriptorPool *descriptorPool);
+void lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
+								   LunaDescriptorSetLayout *descriptorSetLayout);
 void lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
 								LunaDescriptorSet *descriptorSets);
 void lunaWriteDescriptorSets(uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites);
 
-VkShaderModule lunaCreateShaderModule(const uint32_t *spirv, size_t bytes);
+void lunaCreateShaderModule(const uint32_t *spirv, size_t bytes, VkShaderModule *shaderModule);
 
 void lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo);
-LunaBuffer lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo);
+void lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);
 void lunaWriteDataToBuffer(LunaBuffer buffer, const void *data, size_t bytes);
 
 #ifdef __cplusplus
