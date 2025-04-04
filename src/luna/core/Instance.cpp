@@ -10,22 +10,22 @@
 
 namespace luna::helpers
 {
-static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
-								const VkSurfaceKHR surface,
-								const uint32_t targetFormatCount,
-								const VkSurfaceFormatKHR *targetFormats,
-								VkSurfaceFormatKHR &destination)
+static VkResult findSwapChainFormat(const VkPhysicalDevice physicalDevice,
+									const VkSurfaceKHR surface,
+									const uint32_t targetFormatCount,
+									const VkSurfaceFormatKHR *targetFormats,
+									VkSurfaceFormatKHR &destination)
 {
 	destination = {.format = VK_FORMAT_UNDEFINED, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
 	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr));
 	if (formatCount == 0)
 	{
-		return;
+		return VK_ERROR_UNKNOWN;
 	}
 	std::vector<VkSurfaceFormatKHR> formats;
 	formats.reserve(formatCount);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data());
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data()));
 	for (uint32_t i = 0; i < targetFormatCount; i++)
 	{
 		const VkSurfaceFormatKHR &targetFormat = targetFormats[i];
@@ -47,28 +47,32 @@ static void findSwapChainFormat(const VkPhysicalDevice physicalDevice,
 	{
 		throw std::runtime_error("Unable to find suitable Vulkan surface format!");
 	}
+	return VK_SUCCESS;
 }
 
-static void getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
-									const VkSurfaceKHR surface,
-									const uint32_t targetPresentModeCount,
-									const VkPresentModeKHR *targetPresentModes,
-									VkPresentModeKHR &destination)
+static VkResult getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
+										const VkSurfaceKHR surface,
+										const uint32_t targetPresentModeCount,
+										const VkPresentModeKHR *targetPresentModes,
+										VkPresentModeKHR &destination)
 {
 	if (targetPresentModeCount == 0)
 	{
 		destination = VK_PRESENT_MODE_FIFO_KHR;
-		return;
+		return VK_SUCCESS;
 	}
 	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr));
 	if (presentModeCount == 0)
 	{
-		return;
+		return VK_ERROR_UNKNOWN;
 	}
 	std::vector<VkPresentModeKHR> presentModes;
 	presentModes.reserve(presentModeCount);
-	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice,
+																  surface,
+																  &presentModeCount,
+																  presentModes.data()));
 	destination = VK_PRESENT_MODE_MAX_ENUM_KHR;
 	for (uint32_t i = 0; i < targetPresentModeCount; i++)
 	{
@@ -88,25 +92,30 @@ static void getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
 	}
 	// This is an assert instead of an error because VK_PRESENT_MODE_FIFO_KHR is required to be supported.
 	assert(destination != VK_PRESENT_MODE_MAX_ENUM_KHR);
+	return VK_SUCCESS;
 }
 
-static void createSwapChainImages(const VkDevice logicalDevice, core::SwapChain &swapChain)
+static VkResult createSwapChainImages(const VkDevice logicalDevice, core::SwapChain &swapChain)
 {
-	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, nullptr);
+	CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, nullptr));
 
 	swapChain.images.resize(swapChain.imageCount);
-	vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, swapChain.images.data());
+	CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice,
+												swapChain.swapChain,
+												&swapChain.imageCount,
+												swapChain.images.data()));
 
 	swapChain.imageViews.resize(swapChain.imageCount);
 	for (uint32_t i = 0; i < swapChain.imageCount; i++)
 	{
-		createImageView(logicalDevice,
-						swapChain.images[i],
-						swapChain.format.format,
-						VK_IMAGE_ASPECT_COLOR_BIT,
-						1,
-						&swapChain.imageViews[i]);
+		CHECK_RESULT_RETURN(createImageView(logicalDevice,
+											swapChain.images[i],
+											swapChain.format.format,
+											VK_IMAGE_ASPECT_COLOR_BIT,
+											1,
+											&swapChain.imageViews[i]));
 	}
+	return VK_SUCCESS;
 }
 } // namespace luna::helpers
 
@@ -153,22 +162,110 @@ Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
 		.enabledExtensionCount = creationInfo.extensionCount,
 		.ppEnabledExtensionNames = creationInfo.extensionNames,
 	};
-	vkCreateInstance(&createInfo, nullptr, &instance_);
+	CHECK_RESULT_THROW(vkCreateInstance(&createInfo, nullptr, &instance_));
 }
 
-void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
+VkResult Instance::destroy()
+{
+	const VkDevice logicalDevice = device_.logicalDevice();
+	CHECK_RESULT_RETURN(vkDeviceWaitIdle(logicalDevice));
+
+
+	for (uint32_t i = 0; i < swapChain.imageCount; i++)
+	{
+		vkDestroyFramebuffer(logicalDevice, swapChain.framebuffers.at(i), nullptr);
+		vkDestroyImageView(logicalDevice, swapChain.imageViews.at(i), nullptr);
+	}
+	vkDestroySwapchainKHR(logicalDevice, swapChain.swapChain, nullptr);
+
+	for (const VkSampler sampler: samplers_)
+	{
+		vkDestroySampler(logicalDevice, sampler, nullptr);
+	}
+	for (Image image: images_)
+	{
+		image.destroy();
+	}
+
+	for (GraphicsPipeline pipeline: graphicsPipelines_)
+	{
+		pipeline.destroy();
+	}
+	for (RenderPass renderPass: renderPasses_)
+	{
+		renderPass.destroy();
+	}
+
+	for (const VkDescriptorPool descriptorPool: descriptorPools_)
+	{
+		vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+	}
+	for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts_)
+	{
+		descriptorSetLayout.destroy();
+	}
+
+	for (Buffer buffer: buffers_)
+	{
+		buffer.destroy();
+	}
+
+	device_.destroy();
+	vkDestroySurfaceKHR(instance_, surface_, nullptr);
+	vkDestroyInstance(instance_, nullptr);
+
+
+	swapChain.images.clear();
+	swapChain.images.shrink_to_fit();
+	swapChain.imageViews.clear();
+	swapChain.imageViews.shrink_to_fit();
+	swapChain.framebuffers.clear();
+	swapChain.framebuffers.shrink_to_fit();
+
+	samplerIndices_.clear();
+	samplers_.clear();
+	samplers_.shrink_to_fit();
+	imageIndices_.clear();
+	images_.clear();
+	images_.shrink_to_fit();
+
+	graphicsPipelineIndices_.clear();
+	graphicsPipelines_.clear();
+	graphicsPipelines_.shrink_to_fit();
+	renderPassIndices_.clear();
+	renderPasses_.clear();
+	renderPasses_.shrink_to_fit();
+
+	descriptorPoolIndices_.clear();
+	descriptorSetLayoutIndices_.clear();
+	descriptorSetIndices_.clear();
+	descriptorPools_.clear();
+	descriptorPools_.shrink_to_fit();
+	descriptorSetLayouts_.clear();
+	descriptorSetLayouts_.shrink_to_fit();
+	descriptorSets_.clear();
+	descriptorSets_.shrink_to_fit();
+
+	bufferRegionIndices_.clear();
+	buffers_.clear();
+	buffers_.shrink_to_fit();
+
+	return VK_SUCCESS;
+}
+
+VkResult Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 {
 	surface_ = creationInfo.surface;
 
 	VkSurfaceCapabilitiesKHR capabilities;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_.physicalDevice(), surface_, &capabilities);
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_.physicalDevice(), surface_, &capabilities));
 	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 
-	helpers::findSwapChainFormat(device_.physicalDevice(),
-								 surface_,
-								 creationInfo.formatCount,
-								 creationInfo.formatPriorityList,
-								 swapChain.format);
+	CHECK_RESULT_RETURN(helpers::findSwapChainFormat(device_.physicalDevice(),
+													 surface_,
+													 creationInfo.formatCount,
+													 creationInfo.formatPriorityList,
+													 swapChain.format));
 
 	swapChain.extent = capabilities.currentExtent;
 	if (swapChain.extent.width == UINT32_MAX || swapChain.extent.height == UINT32_MAX)
@@ -181,11 +278,11 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 	assert(capabilities.minImageExtent.height <= swapChain.extent.height &&
 		   swapChain.extent.height <= capabilities.maxImageExtent.height);
 
-	helpers::getSwapChainPresentMode(device_.physicalDevice(),
-									 surface_,
-									 creationInfo.presentModeCount,
-									 creationInfo.presentModePriorityList,
-									 swapChain.presentMode);
+	CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(device_.physicalDevice(),
+														 surface_,
+														 creationInfo.presentModeCount,
+														 creationInfo.presentModePriorityList,
+														 swapChain.presentMode));
 
 	swapChain.imageCount = creationInfo.minImageCount;
 	assert(capabilities.minImageCount <= swapChain.imageCount && swapChain.imageCount <= capabilities.maxImageCount);
@@ -210,16 +307,16 @@ void Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 		.presentMode = swapChain.presentMode,
 		.clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
 	};
-	vkCreateSwapchainKHR(device_.logicalDevice(), &createInfo, nullptr, &swapChain.swapChain);
+	CHECK_RESULT_RETURN(vkCreateSwapchainKHR(device_.logicalDevice(), &createInfo, nullptr, &swapChain.swapChain));
 
-	helpers::createSwapChainImages(device_.logicalDevice(), swapChain);
-
+	CHECK_RESULT_RETURN(helpers::createSwapChainImages(device_.logicalDevice(), swapChain));
 	swapChain.imageIndex = -1u;
+	return VK_SUCCESS;
 }
-void Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
-						   uint32_t depth,
-						   uint32_t arrayLayers,
-						   LunaImage *imageIndex)
+VkResult Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
+							   uint32_t depth,
+							   uint32_t arrayLayers,
+							   LunaImage *imageIndex)
 {
 	assert(!creationInfo.descriptorSet || creationInfo.descriptorLayoutBindingName);
 	LunaDescriptorSet descriptorSetIndex;
@@ -227,7 +324,7 @@ void Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 									  ? creationInfo.descriptorLayoutBindingName
 									  : "Image";
 	imageIndices_.emplace_back(images_.size());
-	images_.emplace_back(creationInfo, depth, arrayLayers);
+	TRY_CATCH_RESULT(images_.emplace_back(creationInfo, depth, arrayLayers));
 	const Image image = images_.back();
 	if (creationInfo.descriptorSet != nullptr)
 	{
@@ -247,7 +344,7 @@ void Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 			.bindings = &binding,
 		};
 		LunaDescriptorSetLayout descriptorSetLayout;
-		createDescriptorSetLayout(descriptorSetLayoutCreationInfo, &descriptorSetLayout);
+		CHECK_RESULT_RETURN(createDescriptorSetLayout(descriptorSetLayoutCreationInfo, &descriptorSetLayout));
 
 		const VkDescriptorPoolSize poolSize = {
 			.type = descriptorType,
@@ -260,13 +357,13 @@ void Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 			.poolSizes = &poolSize,
 		};
 		LunaDescriptorPool descriptorPool;
-		createDescriptorPool(descriptorPoolCreationInfo, &descriptorPool);
+		CHECK_RESULT_RETURN(createDescriptorPool(descriptorPoolCreationInfo, &descriptorPool));
 		const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
 			.descriptorPool = descriptorPool,
 			.descriptorSetCount = 1,
 			.setLayouts = &descriptorSetLayout,
 		};
-		allocateDescriptorSets(descriptorSetAllocationInfo, &descriptorSetIndex);
+		CHECK_RESULT_RETURN(allocateDescriptorSets(descriptorSetAllocationInfo, &descriptorSetIndex));
 	}
 
 	const VkDescriptorImageInfo imageInfo = {
@@ -291,22 +388,28 @@ void Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 	{
 		*imageIndex = &imageIndices_.back();
 	}
+	return VK_SUCCESS;
 }
 } // namespace luna::core
 
-void lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
+VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	luna::core::instance = luna::core::Instance(*creationInfo);
+	TRY_CATCH_RESULT(luna::core::instance = luna::core::Instance(*creationInfo));
+	return VK_SUCCESS;
+}
+VkResult lunaDestroyInstance()
+{
+	return luna::core::instance.destroy();
 }
 VkInstance lunaGetInstance()
 {
 	return luna::core::instance.instance();
 }
-void lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo)
+VkResult lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	luna::core::instance.createSwapChain(*creationInfo);
+	return luna::core::instance.createSwapChain(*creationInfo);
 }
 VkFormat lunaGetSwapChainFormat()
 {
@@ -316,11 +419,14 @@ VkExtent2D lunaGetSwapChainExtent()
 {
 	return luna::core::instance.swapChain.extent;
 }
-void lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities)
+VkResult lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities)
 {
 	assert(capabilities);
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::instance.device().physicalDevice(), surface, capabilities);
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::instance.device().physicalDevice(),
+																  surface,
+																  capabilities));
 	capabilities->maxImageCount = capabilities->maxImageCount == 0 ? UINT32_MAX : capabilities->maxImageCount;
+	return VK_SUCCESS;
 }
 void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatPriorityList)
 {

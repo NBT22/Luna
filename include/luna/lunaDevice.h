@@ -12,8 +12,8 @@ extern "C"
 {
 #endif
 
-void lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo);
-void lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo);
+VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo);
+VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo);
 
 #ifdef __cplusplus
 }

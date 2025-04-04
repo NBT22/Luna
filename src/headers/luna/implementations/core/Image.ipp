@@ -4,14 +4,16 @@
 
 #pragma once
 
+#include <luna/core/Luna.hpp>
+
 namespace luna::helpers
 {
-inline void createImageView(const VkDevice logicalDevice,
-							const VkImage image,
-							const VkFormat format,
-							const VkImageAspectFlags aspectMask,
-							const uint8_t mipmapLevels,
-							VkImageView *imageView)
+inline VkResult createImageView(const VkDevice logicalDevice,
+								const VkImage image,
+								const VkFormat format,
+								const VkImageAspectFlags aspectMask,
+								const uint8_t mipmapLevels,
+								VkImageView *imageView)
 {
 	constexpr VkComponentMapping componentMapping = {
 		.r = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -32,7 +34,8 @@ inline void createImageView(const VkDevice logicalDevice,
 		.components = componentMapping,
 		.subresourceRange = subresourceRange,
 	};
-	vkCreateImageView(logicalDevice, &createInfo, nullptr, imageView);
+	CHECK_RESULT_RETURN(vkCreateImageView(logicalDevice, &createInfo, nullptr, imageView));
+	return VK_SUCCESS;
 }
 } // namespace luna::helpers
 

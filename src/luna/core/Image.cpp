@@ -310,26 +310,26 @@ static void transitionImageLayout2(const VkImage image,
 	};
 	vkCmdPipelineBarrier2(core::instance.commandBuffers().transfer.commandBuffer(), &dependencyInfo);
 }
-static void writeImage(const VkImage image,
-					   const VkExtent3D &extent,
-					   const uint32_t arrayLayers,
-					   const LunaSampledImageCreationInfo &creationInfo)
+static VkResult writeImage(const VkImage image,
+						   const VkExtent3D &extent,
+						   const uint32_t arrayLayers,
+						   const LunaSampledImageCreationInfo &creationInfo)
 {
 	core::CommandBuffer transferCommandBuffer = core::instance.commandBuffers().transfer;
 	if (!transferCommandBuffer.isRecording())
 	{
 		const VkDevice logicalDevice = core::instance.device().logicalDevice();
-		transferCommandBuffer.waitForFence(logicalDevice);
-		transferCommandBuffer.resetFence(logicalDevice);
-		transferCommandBuffer.beginSingleUseCommandBuffer();
+		CHECK_RESULT_RETURN(transferCommandBuffer.waitForFence(logicalDevice));
+		CHECK_RESULT_RETURN(transferCommandBuffer.resetFence(logicalDevice));
+		CHECK_RESULT_RETURN(transferCommandBuffer.beginSingleUseCommandBuffer());
 	}
 
 	if (core::instance.stagingBufferOffset() == -1ull)
 	{
-		core::instance.createStagingBuffer(extent.width *
-										   extent.height *
-										   extent.depth *
-										   bytesPerPixel(creationInfo.format));
+		CHECK_RESULT_RETURN(core::instance.createStagingBuffer(extent.width *
+															   extent.height *
+															   extent.depth *
+															   bytesPerPixel(creationInfo.format)));
 	}
 	core::instance.copyToStagingBuffer(static_cast<const uint8_t *>(creationInfo.pixels),
 									   extent.width *
@@ -411,7 +411,9 @@ static void writeImage(const VkImage image,
 		.commandBufferCount = 1,
 		.pCommandBuffers = &transferCommandBuffer.commandBuffer(),
 	};
-	transferCommandBuffer.submitCommandBuffer(core::instance.device().familyQueues().transfer, queueSubmitInfo);
+	CHECK_RESULT_RETURN(transferCommandBuffer.submitCommandBuffer(core::instance.device().familyQueues().transfer,
+																  queueSubmitInfo));
+	return VK_SUCCESS;
 }
 } // namespace luna::helpers
 
@@ -447,29 +449,30 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
 	VmaAllocationInfo allocationInfo;
-	vmaCreateImage(instance.device().allocator(),
-				   &imageCreateInfo,
-				   &allocationCreateInfo,
-				   &image_,
-				   &allocation_,
-				   &allocationInfo);
-	helpers::createImageView(instance.device().logicalDevice(),
-							 image_,
-							 creationInfo.format,
-							 creationInfo.aspectMask == 0 ? VK_IMAGE_ASPECT_COLOR_BIT : creationInfo.aspectMask,
-							 mipmapLevels,
-							 &imageView_);
+	CHECK_RESULT_THROW(vmaCreateImage(instance.device().allocator(),
+									  &imageCreateInfo,
+									  &allocationCreateInfo,
+									  &image_,
+									  &allocation_,
+									  &allocationInfo));
+	CHECK_RESULT_THROW(helpers::createImageView(instance.device().logicalDevice(),
+												image_,
+												creationInfo.format,
+												creationInfo.aspectMask == 0 ? VK_IMAGE_ASPECT_COLOR_BIT
+																			 : creationInfo.aspectMask,
+												mipmapLevels,
+												&imageView_));
 	if (creationInfo.sampler != nullptr)
 	{
 		sampler_ = instance.sampler(creationInfo.sampler);
 	} else if (creationInfo.samplerCreationInfo != nullptr)
 	{
 		LunaSampler sampler;
-		instance.createSampler(*creationInfo.samplerCreationInfo, &sampler);
+		CHECK_RESULT_THROW(instance.createSampler(*creationInfo.samplerCreationInfo, &sampler));
 		sampler_ = instance.sampler(sampler);
 	}
 
-	helpers::writeImage(image_, extent, arrayLayers, creationInfo);
+	CHECK_RESULT_THROW(helpers::writeImage(image_, extent, arrayLayers, creationInfo));
 	isDestroyed_ = false;
 }
 
@@ -486,33 +489,33 @@ void Image::destroy()
 
 } // namespace luna::core
 
-void lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
+VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
 {
 	assert(creationInfo);
-	luna::core::instance.createSampler(*creationInfo, sampler);
+	return luna::core::instance.createSampler(*creationInfo, sampler);
 }
-void lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image)
+VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image)
 {
 	assert(creationInfo);
-	luna::core::instance.createImage(*creationInfo, 0, 1, image);
+	return luna::core::instance.createImage(*creationInfo, 0, 1, image);
 }
-void lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo,
-						  const uint32_t arrayLayers,
-						  LunaImage *image)
+VkResult lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo,
+							  const uint32_t arrayLayers,
+							  LunaImage *image)
 {
 	assert(creationInfo && arrayLayers);
-	luna::core::instance.createImage(*creationInfo, 0, arrayLayers, image);
+	return luna::core::instance.createImage(*creationInfo, 0, arrayLayers, image);
 }
-void lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
+VkResult lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
 {
 	assert(creationInfo);
-	luna::core::instance.createImage(*creationInfo, depth, 1, image);
+	return luna::core::instance.createImage(*creationInfo, depth, 1, image);
 }
-void lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
-							const uint32_t depth,
-							const uint32_t arrayLayers,
-							LunaImage *image)
+VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
+								const uint32_t depth,
+								const uint32_t arrayLayers,
+								LunaImage *image)
 {
 	assert(creationInfo && arrayLayers);
-	luna::core::instance.createImage(*creationInfo, depth, arrayLayers, image);
+	return luna::core::instance.createImage(*creationInfo, depth, arrayLayers, image);
 }

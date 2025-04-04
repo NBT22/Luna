@@ -16,13 +16,13 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 {
 	assert(isDestroyed_);
 	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, nullptr);
+	CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, nullptr));
 	if (deviceCount == 0)
 	{
 		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
 	}
 	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices.data());
+	CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices.data()));
 	switch (instance.minorVersion())
 	{
 		case 1:
@@ -91,6 +91,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 	for (const VkPhysicalDevice device: devices)
 	{
 		vkGetPhysicalDeviceFeatures2(device, &features_);
+		// checkUsability can throw an error, but it will be caught by the function calling this constructor
 		if (!checkFeatureSupport(creationInfo.requiredFeatures) || !checkUsability(device, creationInfo.surface))
 		{
 			continue;
@@ -145,7 +146,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		.ppEnabledExtensionNames = creationInfo.extensionNames,
 		.pEnabledFeatures = &creationInfo.requiredFeatures.features,
 	};
-	vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_);
+	CHECK_RESULT_THROW(vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_));
 
 	vkGetDeviceQueue(logicalDevice_, familyIndices_.graphics, 0, &familyQueues_.graphics);
 	vkGetDeviceQueue(logicalDevice_, familyIndices_.transfer, 0, &familyQueues_.transfer);
@@ -158,15 +159,15 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		.instance = instance.instance(),
 		.vulkanApiVersion = VK_MAKE_API_VERSION(0, 1, instance.minorVersion(), 0),
 	};
-	vmaCreateAllocator(&allocationCreateInfo, &allocator_);
+	CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
-	createCommandPoolsAndBuffers();
-	createSemaphores();
+	CHECK_RESULT_THROW(createCommandPoolsAndBuffers());
+	CHECK_RESULT_THROW(createSemaphores());
 	isDestroyed_ = false;
 }
 } // namespace luna::core
 
-void lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
+VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
 {
 	assert(creationInfo);
 	const VkPhysicalDeviceFeatures2 requiredFeatures2 = {
@@ -179,11 +180,11 @@ void lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
 		.requiredFeatures = requiredFeatures2,
 		.surface = creationInfo->surface,
 	};
-	luna::core::instance.addNewDevice(creationInfo2);
+	return luna::core::instance.addNewDevice(creationInfo2);
 }
 
-void lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
+VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
 	assert(creationInfo);
-	luna::core::instance.addNewDevice(*creationInfo);
+	return luna::core::instance.addNewDevice(*creationInfo);
 }

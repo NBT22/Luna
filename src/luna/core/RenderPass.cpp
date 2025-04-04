@@ -220,10 +220,10 @@ static void createAttachments(const VkSampleCountFlagBits samples,
 	}
 }
 
-static void createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
-							 const uint32_t attachmentCount,
-							 const VkSampleCountFlagBits samples,
-							 VkRenderPass &renderPass)
+static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
+								 const uint32_t attachmentCount,
+								 const VkSampleCountFlagBits samples,
+								 VkRenderPass &renderPass)
 {
 	std::array<VkAttachmentReference, 3> attachmentReferences{};
 	std::vector<VkAttachmentDescription> attachmentDescriptions;
@@ -269,12 +269,13 @@ static void createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
 		.dependencyCount = creationInfo.dependencyCount,
 		.pDependencies = creationInfo.dependencies,
 	};
-	vkCreateRenderPass(core::instance.device().logicalDevice(), &createInfo, nullptr, &renderPass);
+	CHECK_RESULT_RETURN(vkCreateRenderPass(core::instance.device().logicalDevice(), &createInfo, nullptr, &renderPass));
+	return VK_SUCCESS;
 }
-static void createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
-							  const uint32_t attachmentCount,
-							  const VkSampleCountFlagBits samples,
-							  VkRenderPass &renderPass)
+static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
+								  const uint32_t attachmentCount,
+								  const VkSampleCountFlagBits samples,
+								  VkRenderPass &renderPass)
 {
 	std::array<VkAttachmentReference2, 3> attachmentReferences{};
 	std::vector<VkAttachmentDescription2> attachmentDescriptions(creationInfo.attachmentCount);
@@ -327,7 +328,11 @@ static void createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
 		.correlatedViewMaskCount = creationInfo.correlatedViewMaskCount,
 		.pCorrelatedViewMasks = creationInfo.correlatedViewMasks,
 	};
-	vkCreateRenderPass2(core::instance.device().logicalDevice(), &createInfo, nullptr, &renderPass);
+	CHECK_RESULT_RETURN(vkCreateRenderPass2(core::instance.device().logicalDevice(),
+											&createInfo,
+											nullptr,
+											&renderPass));
+	return VK_SUCCESS;
 }
 } // namespace luna::helpers
 
@@ -363,13 +368,13 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo *creationInfo,
 
 	if (creationInfo2 != nullptr)
 	{
-		helpers::createRenderPass2(*creationInfo2, attachmentCount, samples_, renderPass_);
+		CHECK_RESULT_THROW(helpers::createRenderPass2(*creationInfo2, attachmentCount, samples_, renderPass_));
 	} else
 	{
-		helpers::createRenderPass(*creationInfo, attachmentCount, samples_, renderPass_);
+		CHECK_RESULT_THROW(helpers::createRenderPass(*creationInfo, attachmentCount, samples_, renderPass_));
 	}
 
-	createAttachmentImages();
+	CHECK_RESULT_THROW(createAttachmentImages());
 	const uint32_t framebufferAttachmentCount = creationInfo->framebufferAttachmentCount +
 												static_cast<uint32_t>(creationInfo->createDepthAttachment) +
 												static_cast<uint32_t>(samples_ != VK_SAMPLE_COUNT_1_BIT);
@@ -386,7 +391,9 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo *creationInfo,
 		framebufferAttachments.emplace_back(colorImageView_);
 	}
 	framebufferAttachments.emplace_back(instance.swapChain.imageViews.at(0));
-	createSwapChainFramebuffers(renderPass_, framebufferAttachmentCount + 1, framebufferAttachments);
+	CHECK_RESULT_THROW(createSwapChainFramebuffers(renderPass_,
+												   framebufferAttachmentCount + 1,
+												   framebufferAttachments));
 	isDestroyed_ = false;
 }
 
@@ -411,7 +418,7 @@ void RenderPass::destroy()
 }
 
 // TODO: Look into VMA_MEMORY_USAGE_GPU_LAZILY_ALLOCATED
-inline void RenderPass::createAttachmentImages()
+inline VkResult RenderPass::createAttachmentImages()
 {
 	constexpr VmaAllocationCreateInfo allocationCreateInfo = {
 		.usage = VMA_MEMORY_USAGE_AUTO,
@@ -435,18 +442,18 @@ inline void RenderPass::createAttachmentImages()
 			.queueFamilyIndexCount = instance.device().familyCount(),
 			.pQueueFamilyIndices = instance.device().queueFamilyIndices(),
 		};
-		vmaCreateImage(instance.device().allocator(),
-					   &colorImageCreateInfo,
-					   &allocationCreateInfo,
-					   &colorImage_,
-					   &colorImageAllocation_,
-					   nullptr);
-		helpers::createImageView(instance.device().logicalDevice(),
-								 colorImage_,
-								 instance.swapChain.format.format,
-								 VK_IMAGE_ASPECT_COLOR_BIT,
-								 1,
-								 &colorImageView_);
+		CHECK_RESULT_RETURN(vmaCreateImage(instance.device().allocator(),
+										   &colorImageCreateInfo,
+										   &allocationCreateInfo,
+										   &colorImage_,
+										   &colorImageAllocation_,
+										   nullptr));
+		CHECK_RESULT_RETURN(helpers::createImageView(instance.device().logicalDevice(),
+													 colorImage_,
+													 instance.swapChain.format.format,
+													 VK_IMAGE_ASPECT_COLOR_BIT,
+													 1,
+													 &colorImageView_));
 	}
 
 	const VkImageCreateInfo depthImageCreateInfo = {
@@ -463,23 +470,24 @@ inline void RenderPass::createAttachmentImages()
 		.queueFamilyIndexCount = instance.device().familyCount(),
 		.pQueueFamilyIndices = instance.device().queueFamilyIndices(),
 	};
-	vmaCreateImage(instance.device().allocator(),
-				   &depthImageCreateInfo,
-				   &allocationCreateInfo,
-				   &depthImage_,
-				   &depthImageAllocation_,
-				   nullptr);
-	helpers::createImageView(instance.device().logicalDevice(),
-							 depthImage_,
-							 instance.depthImageFormat,
-							 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-							 1,
-							 &depthImageView_);
+	CHECK_RESULT_RETURN(vmaCreateImage(instance.device().allocator(),
+									   &depthImageCreateInfo,
+									   &allocationCreateInfo,
+									   &depthImage_,
+									   &depthImageAllocation_,
+									   nullptr));
+	CHECK_RESULT_RETURN(helpers::createImageView(instance.device().logicalDevice(),
+												 depthImage_,
+												 instance.depthImageFormat,
+												 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+												 1,
+												 &depthImageView_));
+	return VK_SUCCESS;
 }
 
-inline void RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPass,
-													const uint32_t attachmentCount,
-													std::vector<VkImageView> &attachmentImages) const
+inline VkResult RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPass,
+														const uint32_t attachmentCount,
+														std::vector<VkImageView> &attachmentImages) const
 {
 	SwapChain &swapChain = instance.swapChain;
 	swapChain.framebuffers.resize(swapChain.imageCount);
@@ -495,24 +503,25 @@ inline void RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPas
 			.height = extent_.height,
 			.layers = 1,
 		};
-		vkCreateFramebuffer(instance.device().logicalDevice(),
-							&framebufferCreateInfo,
-							nullptr,
-							&swapChain.framebuffers[i]);
+		CHECK_RESULT_RETURN(vkCreateFramebuffer(instance.device().logicalDevice(),
+												&framebufferCreateInfo,
+												nullptr,
+												&swapChain.framebuffers[i]));
 	}
+	return VK_SUCCESS;
 }
 } // namespace luna::core
 
-void lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass)
+VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass)
 {
 	assert(creationInfo);
-	luna::core::instance.createRenderPass(creationInfo, renderPass);
+	return luna::core::instance.createRenderPass(creationInfo, renderPass);
 }
 
-void lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass)
+VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass)
 {
 	assert(creationInfo);
-	luna::core::instance.createRenderPass(creationInfo, renderPass);
+	return luna::core::instance.createRenderPass(creationInfo, renderPass);
 }
 
 LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass renderPass, const char *name)
@@ -524,7 +533,7 @@ LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass render
 	return luna::core::instance.renderPass(renderPass).getSubpassIndexByName(name);
 }
 
-void lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo)
+VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo)
 {
 	assert(renderPass);
 	const luna::core::Device &device = luna::core::instance.device();
@@ -535,15 +544,15 @@ void lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBe
 	if (swapChain.imageIndex == -1u)
 	{
 		// TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
-		commandBuffer.waitForFence(device.logicalDevice_);
-		commandBuffer.resetFence(device.logicalDevice_);
-		vkAcquireNextImageKHR(device.logicalDevice_,
-							  swapChain.swapChain,
-							  UINT64_MAX,
-							  device.imageAvailableSemaphore_,
-							  VK_NULL_HANDLE,
-							  &luna::core::instance.swapChain.imageIndex);
-		commandBuffer.beginSingleUseCommandBuffer();
+		CHECK_RESULT_RETURN(commandBuffer.waitForFence(device.logicalDevice_));
+		CHECK_RESULT_RETURN(commandBuffer.resetFence(device.logicalDevice_));
+		CHECK_RESULT_RETURN(vkAcquireNextImageKHR(device.logicalDevice_,
+												  swapChain.swapChain,
+												  UINT64_MAX,
+												  device.imageAvailableSemaphore_,
+												  VK_NULL_HANDLE,
+												  &luna::core::instance.swapChain.imageIndex));
+		CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
 
 		uint32_t clearValueCount = 1;
 		std::vector<VkClearValue> clearValues;
@@ -569,4 +578,5 @@ void lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBe
 		};
 		vkCmdBeginRenderPass(commandBuffer.commandBuffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
+	return VK_SUCCESS;
 }

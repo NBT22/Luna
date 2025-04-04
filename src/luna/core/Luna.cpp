@@ -6,20 +6,17 @@
 #include <luna/core/Luna.hpp>
 #include <luna/luna.h>
 
-void lunaDestroyInstance()
-{
-	luna::core::instance.destroy();
-}
-void lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkShaderModule *shaderModule)
+VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkShaderModule *shaderModule)
 {
 	const VkShaderModuleCreateInfo creationInfo = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 		.codeSize = bytes,
 		.pCode = spirv,
 	};
-	luna::core::instance.device_.addShaderModule(&creationInfo, shaderModule);
+	CHECK_RESULT_RETURN(luna::core::instance.device_.addShaderModule(&creationInfo, shaderModule));
+	return VK_SUCCESS;
 }
-void lunaDrawFrame()
+VkResult lunaDrawFrame()
 {
 	luna::core::CommandBuffer &commandBuffer = luna::core::instance.commandBuffers().graphics;
 	assert(commandBuffer.isRecording());
@@ -38,7 +35,8 @@ void lunaDrawFrame()
 		.signalSemaphoreCount = 1,
 		.pSignalSemaphores = &renderFinishedSemaphore,
 	};
-	commandBuffer.submitCommandBuffer(luna::core::instance.device().familyQueues().graphics, queueSubmitInfo);
+	CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::core::instance.device().familyQueues().graphics,
+														  queueSubmitInfo));
 
 	const VkPresentInfoKHR presentInfo = {
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -48,25 +46,28 @@ void lunaDrawFrame()
 		.pSwapchains = &luna::core::instance.swapChain.swapChain,
 		.pImageIndices = &luna::core::instance.swapChain.imageIndex,
 	};
-	vkQueuePresentKHR(luna::core::instance.device().familyQueues().presentation, &presentInfo);
+	CHECK_RESULT_RETURN(vkQueuePresentKHR(luna::core::instance.device().familyQueues().presentation, &presentInfo));
 
 	luna::core::instance.swapChain.imageIndex = -1u;
 	luna::core::instance.unbindAllPipelines();
+	return VK_SUCCESS;
 }
-void lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo, LunaDescriptorPool *descriptorPool)
+VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
+								  LunaDescriptorPool *descriptorPool)
 {
 	assert(creationInfo);
-	luna::core::instance.createDescriptorPool(*creationInfo, descriptorPool);
+	return luna::core::instance.createDescriptorPool(*creationInfo, descriptorPool);
 }
-void lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
-								LunaDescriptorSet *descriptorSets)
+VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
+									LunaDescriptorSet *descriptorSets)
 {
 	assert(allocationInfo);
 	if (allocationInfo->descriptorSetCount != 0)
 	{
 		assert(allocationInfo->setLayouts);
-		luna::core::instance.allocateDescriptorSets(*allocationInfo, descriptorSets);
+		return luna::core::instance.allocateDescriptorSets(*allocationInfo, descriptorSets);
 	}
+	return VK_SUCCESS;
 }
 void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites)
 {

@@ -21,14 +21,14 @@ template<typename T> struct FamilyValues
 class Device
 {
 	public:
-		friend void ::lunaBeginRenderPass(LunaRenderPass, const LunaRenderPassBeginInfo *beginInfo);
+		friend VkResult(::lunaBeginRenderPass(LunaRenderPass, const LunaRenderPassBeginInfo *beginInfo));
 
 		Device() = default;
 		explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
 
 		void destroy();
 
-		void addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule);
+		VkResult addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule);
 
 		/// A getter for the @c physicalDevice_ value
 		/// @return The Vulkan handle for the physical device described in this instance
@@ -49,13 +49,13 @@ class Device
 		[[nodiscard]] VkSemaphore renderFinishedSemaphore() const;
 
 	private:
-		void findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+		VkResult findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 		void initQueueFamilyIndices();
 		[[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
 		[[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
 		[[nodiscard]] bool checkUsability(VkPhysicalDevice device, VkSurfaceKHR surface);
-		void createCommandPoolsAndBuffers();
-		void createSemaphores();
+		VkResult createCommandPoolsAndBuffers();
+		VkResult createSemaphores();
 
 		bool isDestroyed_{true};
 		VkPhysicalDevice physicalDevice_{};

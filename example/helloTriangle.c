@@ -6,6 +6,12 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#define CHECK_RESULT(value) \
+	if (value != VK_SUCCESS) \
+	{ \
+		return 5; \
+	}
+
 #pragma region typedefs
 typedef struct
 {
@@ -94,7 +100,7 @@ static const Vertex vertices[3] = {
 };
 #pragma endregion constants
 
-static void createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
+static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
 
@@ -119,21 +125,23 @@ static void createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass
 		}},
 		.extent = extent,
 	};
-	lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
+	return lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
 }
 
-static void createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphicsPipeline *pipeline)
+static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphicsPipeline *pipeline)
 {
 	const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
 
 	VkShaderModule vertexShaderModule;
 	VkShaderModule fragmentShaderModule;
-	lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule);
-	lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV, sizeof(FRAGMENT_SHADER_SPIRV), &fragmentShaderModule);
-	if (!vertexShaderModule || !fragmentShaderModule)
+	if (lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule) != VK_SUCCESS)
 	{
-		// TODO: Figure out how to handle Luna functions failing
-		return;
+		return false;
+	}
+	if (lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV, sizeof(FRAGMENT_SHADER_SPIRV), &fragmentShaderModule) !=
+		VK_SUCCESS)
+	{
+		return false;
 	}
 	const VkPipelineShaderStageCreateInfo shaderStages[2] = {
 		{
@@ -252,7 +260,7 @@ static void createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphicsPi
 		.colorBlendState = &colorBlending,
 		.subpass = subpass,
 	};
-	lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
+	return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
 }
 
 int main()
@@ -279,12 +287,15 @@ int main()
 		.enableValidation = true,
 #endif
 	};
-	lunaCreateInstance(&instanceCreationInfo);
+	if (lunaCreateInstance(&instanceCreationInfo) != VK_SUCCESS)
+	{
+		return 3;
+	}
 
 	VkSurfaceKHR surface;
 	if (!SDL_Vulkan_CreateSurface(window, lunaGetInstance(), NULL, &surface))
 	{
-		return 3;
+		return 4;
 	}
 	const VkPhysicalDeviceFeatures requiredFeatures = {
 		.logicOp = VK_TRUE,
@@ -296,7 +307,7 @@ int main()
 		.requiredFeatures = requiredFeatures,
 		.surface = surface,
 	};
-	lunaAddNewDevice(&deviceCreationInfo);
+	CHECK_RESULT(lunaAddNewDevice(&deviceCreationInfo));
 
 	const VkExtent3D extent = {
 		.width = 1080,
@@ -313,20 +324,20 @@ int main()
 		.presentModeCount = 2,
 		.presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR},
 	};
-	lunaCreateSwapChain(&swapChainCreationInfo);
+	CHECK_RESULT(lunaCreateSwapChain(&swapChainCreationInfo));
 
 	LunaRenderPass renderPass;
-	createRenderPass(extent, &renderPass);
+	CHECK_RESULT(createRenderPass(extent, &renderPass));
 
 	LunaGraphicsPipeline graphicsPipeline;
-	createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline);
+	CHECK_RESULT(createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline));
 
 	LunaBufferCreationInfo bufferCreationInfo = {
 		.size = sizeof(vertices),
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 	};
 	LunaBuffer vertexBuffer;
-	lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer);
+	CHECK_RESULT(lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer));
 	lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
 
 	const LunaRenderPassBeginInfo beginInfo = {
@@ -367,26 +378,26 @@ int main()
 		switch (event.type)
 		{
 			case SDL_EVENT_QUIT:
-				lunaDestroyInstance();
+				CHECK_RESULT(lunaDestroyInstance());
 				return 0;
 			case SDL_EVENT_KEY_UP:
 				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 				{
-					lunaDestroyInstance();
+					CHECK_RESULT(lunaDestroyInstance());
 					return 0;
 				}
 				break;
 			default:;
 		}
-		lunaBeginRenderPass(renderPass, &beginInfo);
-		lunaDrawBuffer(vertexBuffer,
-					   graphicsPipeline,
-					   (LunaGraphicsPipelineBindInfo[]){0},
-					   sizeof(vertices) / sizeof(*vertices),
-					   1,
-					   0,
-					   0);
-		lunaDrawFrame();
+		CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
+		CHECK_RESULT(lunaDrawBuffer(vertexBuffer,
+									graphicsPipeline,
+									(LunaGraphicsPipelineBindInfo[]){0},
+									sizeof(vertices) / sizeof(*vertices),
+									1,
+									0,
+									0));
+		CHECK_RESULT(lunaDrawFrame());
 	}
 #endif
 }

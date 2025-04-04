@@ -18,15 +18,14 @@ class GraphicsPipeline
 	public:
 		static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
 
-		friend void ::lunaDrawFrame();
-		friend void ::lunaPushConstants(LunaGraphicsPipeline);
+		friend VkResult(::lunaPushConstants(LunaGraphicsPipeline));
 
 		GraphicsPipeline() = default;
 		explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 
 		void destroy();
 
-		void bind(const LunaGraphicsPipelineBindInfo &bindInfo);
+		VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo);
 		void unbind();
 
 	private:

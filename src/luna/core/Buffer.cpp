@@ -9,19 +9,19 @@
 
 namespace luna::core::buffer
 {
-void BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index)
+VkResult BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index)
 {
 	const auto hasFreeSpace = [creationInfo](const Buffer &buffer) -> bool {
 		return creationInfo.size <= buffer.freeBytes_ &&
 			   (creationInfo.flags & buffer.creationFlags_) == creationInfo.flags &&
 			   (creationInfo.usage & buffer.usageFlags_) == creationInfo.usage;
 	};
-	std::vector<Buffer>::iterator &&bufferIterator = std::find_if(instance.buffers_.begin(),
-																  instance.buffers_.end(),
-																  hasFreeSpace);
+	std::vector<Buffer>::iterator bufferIterator = std::find_if(instance.buffers_.begin(),
+																instance.buffers_.end(),
+																hasFreeSpace);
 	if (bufferIterator == instance.buffers_.end())
 	{
-		bufferIterator = instance.allocateBuffer(creationInfo);
+		CHECK_RESULT_RETURN(instance.allocateBuffer(creationInfo, &bufferIterator));
 	}
 	const uint32_t bufferIndex = bufferIterator - instance.buffers_.begin();
 	Buffer *buffer = bufferIterator.base();
@@ -43,6 +43,7 @@ void BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo, Luna
 	{
 		*index = &instance.bufferRegionIndices_.back();
 	}
+	return VK_SUCCESS;
 }
 
 void BufferRegion::destroy()
@@ -73,12 +74,12 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 		.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
-	vmaCreateBuffer(instance.device().allocator(),
-					&bufferCreateInfo,
-					&allocationCreateInfo,
-					&buffer_,
-					&allocation_,
-					&allocationInfo);
+	CHECK_RESULT_THROW(vmaCreateBuffer(instance.device().allocator(),
+									   &bufferCreateInfo,
+									   &allocationCreateInfo,
+									   &buffer_,
+									   &allocation_,
+									   &allocationInfo));
 	data_ = allocationInfo.pMappedData;
 	isDestroyed_ = false;
 }
@@ -97,16 +98,16 @@ void Buffer::destroy()
 }
 } // namespace luna::core
 
-void lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo)
+VkResult lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	(void)luna::core::instance.allocateBuffer(*creationInfo);
+	return luna::core::instance.allocateBuffer(*creationInfo, nullptr);
 }
 
-void lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer)
+VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer)
 {
 	assert(creationInfo);
-	luna::core::buffer::BufferRegion::createBuffer(*creationInfo, buffer);
+	return luna::core::buffer::BufferRegion::createBuffer(*creationInfo, buffer);
 }
 
 void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes)
@@ -119,19 +120,20 @@ void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size
 	std::copy_n(static_cast<const uint8_t *>(data), bytes, luna::core::instance.bufferRegion(buffer).data_);
 }
 
-void lunaDrawBuffer(const LunaBuffer vertexBuffer,
-					const LunaGraphicsPipeline pipeline,
-					const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-					const uint32_t vertexCount,
-					const uint32_t instanceCount,
-					const uint32_t firstVertex,
-					const uint32_t firstInstance)
+VkResult lunaDrawBuffer(const LunaBuffer vertexBuffer,
+						const LunaGraphicsPipeline pipeline,
+						const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
+						const uint32_t vertexCount,
+						const uint32_t instanceCount,
+						const uint32_t firstVertex,
+						const uint32_t firstInstance)
 {
 	using namespace luna::core;
 	assert(vertexBuffer && pipeline);
 	const auto bufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
 	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index).bind(*pipelineBindInfo);
+	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
@@ -139,22 +141,24 @@ void lunaDrawBuffer(const LunaBuffer vertexBuffer,
 						   &instance.buffers_.at(bufferRegionIndex.bufferIndex).buffer(),
 						   &instance.bufferRegion(bufferRegionIndex).offset());
 	vkCmdDraw(commandBuffer.commandBuffer(), vertexCount, instanceCount, firstVertex, firstInstance);
+	return VK_SUCCESS;
 }
 
-void lunaDrawBufferIndirect(const LunaBuffer vertexBuffer,
-							const LunaGraphicsPipeline pipeline,
-							const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-							const LunaBuffer buffer,
-							const VkDeviceSize offset,
-							const uint32_t drawCount,
-							const uint32_t stride)
+VkResult lunaDrawBufferIndirect(const LunaBuffer vertexBuffer,
+								const LunaGraphicsPipeline pipeline,
+								const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
+								const LunaBuffer buffer,
+								const VkDeviceSize offset,
+								const uint32_t drawCount,
+								const uint32_t stride)
 {
 	using namespace luna::core;
 	assert(vertexBuffer && pipeline && buffer);
 	const auto vertexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
 	const auto drawParameterBufferIndex = static_cast<const buffer::BufferRegionIndex *>(buffer)->bufferIndex;
 	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index).bind(*pipelineBindInfo);
+	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
@@ -166,17 +170,18 @@ void lunaDrawBufferIndirect(const LunaBuffer vertexBuffer,
 					  offset,
 					  drawCount,
 					  stride);
+	return VK_SUCCESS;
 }
 
-void lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
-								 const LunaGraphicsPipeline pipeline,
-								 const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-								 const LunaBuffer buffer,
-								 const VkDeviceSize offset,
-								 const LunaBuffer countBuffer,
-								 const VkDeviceSize countBufferOffset,
-								 const uint32_t maxDrawCount,
-								 const uint32_t stride)
+VkResult lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
+									 const LunaGraphicsPipeline pipeline,
+									 const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
+									 const LunaBuffer buffer,
+									 const VkDeviceSize offset,
+									 const LunaBuffer countBuffer,
+									 const VkDeviceSize countBufferOffset,
+									 const uint32_t maxDrawCount,
+									 const uint32_t stride)
 {
 	using namespace luna::core;
 	assert(vertexBuffer && pipeline && buffer && countBuffer);
@@ -184,7 +189,8 @@ void lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
 	const auto drawParameterBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(buffer);
 	const auto countBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(countBuffer);
 	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index).bind(*pipelineBindInfo);
+	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
@@ -198,26 +204,28 @@ void lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
 						   countBufferOffset + instance.bufferRegion(countBufferRegionIndex).offset(),
 						   maxDrawCount,
 						   stride);
+	return VK_SUCCESS;
 }
 
-void lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
-						   const LunaBuffer indexBuffer,
-						   const VkDeviceSize indexOffset,
-						   const VkIndexType indexType,
-						   const LunaGraphicsPipeline pipeline,
-						   const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-						   const uint32_t indexCount,
-						   const uint32_t instanceCount,
-						   const uint32_t firstIndex,
-						   const int32_t vertexOffset,
-						   const uint32_t firstInstance)
+VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
+							   const LunaBuffer indexBuffer,
+							   const VkDeviceSize indexOffset,
+							   const VkIndexType indexType,
+							   const LunaGraphicsPipeline pipeline,
+							   const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
+							   const uint32_t indexCount,
+							   const uint32_t instanceCount,
+							   const uint32_t firstIndex,
+							   const int32_t vertexOffset,
+							   const uint32_t firstInstance)
 {
 	using namespace luna::core;
 	assert(vertexBuffer && indexBuffer && pipeline);
 	const auto bufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
 	const auto indexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(indexBuffer);
 	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index).bind(*pipelineBindInfo);
+	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
@@ -229,18 +237,19 @@ void lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
 						 indexOffset + instance.bufferRegion(indexBufferRegionIndex).offset(),
 						 indexType);
 	vkCmdDrawIndexed(commandBuffer.commandBuffer(), indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+	return VK_SUCCESS;
 }
 
-void lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
-								   const LunaBuffer indexBuffer,
-								   const VkDeviceSize indexOffset,
-								   const VkIndexType indexType,
-								   const LunaGraphicsPipeline pipeline,
-								   const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-								   const LunaBuffer buffer,
-								   const VkDeviceSize offset,
-								   const uint32_t drawCount,
-								   const uint32_t stride)
+VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
+									   const LunaBuffer indexBuffer,
+									   const VkDeviceSize indexOffset,
+									   const VkIndexType indexType,
+									   const LunaGraphicsPipeline pipeline,
+									   const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
+									   const LunaBuffer buffer,
+									   const VkDeviceSize offset,
+									   const uint32_t drawCount,
+									   const uint32_t stride)
 {
 	using namespace luna::core;
 	assert(vertexBuffer && indexBuffer && pipeline && buffer);
@@ -248,7 +257,8 @@ void lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
 	const auto drawParameterBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(buffer);
 	const auto indexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(indexBuffer);
 	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index).bind(*pipelineBindInfo);
+	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
@@ -264,20 +274,21 @@ void lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
 							 offset + instance.bufferRegion(drawParameterBufferRegionIndex).offset(),
 							 drawCount,
 							 stride);
+	return VK_SUCCESS;
 }
 
-void lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
-										const LunaBuffer indexBuffer,
-										const VkDeviceSize indexOffset,
-										const VkIndexType indexType,
-										const LunaGraphicsPipeline pipeline,
-										const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-										const LunaBuffer buffer,
-										const VkDeviceSize offset,
-										const LunaBuffer countBuffer,
-										const VkDeviceSize countBufferOffset,
-										const uint32_t maxDrawCount,
-										const uint32_t stride)
+VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
+											const LunaBuffer indexBuffer,
+											const VkDeviceSize indexOffset,
+											const VkIndexType indexType,
+											const LunaGraphicsPipeline pipeline,
+											const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
+											const LunaBuffer buffer,
+											const VkDeviceSize offset,
+											const LunaBuffer countBuffer,
+											const VkDeviceSize countBufferOffset,
+											const uint32_t maxDrawCount,
+											const uint32_t stride)
 {
 	using namespace luna::core;
 	assert(vertexBuffer && indexBuffer && pipeline && buffer && countBuffer);
@@ -286,7 +297,8 @@ void lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
 	const auto countBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(countBuffer);
 	const auto indexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(indexBuffer);
 	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index).bind(*pipelineBindInfo);
+	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
@@ -304,4 +316,5 @@ void lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
 								  countBufferOffset + instance.bufferRegion(countBufferRegionIndex).offset(),
 								  maxDrawCount,
 								  stride);
+	return VK_SUCCESS;
 }

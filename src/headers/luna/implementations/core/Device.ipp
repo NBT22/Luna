@@ -34,14 +34,15 @@ inline void Device::destroy()
 	isDestroyed_ = true;
 }
 
-inline void Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule)
+inline VkResult Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule)
 {
 	shaderModules_.emplace_back();
-	vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back());
+	CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back()));
 	if (shaderModule != nullptr)
 	{
 		*shaderModule = shaderModules_.back();
 	}
+	return VK_SUCCESS;
 }
 
 inline VkPhysicalDevice Device::physicalDevice() const
@@ -92,7 +93,7 @@ inline VkSemaphore Device::renderFinishedSemaphore() const
 // TODO: Better family finding logic to allow for
 //  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
 //  2. Ensuring that the most optimal layout is found, regardless of what order the implementation provides the families
-inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface)
+inline VkResult Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface)
 {
 	assert(physicalDevice != VK_NULL_HANDLE);
 	familyCount_ = 0;
@@ -109,7 +110,10 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 	for (uint32_t index = 0; index < familyCount; index++)
 	{
 		VkBool32 supportsPresentation = VK_FALSE;
-		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &supportsPresentation);
+		CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice,
+																 index,
+																 surface,
+																 &supportsPresentation));
 		if (!hasFamily_.graphics && (families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
 		{
 			familyIndices_.graphics = index;
@@ -142,18 +146,19 @@ inline void Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice
 
 		if (hasFamily_.graphics && hasFamily_.transfer && presentationFound)
 		{
-			return;
+			return VK_SUCCESS;
 		}
 	}
 	if (!presentationFound || !hasFamily_.graphics)
 	{
 		familyCount_ = 0;
-		return;
+		return VK_ERROR_UNKNOWN;
 	}
 	if (!hasFamily_.transfer)
 	{
 		familyIndices_.transfer = familyIndices_.graphics;
 	}
+	return VK_SUCCESS;
 }
 inline void Device::initQueueFamilyIndices()
 {
@@ -272,35 +277,34 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfaceKHR surface)
 {
 	uint32_t count;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, nullptr);
+	CHECK_RESULT_THROW(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, nullptr));
 	if (count == 0)
 	{
 		return false;
 	}
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, nullptr);
+	CHECK_RESULT_THROW(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count, nullptr));
 	if (count == 0)
 	{
 		return false;
 	}
 
-	findQueueFamilyIndices(device, surface);
-	if (familyCount_ == 0)
-	{
-		return false;
-	}
+	CHECK_RESULT_THROW(findQueueFamilyIndices(device, surface));
 
 	vkGetPhysicalDeviceProperties(device, &properties_);
 	vkGetPhysicalDeviceMemoryProperties(device, &memoryProperties_);
 
 	uint32_t extensionCount;
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+	CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr));
 	if (extensionCount == 0)
 	{
 		return false;
 	}
 	std::vector<VkExtensionProperties> availableExtensions;
 	availableExtensions.reserve(extensionCount);
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+	CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(device,
+															nullptr,
+															&extensionCount,
+															availableExtensions.data()));
 	for (uint32_t j = 0; j < extensionCount; j++)
 	{
 		if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
@@ -310,26 +314,26 @@ inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfac
 	}
 	return false;
 }
-inline void Device::createCommandPoolsAndBuffers()
+inline VkResult Device::createCommandPoolsAndBuffers()
 {
 	const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		.queueFamilyIndex = familyIndices_.graphics,
 	};
-	commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
-												   graphicsCommandPoolCreateInfo,
-												   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-												   nullptr);
+	CHECK_RESULT_RETURN(commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
+																	   graphicsCommandPoolCreateInfo,
+																	   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+																	   nullptr));
 	const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		.queueFamilyIndex = familyIndices_.transfer,
 	};
-	commandBuffers_.transfer.allocateCommandBuffer(logicalDevice_,
-												   transferCommandPoolCreateInfo,
-												   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-												   nullptr);
+	CHECK_RESULT_RETURN(commandBuffers_.transfer.allocateCommandBuffer(logicalDevice_,
+																	   transferCommandPoolCreateInfo,
+																	   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+																	   nullptr));
 	if (hasFamily_.presentation)
 	{
 		const VkCommandPoolCreateInfo presentationCommandPoolCreateInfo = {
@@ -337,18 +341,20 @@ inline void Device::createCommandPoolsAndBuffers()
 			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 			.queueFamilyIndex = familyIndices_.presentation,
 		};
-		commandBuffers_.presentation.allocateCommandBuffer(logicalDevice_,
-														   presentationCommandPoolCreateInfo,
-														   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-														   nullptr);
+		CHECK_RESULT_RETURN(commandBuffers_.presentation.allocateCommandBuffer(logicalDevice_,
+																			   presentationCommandPoolCreateInfo,
+																			   VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+																			   nullptr));
 	}
+	return VK_SUCCESS;
 }
-inline void Device::createSemaphores()
+inline VkResult Device::createSemaphores()
 {
 	constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 	};
-	vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore_);
-	vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &renderFinishedSemaphore_);
+	CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore_));
+	CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &renderFinishedSemaphore_));
+	return VK_SUCCESS;
 }
 } // namespace luna::core

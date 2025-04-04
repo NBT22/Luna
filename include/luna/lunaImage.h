@@ -12,15 +12,15 @@ extern "C"
 {
 #endif
 
-void lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler);
+VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler);
 
-void lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image);
-void lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo, uint32_t arrayLayers, LunaImage *image);
-void lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, uint32_t depth, LunaImage *image);
-void lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
-							uint32_t depth,
-							uint32_t arrayLayers,
-							LunaImage *image);
+VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image);
+VkResult lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo, uint32_t arrayLayers, LunaImage *image);
+VkResult lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, uint32_t depth, LunaImage *image);
+VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
+								uint32_t depth,
+								uint32_t arrayLayers,
+								LunaImage *image);
 
 #ifdef __cplusplus
 }

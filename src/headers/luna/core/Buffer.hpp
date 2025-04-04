@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan.h>
 
 namespace luna::core::buffer
 {
@@ -21,7 +20,7 @@ class BufferRegion
 {
 	public:
 		// TODO: Maybe move this to Instance where the others live and friend it here?
-		static void createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index);
+		static VkResult createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index);
 		static bool isDestroyed(const BufferRegion &region);
 
 		friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t);

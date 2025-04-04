@@ -15,12 +15,12 @@ class CommandBuffer
 
 		void destroy(VkDevice logicalDevice);
 
-		void allocateCommandBuffer(VkDevice logicalDevice,
-								   const VkCommandPoolCreateInfo &poolCreateInfo,
-								   VkCommandBufferLevel commandBufferLevel,
-								   const void *allocateInfoPNext);
-		void beginSingleUseCommandBuffer();
-		void submitCommandBuffer(VkQueue queue, const VkSubmitInfo &submitInfo);
+		VkResult allocateCommandBuffer(VkDevice logicalDevice,
+									   const VkCommandPoolCreateInfo &poolCreateInfo,
+									   VkCommandBufferLevel commandBufferLevel,
+									   const void *allocateInfoPNext);
+		VkResult beginSingleUseCommandBuffer();
+		VkResult submitCommandBuffer(VkQueue queue, const VkSubmitInfo &submitInfo);
 		void setRecording(bool value);
 		VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
 		VkResult resetFence(VkDevice logicalDevice) const;

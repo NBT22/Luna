@@ -12,12 +12,13 @@ extern "C"
 {
 #endif
 
-void lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
+VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
+VkResult lunaDestroyInstance();
 VkInstance lunaGetInstance();
 
-void lunaGetSurfaceCapabilities(VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
+VkResult lunaGetSurfaceCapabilities(VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 
-void lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo);
+VkResult lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo);
 VkFormat lunaGetSwapChainFormat();
 VkExtent2D lunaGetSwapChainExtent();
 

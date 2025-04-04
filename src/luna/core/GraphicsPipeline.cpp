@@ -42,7 +42,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 		.pushConstantRangeCount = layoutCreationInfo.pushConstantRangeCount,
 		.pPushConstantRanges = pushConstantRanges.data(),
 	};
-	vkCreatePipelineLayout(instance.device().logicalDevice(), &layoutCreateInfo, nullptr, &layout_);
+	CHECK_RESULT_THROW(vkCreatePipelineLayout(instance.device().logicalDevice(), &layoutCreateInfo, nullptr, &layout_));
 
 	const RenderPassSubpassIndex *subpassIndex = static_cast<const RenderPassSubpassIndex *>(creationInfo.subpass);
 	const RenderPass &renderPass = instance.renderPass(subpassIndex->renderPassIndex);
@@ -64,7 +64,12 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 		.renderPass = renderPass.renderPass(),
 		.subpass = subpassIndex->index,
 	};
-	vkCreateGraphicsPipelines(instance.device().logicalDevice(), nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline_);
+	CHECK_RESULT_THROW(vkCreateGraphicsPipelines(instance.device().logicalDevice(),
+												 nullptr,
+												 1,
+												 &pipelineCreateInfo,
+												 nullptr,
+												 &pipeline_));
 
 	isDestroyed_ = false;
 }
@@ -81,18 +86,18 @@ void GraphicsPipeline::destroy()
 	pushConstantsRanges_.shrink_to_fit();
 	isDestroyed_ = true;
 }
-void GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo)
+VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo)
 {
 	if (bound_)
 	{
-		return;
+		return VK_SUCCESS;
 	}
 	instance.unbindAllPipelines();
 	CommandBuffer commandBuffer = instance.commandBuffers().graphics;
 	if (!commandBuffer.isRecording())
 	{
-		commandBuffer.waitForFence(instance.device().logicalDevice());
-		commandBuffer.beginSingleUseCommandBuffer();
+		CHECK_RESULT_RETURN(commandBuffer.waitForFence(instance.device().logicalDevice()));
+		CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
 	}
 	vkCmdBindPipeline(commandBuffer.commandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
 	if (bindInfo.descriptorSetCount > 0)
@@ -113,16 +118,18 @@ void GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo)
 								bindInfo.dynamicOffsets);
 	}
 	bound_ = true;
+	return VK_SUCCESS;
 }
 } // namespace luna::core
 
-void lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo, LunaGraphicsPipeline *pipeline)
+VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo,
+									LunaGraphicsPipeline *pipeline)
 {
 	assert(creationInfo);
-	luna::core::instance.createGraphicsPipeline(*creationInfo, pipeline);
+	return luna::core::instance.createGraphicsPipeline(*creationInfo, pipeline);
 }
 
-void lunaPushConstants(const LunaGraphicsPipeline pipeline)
+VkResult lunaPushConstants(const LunaGraphicsPipeline pipeline)
 {
 	const uint32_t pipelineIndex = static_cast<const luna::core::GraphicsPipelineIndex *>(pipeline)->index;
 	const luna::core::GraphicsPipeline &graphicsPipeline = luna::core::instance.graphicsPipelines_.at(pipelineIndex);
@@ -130,8 +137,8 @@ void lunaPushConstants(const LunaGraphicsPipeline pipeline)
 	luna::core::CommandBuffer commandBuffer = luna::core::instance.commandBuffers().graphics;
 	if (!commandBuffer.isRecording())
 	{
-		commandBuffer.waitForFence(luna::core::instance.device().logicalDevice());
-		commandBuffer.beginSingleUseCommandBuffer();
+		CHECK_RESULT_RETURN(commandBuffer.waitForFence(luna::core::instance.device().logicalDevice()));
+		CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
 	}
 	uint32_t offset = 0;
 	for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
@@ -146,4 +153,5 @@ void lunaPushConstants(const LunaGraphicsPipeline pipeline)
 						   pushConstantsData);
 		offset += pushConstantsRange.size;
 	}
+	return VK_SUCCESS;
 }

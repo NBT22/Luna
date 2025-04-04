@@ -91,5 +91,5 @@ readability-*,
 -readability-identifier-naming,
 -readability-reference-to-constructed-temporary'
 CheckOptions:
-  bugprone-unused-return-value.CheckedFunctions: '[A-Z].+'
+  bugprone-unused-return-value.CheckedReturnTypes: '^::(Vk|Luna).+$;^::luna.+$'
   bugprone-unused-return-value.AllowCastToVoid: true

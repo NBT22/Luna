@@ -40,7 +40,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
 		.bindingCount = creationInfo.bindingCount,
 		.pBindings = bindings.data(),
 	};
-	vkCreateDescriptorSetLayout(instance.device().logicalDevice(), &createInfo, nullptr, &layout_);
+	CHECK_RESULT_THROW(vkCreateDescriptorSetLayout(instance.device().logicalDevice(), &createInfo, nullptr, &layout_));
 	isDestroyed_ = false;
 }
 
@@ -56,9 +56,9 @@ void DescriptorSetLayout::destroy()
 }
 } // namespace luna::core
 
-void lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
-								   LunaDescriptorSetLayout *descriptorSetLayout)
+VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
+									   LunaDescriptorSetLayout *descriptorSetLayout)
 {
 	assert(creationInfo);
-	luna::core::instance.createDescriptorSetLayout(*creationInfo, descriptorSetLayout);
+	return luna::core::instance.createDescriptorSetLayout(*creationInfo, descriptorSetLayout);
 }

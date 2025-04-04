@@ -21,95 +21,92 @@ extern class Instance instance;
 class Instance
 {
 	public:
-		friend void buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &, LunaBuffer *index);
-		friend void ::lunaDrawBuffer(LunaBuffer,
-									 LunaGraphicsPipeline,
-									 const LunaGraphicsPipelineBindInfo *,
-									 uint32_t,
-									 uint32_t,
-									 uint32_t,
-									 uint32_t);
-		friend void ::lunaDrawBufferIndirect(LunaBuffer,
-											 LunaGraphicsPipeline,
-											 const LunaGraphicsPipelineBindInfo *,
-											 LunaBuffer,
-											 VkDeviceSize,
-											 uint32_t,
-											 uint32_t);
-		friend void ::lunaDrawBufferIndirectCount(LunaBuffer,
-												  LunaGraphicsPipeline,
-												  const LunaGraphicsPipelineBindInfo *,
-												  LunaBuffer,
-												  VkDeviceSize,
-												  LunaBuffer,
-												  VkDeviceSize,
-												  uint32_t,
-												  uint32_t);
-		friend void ::lunaDrawBufferIndexed(LunaBuffer,
-											LunaBuffer,
-											VkDeviceSize,
-											VkIndexType,
-											LunaGraphicsPipeline,
-											const LunaGraphicsPipelineBindInfo *,
-											uint32_t,
-											uint32_t,
-											uint32_t,
-											int32_t,
-											uint32_t);
-		friend void ::lunaDrawBufferIndexedIndirect(LunaBuffer,
-													LunaBuffer,
-													VkDeviceSize,
-													VkIndexType,
-													LunaGraphicsPipeline,
-													const LunaGraphicsPipelineBindInfo *,
-													LunaBuffer,
-													VkDeviceSize,
-													uint32_t,
-													uint32_t);
-		friend void ::lunaDrawBufferIndexedIndirectCount(LunaBuffer,
-														 LunaBuffer,
-														 VkDeviceSize indexOffset,
-														 VkIndexType indexType,
-														 LunaGraphicsPipeline,
-														 const LunaGraphicsPipelineBindInfo *,
-														 LunaBuffer,
-														 VkDeviceSize,
-														 LunaBuffer,
-														 VkDeviceSize,
-														 uint32_t,
-														 uint32_t);
-		friend void ::lunaPushConstants(LunaGraphicsPipeline);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wparentheses"
-		friend void ::lunaCreateShaderModule(const uint32_t *, size_t, VkShaderModule *shaderModule);
-#pragma GCC diagnostic pop
+		friend VkResult buffer::BufferRegion::createBuffer(const LunaBufferCreationInfo &, LunaBuffer *index);
+		friend VkResult(::lunaDrawBuffer(LunaBuffer,
+										 LunaGraphicsPipeline,
+										 const LunaGraphicsPipelineBindInfo *,
+										 uint32_t,
+										 uint32_t,
+										 uint32_t,
+										 uint32_t));
+		friend VkResult(::lunaDrawBufferIndirect(LunaBuffer,
+												 LunaGraphicsPipeline,
+												 const LunaGraphicsPipelineBindInfo *,
+												 LunaBuffer,
+												 VkDeviceSize,
+												 uint32_t,
+												 uint32_t));
+		friend VkResult(::lunaDrawBufferIndirectCount(LunaBuffer,
+													  LunaGraphicsPipeline,
+													  const LunaGraphicsPipelineBindInfo *,
+													  LunaBuffer,
+													  VkDeviceSize,
+													  LunaBuffer,
+													  VkDeviceSize,
+													  uint32_t,
+													  uint32_t));
+		friend VkResult(::lunaDrawBufferIndexed(LunaBuffer,
+												LunaBuffer,
+												VkDeviceSize,
+												VkIndexType,
+												LunaGraphicsPipeline,
+												const LunaGraphicsPipelineBindInfo *,
+												uint32_t,
+												uint32_t,
+												uint32_t,
+												int32_t,
+												uint32_t));
+		friend VkResult(::lunaDrawBufferIndexedIndirect(LunaBuffer,
+														LunaBuffer,
+														VkDeviceSize,
+														VkIndexType,
+														LunaGraphicsPipeline,
+														const LunaGraphicsPipelineBindInfo *,
+														LunaBuffer,
+														VkDeviceSize,
+														uint32_t,
+														uint32_t));
+		friend VkResult(::lunaDrawBufferIndexedIndirectCount(LunaBuffer,
+															 LunaBuffer,
+															 VkDeviceSize indexOffset,
+															 VkIndexType indexType,
+															 LunaGraphicsPipeline,
+															 const LunaGraphicsPipelineBindInfo *,
+															 LunaBuffer,
+															 VkDeviceSize,
+															 LunaBuffer,
+															 VkDeviceSize,
+															 uint32_t,
+															 uint32_t));
+		friend VkResult(::lunaPushConstants(LunaGraphicsPipeline));
+		friend VkResult(::lunaCreateShaderModule(const uint32_t *, size_t, VkShaderModule *shaderModule));
 
 		Instance() = default;
 		explicit Instance(const LunaInstanceCreationInfo &creationInfo);
 
-		void destroy();
+		VkResult destroy();
 
 		void unbindAllPipelines();
-		void addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
-		void createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
-		void createRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass);
-		void createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2, LunaRenderPass *renderPass);
-		void createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo,
-								  LunaDescriptorPool *descriptorPool);
-		void createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo,
-									   LunaDescriptorSetLayout *descriptorSetLayout);
-		void allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
-									LunaDescriptorSet *descriptorSets);
-		void createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
-									LunaGraphicsPipeline *pipeline);
-		std::vector<Buffer>::iterator allocateBuffer(const LunaBufferCreationInfo &creationInfo);
-		void createStagingBuffer(size_t size);
+		VkResult addNewDevice(const LunaDeviceCreationInfo2 &creationInfo);
+		VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
+		VkResult createRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass);
+		VkResult createRenderPass(const LunaRenderPassCreationInfo2 *creationInfo2, LunaRenderPass *renderPass);
+		VkResult createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo,
+									  LunaDescriptorPool *descriptorPool);
+		VkResult createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo,
+										   LunaDescriptorSetLayout *descriptorSetLayout);
+		VkResult allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
+										LunaDescriptorSet *descriptorSets);
+		VkResult createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
+										LunaGraphicsPipeline *pipeline);
+		VkResult allocateBuffer(const LunaBufferCreationInfo &creationInfo, std::vector<Buffer>::iterator *iterator);
+		VkResult createStagingBuffer(size_t size);
 		void copyToStagingBuffer(const uint8_t *data, size_t size) const;
-		void createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler);
-		void createImage(const LunaSampledImageCreationInfo &creationInfo,
-						 uint32_t depth,
-						 uint32_t arrayLayers,
-						 LunaImage *imageIndex);
+		VkResult createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler);
+		VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
+							 uint32_t depth,
+							 uint32_t arrayLayers,
+							 LunaImage *imageIndex);
 
 		[[nodiscard]] uint32_t minorVersion() const;
 		[[nodiscard]] VkInstance instance() const;
