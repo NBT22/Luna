@@ -83,6 +83,7 @@ typedef struct
 
 typedef struct
 {
+		const char *name;
 		VkSubpassDescriptionFlags flags;
 		VkPipelineBindPoint pipelineBindPoint;
 		uint32_t inputAttachmentCount;
@@ -106,7 +107,6 @@ typedef struct
 
 		uint32_t subpassCount;
 		const LunaSubpassCreationInfo *subpasses;
-		const char **subpassNames;
 
 		uint32_t dependencyCount;
 		const VkSubpassDependency *dependencies;
@@ -118,6 +118,7 @@ typedef struct
 
 typedef struct
 {
+		const char *name;
 		const void *pNext;
 		VkSubpassDescriptionFlags flags;
 		VkPipelineBindPoint pipelineBindPoint;
@@ -143,7 +144,6 @@ typedef struct
 
 		uint32_t subpassCount;
 		const LunaSubpassCreationInfo2 *subpasses;
-		const char **subpassNames;
 
 		uint32_t dependencyCount;
 		const VkSubpassDependency2 *dependencies;
@@ -290,6 +290,7 @@ typedef struct
 		LunaSampler sampler;
 		const LunaSamplerCreationInfo *samplerCreationInfo;
 
+		// TODO: This feels redundant considering that we also have aspectMask
 		VkImageAspectFlags aspectFlags;
 		VkPipelineStageFlags sourceStageMask;
 		VkPipelineStageFlags destinationStageMask;

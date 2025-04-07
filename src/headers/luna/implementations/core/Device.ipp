@@ -184,7 +184,8 @@ inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &require
 	const VkBool32 *requiredFeatureArray = std::bit_cast<const VkBool32 *,
 														 const VkPhysicalDeviceFeatures2 *>(&requiredFeatures);
 	constexpr int featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
-	const VkBool32 *supportedFeatureArray = std::bit_cast<VkBool32 *, const VkPhysicalDeviceFeatures2 *>(&features_);
+	const VkBool32 *supportedFeatureArray = std::bit_cast<const VkBool32 *,
+														  const VkPhysicalDeviceFeatures *>(&features_.features);
 	for (int i = 0; i < featureCount; i++)
 	{
 		if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
@@ -267,7 +268,7 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 				   structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
 	}
 
-	const void *pNext = requiredFeatures + 2;
+	const void *pNext = *std::bit_cast<const void **, const VkBool32 *>(requiredFeatures + 1);
 	if (pNext != nullptr)
 	{
 		return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));

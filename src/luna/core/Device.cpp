@@ -188,3 +188,15 @@ VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 	assert(creationInfo);
 	return luna::core::instance.addNewDevice(*creationInfo);
 }
+
+VkPhysicalDeviceProperties lunaGetPhysicalDeviceProperties() {
+	VkPhysicalDeviceProperties properties;
+	vkGetPhysicalDeviceProperties(luna::core::instance.device().physicalDevice(), &properties);
+	return properties;
+}
+
+VkPhysicalDeviceProperties2 lunaGetPhysicalDeviceProperties2() {
+	VkPhysicalDeviceProperties2 properties;
+	vkGetPhysicalDeviceProperties2(luna::core::instance.device().physicalDevice(), &properties);
+	return properties;
+}

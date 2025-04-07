@@ -12,6 +12,7 @@ extern "C"
 {
 #endif
 
+// TODO: Vertex buffer offset
 VkResult lunaDrawBuffer(LunaBuffer vertexBuffer,
 						LunaGraphicsPipeline pipeline,
 						const LunaGraphicsPipelineBindInfo *pipelineBindInfo,

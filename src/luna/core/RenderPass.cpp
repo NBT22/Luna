@@ -345,18 +345,12 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo *creationInfo,
 	assert(isDestroyed_ && creationInfo);
 	extent_ = creationInfo->extent;
 	subpassIndices_.reserve(creationInfo->subpassCount);
-	if (creationInfo->subpassNames != nullptr)
-	{
-		for (uint32_t i = 0; i < creationInfo->subpassCount; i++)
-		{
-			if (creationInfo->subpassNames[i] != nullptr)
-			{
-				subpassMap_[creationInfo->subpassNames[i]] = i;
-			}
-		}
-	}
 	for (uint32_t i = 0; i < creationInfo->subpassCount; i++)
 	{
+		if (creationInfo->subpasses[i].name != nullptr)
+		{
+			subpassMap_[creationInfo->subpasses[i].name] = i;
+		}
 		subpassIndices_.emplace_back(i, renderPassIndex);
 	}
 	samples_ = creationInfo->samples != 0 ? creationInfo->samples : VK_SAMPLE_COUNT_1_BIT;

@@ -46,7 +46,6 @@ inline VkResult Instance::createRenderPass(const LunaRenderPassCreationInfo2 *cr
 		.depthAttachmentLoadMode = creationInfo2->depthAttachmentLoadMode,
 		.attachmentCount = creationInfo2->attachmentCount,
 		.subpassCount = creationInfo2->subpassCount,
-		.subpassNames = creationInfo2->subpassNames,
 		.dependencyCount = creationInfo2->dependencyCount,
 		.extent = creationInfo2->extent,
 		.framebufferAttachmentCount = creationInfo2->framebufferAttachmentCount,

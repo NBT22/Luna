@@ -58,6 +58,7 @@ static VkResult getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
 {
 	if (targetPresentModeCount == 0)
 	{
+		// TODO: Check if fifo is somehow missing
 		destination = VK_PRESENT_MODE_FIFO_KHR;
 		return VK_SUCCESS;
 	}

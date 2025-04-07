@@ -140,7 +140,7 @@ static const uint32_t indices[] = {
 };
 #pragma endregion constants
 
-static bool createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
+static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
 
@@ -165,7 +165,7 @@ static bool createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass
 		}},
 		.extent = extent,
 	};
-	return lunaCreateRenderPass(&renderPassCreationInfo, renderPass) == VK_SUCCESS;
+	return lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
 }
 
 static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
@@ -443,9 +443,10 @@ int main()
 		.surface = surface,
 		.width = extent.width,
 		.height = extent.height,
+		// TODO: Fix magic number
 		.minImageCount = 3,
 		.formatCount = 1,
-		.formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}},
+		.formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}},
 		.presentModeCount = 2,
 		.presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR},
 	};

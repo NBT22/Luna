@@ -15,6 +15,9 @@ extern "C"
 VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo);
 VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo);
 
+VkPhysicalDeviceProperties lunaGetPhysicalDeviceProperties();
+VkPhysicalDeviceProperties2 lunaGetPhysicalDeviceProperties2();
+
 #ifdef __cplusplus
 }
 #endif
