@@ -215,7 +215,7 @@ static uint8_t bytesPerPixel(const VkFormat format)
 static void transitionImageLayout(const VkImage image,
 								  const VkImageLayout oldLayout,
 								  const VkImageLayout newLayout,
-								  const VkImageAspectFlags aspectFlags,
+								  const VkImageAspectFlags aspectMask,
 								  const uint32_t mipmapLevels,
 								  const uint32_t arrayLayers,
 								  const VkPipelineStageFlags sourceStageMask,
@@ -223,18 +223,6 @@ static void transitionImageLayout(const VkImage image,
 								  const VkPipelineStageFlags destinationStageMask,
 								  const VkAccessFlags destinationAccessMask)
 {
-	VkImageAspectFlags aspectMask = aspectFlags;
-	if (aspectMask == 0)
-	{
-		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-			newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
-		{
-			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		} else
-		{
-			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-	}
 	const VkImageSubresourceRange subresourceRange = {
 		.aspectMask = aspectMask,
 		.levelCount = mipmapLevels,
@@ -265,7 +253,7 @@ static void transitionImageLayout(const VkImage image,
 static void transitionImageLayout2(const VkImage image,
 								   const VkImageLayout oldLayout,
 								   const VkImageLayout newLayout,
-								   const VkImageAspectFlags aspectFlags,
+								   const VkImageAspectFlags aspectMask,
 								   const uint32_t mipmapLevels,
 								   const uint32_t arrayLayers,
 								   const VkPipelineStageFlags2 sourceStageMask,
@@ -273,18 +261,6 @@ static void transitionImageLayout2(const VkImage image,
 								   const VkPipelineStageFlags2 destinationStageMask,
 								   const VkAccessFlags2 destinationAccessMask)
 {
-	VkImageAspectFlags aspectMask = aspectFlags;
-	if (aspectMask == 0)
-	{
-		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-			newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
-		{
-			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		} else
-		{
-			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-	}
 	const VkImageSubresourceRange subresourceRange = {
 		.aspectMask = aspectMask,
 		.levelCount = mipmapLevels,
@@ -313,7 +289,8 @@ static void transitionImageLayout2(const VkImage image,
 static VkResult writeImage(const VkImage image,
 						   const VkExtent3D &extent,
 						   const uint32_t arrayLayers,
-						   const LunaSampledImageCreationInfo &creationInfo)
+						   const LunaSampledImageCreationInfo &creationInfo,
+						   const VkImageAspectFlags aspectMask)
 {
 	core::CommandBuffer transferCommandBuffer = core::instance.commandBuffers().transfer;
 	if (!transferCommandBuffer.isRecording())
@@ -343,7 +320,7 @@ static VkResult writeImage(const VkImage image,
 		transitionImageLayout2(image,
 							   VK_IMAGE_LAYOUT_UNDEFINED,
 							   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							   creationInfo.aspectFlags,
+							   VK_IMAGE_ASPECT_COLOR_BIT,
 							   mipmapLevels,
 							   arrayLayers,
 							   creationInfo.sourceStageMask,
@@ -355,7 +332,7 @@ static VkResult writeImage(const VkImage image,
 		transitionImageLayout(image,
 							  VK_IMAGE_LAYOUT_UNDEFINED,
 							  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							  creationInfo.aspectFlags,
+							  VK_IMAGE_ASPECT_COLOR_BIT,
 							  mipmapLevels,
 							  arrayLayers,
 							  creationInfo.sourceStageMask,
@@ -385,7 +362,7 @@ static VkResult writeImage(const VkImage image,
 		transitionImageLayout2(image,
 							   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 							   creationInfo.layout,
-							   creationInfo.aspectFlags,
+							   aspectMask,
 							   mipmapLevels,
 							   arrayLayers,
 							   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -397,7 +374,7 @@ static VkResult writeImage(const VkImage image,
 		transitionImageLayout(image,
 							  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 							  creationInfo.layout,
-							  creationInfo.aspectFlags,
+							  aspectMask,
 							  mipmapLevels,
 							  arrayLayers,
 							  VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -455,11 +432,22 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
 									  &image_,
 									  &allocation_,
 									  &allocationInfo));
+	VkImageAspectFlags aspectMask = creationInfo.aspectMask;
+	if (aspectMask == 0)
+	{
+		if (creationInfo.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+			creationInfo.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+		{
+			aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		} else
+		{
+			aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+	}
 	CHECK_RESULT_THROW(helpers::createImageView(instance.device().logicalDevice(),
 												image_,
 												creationInfo.format,
-												creationInfo.aspectMask == 0 ? VK_IMAGE_ASPECT_COLOR_BIT
-																			 : creationInfo.aspectMask,
+												aspectMask,
 												mipmapLevels,
 												&imageView_));
 	if (creationInfo.sampler != nullptr)
@@ -472,7 +460,7 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
 		sampler_ = instance.sampler(sampler);
 	}
 
-	CHECK_RESULT_THROW(helpers::writeImage(image_, extent, arrayLayers, creationInfo));
+	CHECK_RESULT_THROW(helpers::writeImage(image_, extent, arrayLayers, creationInfo, aspectMask));
 	isDestroyed_ = false;
 }
 
@@ -485,6 +473,16 @@ void Image::destroy()
 	vkDestroyImageView(instance.device().logicalDevice(), imageView_, nullptr);
 	vmaDestroyImage(instance.device().allocator(), image_, allocation_);
 	isDestroyed_ = true;
+}
+
+VkSampler Image::sampler(const LunaSampler sampler)
+{
+	if (sampler == nullptr)
+	{
+		return sampler_;
+	}
+	sampler_ = instance.sampler(sampler);
+	return sampler_;
 }
 
 } // namespace luna::core

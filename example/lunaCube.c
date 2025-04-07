@@ -469,7 +469,7 @@ int main()
 						   &transformMatrix,
 						   &graphicsPipeline);
 
-	LunaBufferCreationInfo vertexBufferCreationInfo = {
+	const LunaBufferCreationInfo vertexBufferCreationInfo = {
 		.size = sizeof(vertices),
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 	};
@@ -477,7 +477,7 @@ int main()
 	CHECK_RESULT(lunaCreateBuffer(&vertexBufferCreationInfo, &vertexBuffer));
 	lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
 
-	LunaBufferCreationInfo indexBufferCreationInfo = {
+	const LunaBufferCreationInfo indexBufferCreationInfo = {
 		.size = sizeof(indices),
 		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 	};

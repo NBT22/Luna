@@ -79,7 +79,8 @@ class Instance
 															 uint32_t,
 															 uint32_t));
 		friend VkResult(::lunaPushConstants(LunaGraphicsPipeline));
-		friend VkResult(::lunaCreateShaderModule(const uint32_t *, size_t, VkShaderModule *shaderModule));
+		friend VkResult(::lunaCreateShaderModule(const uint32_t *, size_t, VkShaderModule *));
+		friend void ::lunaWriteDescriptorSets(uint32_t, const LunaWriteDescriptorSet *);
 
 		Instance() = default;
 		explicit Instance(const LunaInstanceCreationInfo &creationInfo);
@@ -129,6 +130,7 @@ class Instance
 		[[nodiscard]] size_t stagingBufferOffset() const;
 		[[nodiscard]] VkSampler sampler(LunaSampler sampler) const;
 		[[nodiscard]] VkSampler sampler(const SamplerIndex *sampler) const;
+		[[nodiscard]] const Image &image(LunaImage image) const;
 
 		SwapChain swapChain{};
 		VkFormat depthImageFormat{};

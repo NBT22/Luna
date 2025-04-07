@@ -319,72 +319,33 @@ VkResult Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 							   uint32_t arrayLayers,
 							   LunaImage *imageIndex)
 {
-	assert(!creationInfo.descriptorSet || creationInfo.descriptorLayoutBindingName);
-	LunaDescriptorSet descriptorSetIndex;
-	const char *bindingName = creationInfo.descriptorLayoutBindingName != nullptr
-									  ? creationInfo.descriptorLayoutBindingName
-									  : "Image";
 	imageIndices_.emplace_back(images_.size());
 	TRY_CATCH_RESULT(images_.emplace_back(creationInfo, depth, arrayLayers));
 	const Image image = images_.back();
 	if (creationInfo.descriptorSet != nullptr)
 	{
-		descriptorSetIndex = creationInfo.descriptorSet;
-	} else
-	{
-		const VkDescriptorType descriptorType = image.sampler() == nullptr ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
-																		   : VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		const LunaDescriptorSetLayoutBinding binding = {
-			.bindingName = bindingName,
-			.descriptorType = descriptorType,
+		assert(creationInfo.descriptorLayoutBindingName);
+		const VkDescriptorImageInfo imageInfo = {
+			.sampler = image.sampler(),
+			.imageView = image.imageView(),
+			.imageLayout = creationInfo.layout,
+		};
+		DescriptorSetLayout descriptorSetLayout;
+		VkDescriptorSet descriptorSet;
+		Instance::descriptorSet(creationInfo.descriptorSet, nullptr, &descriptorSetLayout, &descriptorSet);
+		const char *bindingName = creationInfo.descriptorLayoutBindingName;
+		const DescriptorSetLayout::Binding binding = descriptorSetLayout.binding(bindingName);
+		const VkWriteDescriptorSet writeDescriptor = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = descriptorSet,
+			.dstBinding = binding.index,
 			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.descriptorType = binding.type,
+			.pImageInfo = &imageInfo,
 		};
-		const LunaDescriptorSetLayoutCreationInfo descriptorSetLayoutCreationInfo = {
-			.bindingCount = 1,
-			.bindings = &binding,
-		};
-		LunaDescriptorSetLayout descriptorSetLayout;
-		CHECK_RESULT_RETURN(createDescriptorSetLayout(descriptorSetLayoutCreationInfo, &descriptorSetLayout));
-
-		const VkDescriptorPoolSize poolSize = {
-			.type = descriptorType,
-			.descriptorCount = 1,
-		};
-		// ReSharper disable once CppVariableCanBeMadeConstexpr It's wrong again; memory locations are not constant -_-
-		const LunaDescriptorPoolCreationInfo descriptorPoolCreationInfo = {
-			.maxSets = 1,
-			.poolSizeCount = 1,
-			.poolSizes = &poolSize,
-		};
-		LunaDescriptorPool descriptorPool;
-		CHECK_RESULT_RETURN(createDescriptorPool(descriptorPoolCreationInfo, &descriptorPool));
-		const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
-			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 1,
-			.setLayouts = &descriptorSetLayout,
-		};
-		CHECK_RESULT_RETURN(allocateDescriptorSets(descriptorSetAllocationInfo, &descriptorSetIndex));
+		vkUpdateDescriptorSets(device_.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
 	}
 
-	const VkDescriptorImageInfo imageInfo = {
-		.sampler = image.sampler(),
-		.imageView = image.imageView(),
-		.imageLayout = creationInfo.layout,
-	};
-	DescriptorSetLayout descriptorSetLayout;
-	VkDescriptorSet descriptorSet;
-	Instance::descriptorSet(descriptorSetIndex, nullptr, &descriptorSetLayout, &descriptorSet);
-	const DescriptorSetLayout::Binding binding = descriptorSetLayout.binding(bindingName);
-	const VkWriteDescriptorSet writeDescriptor = {
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.dstSet = descriptorSet,
-		.dstBinding = binding.index,
-		.descriptorCount = 1,
-		.descriptorType = binding.type,
-		.pImageInfo = &imageInfo,
-	};
-	vkUpdateDescriptorSets(device_.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
 	if (imageIndex != nullptr)
 	{
 		*imageIndex = &imageIndices_.back();

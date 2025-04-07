@@ -29,6 +29,10 @@ inline void BufferRegion::copyToBuffer(const uint8_t *data, const size_t bytes) 
 	std::copy_n(data, bytes, data_);
 }
 
+inline size_t BufferRegion::size() const
+{
+	return size_;
+}
 inline const size_t &BufferRegion::offset() const
 {
 	return offset_;

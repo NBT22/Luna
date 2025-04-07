@@ -190,13 +190,27 @@ typedef struct
 
 typedef struct
 {
+		LunaSampler sampler;
+		LunaImage image;
+		VkImageLayout imageLayout;
+} LunaDescriptorImageInfo;
+
+typedef struct
+{
+		LunaBuffer buffer;
+		VkDeviceSize offset;
+		VkDeviceSize range;
+} LunaDescriptorBufferInfo;
+
+typedef struct
+{
 		LunaDescriptorSet descriptorSet;
 		const char *bindingName;
 		uint32_t descriptorArrayElement;
 		uint32_t descriptorCount;
-		const VkDescriptorImageInfo *imageInfo;
-		const VkDescriptorBufferInfo *bufferInfo;
-		const VkBufferView *texelBufferView;
+		const LunaDescriptorImageInfo *imageInfo;
+		const LunaDescriptorBufferInfo *bufferInfo;
+		// TODO: const VkBufferView *texelBufferView;
 } LunaWriteDescriptorSet;
 
 typedef struct
@@ -290,8 +304,6 @@ typedef struct
 		LunaSampler sampler;
 		const LunaSamplerCreationInfo *samplerCreationInfo;
 
-		// TODO: This feels redundant considering that we also have aspectMask
-		VkImageAspectFlags aspectFlags;
 		VkPipelineStageFlags sourceStageMask;
 		VkPipelineStageFlags destinationStageMask;
 		VkAccessFlags destinationAccessMask;

@@ -332,7 +332,7 @@ int main()
 	LunaGraphicsPipeline graphicsPipeline;
 	CHECK_RESULT(createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline));
 
-	LunaBufferCreationInfo bufferCreationInfo = {
+	const LunaBufferCreationInfo bufferCreationInfo = {
 		.size = sizeof(vertices),
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 	};

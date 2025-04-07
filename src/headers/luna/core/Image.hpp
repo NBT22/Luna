@@ -35,6 +35,7 @@ class Image
 
 		[[nodiscard]] VkImageView imageView() const;
 		[[nodiscard]] VkSampler sampler() const;
+		[[nodiscard]] VkSampler sampler(LunaSampler sampler);
 
 	private:
 		bool isDestroyed_{true};

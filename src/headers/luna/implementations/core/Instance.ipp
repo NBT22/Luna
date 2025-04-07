@@ -330,6 +330,11 @@ inline VkSampler Instance::sampler(const SamplerIndex *sampler) const
 {
 	return samplers_.at(sampler->index);
 }
+inline const Image &Instance::image(const LunaImage image) const
+{
+	return images_.at(static_cast<const ImageIndex *>(image)->index);
+}
+
 
 inline RenderPass &Instance::renderPass_(const LunaRenderPass index)
 {

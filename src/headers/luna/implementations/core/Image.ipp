@@ -5,6 +5,7 @@
 #pragma once
 
 #include <luna/core/Luna.hpp>
+#include "luna/core/Instance.hpp"
 
 namespace luna::helpers
 {
