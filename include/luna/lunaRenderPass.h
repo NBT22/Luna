@@ -17,6 +17,8 @@ VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, 
 LunaRenderPassSubpass lunaGetRenderPassSubpassByName(LunaRenderPass renderPass, const char *name);
 
 VkResult lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo);
+void lunaNextSubpass();
+void lunaEndRenderPass();
 
 #ifdef __cplusplus
 }

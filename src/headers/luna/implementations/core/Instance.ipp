@@ -13,6 +13,11 @@ inline void unbindAllPipelines()
 		pipeline.unbind();
 	}
 }
+inline void destroyBufferRegion(const LunaBuffer buffer)
+{
+	const buffer::BufferRegionIndex index = *static_cast<const buffer::BufferRegionIndex *>(buffer);
+	buffers.at(index.bufferIndex).regions_.at(index.bufferRegionIndex).destroy();
+}
 
 inline const RenderPass &renderPass(const LunaRenderPass renderPass)
 {
@@ -31,9 +36,9 @@ inline VkDescriptorSet descriptorSet(const LunaDescriptorSet descriptorSet)
 	return descriptorSets.at(static_cast<const DescriptorSetIndex *>(descriptorSet)->index);
 }
 inline void descriptorSet(const LunaDescriptorSet index,
-									VkDescriptorPool *pool,
-									DescriptorSetLayout *layout,
-									VkDescriptorSet *descriptorSet)
+						  VkDescriptorPool *pool,
+						  DescriptorSetLayout *layout,
+						  VkDescriptorSet *descriptorSet)
 {
 	const DescriptorSetIndex descriptorSetIndex = *static_cast<const DescriptorSetIndex *>(index);
 	if (pool != nullptr)

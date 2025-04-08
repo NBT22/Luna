@@ -301,16 +301,20 @@ static VkResult writeImage(const VkImage image,
 		CHECK_RESULT_RETURN(transferCommandBuffer.beginSingleUseCommandBuffer());
 	}
 
-	if (core::stagingBufferIndex == nullptr)
+	const size_t bytes = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format);
+	if (core::stagingBufferIndex == nullptr || core::bufferRegion(core::stagingBufferIndex).size() < bytes)
 	{
+		if (core::stagingBufferIndex != nullptr)
+		{
+			core::destroyBufferRegion(core::stagingBufferIndex);
+		}
 		const LunaBufferCreationInfo bufferCreationInfo = {
-			.size = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format),
+			.size = bytes,
 			.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		};
 		CHECK_RESULT_RETURN(core::buffer::BufferRegion::createBuffer(bufferCreationInfo, &core::stagingBufferIndex));
 	}
 
-	const size_t bytes = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format);
 	core::bufferRegion(core::stagingBufferIndex).copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
 	const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
 	if (VK_API_VERSION_MINOR(core::apiVersion) >= 3)

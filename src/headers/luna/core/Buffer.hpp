@@ -53,6 +53,7 @@ class Buffer
 		static bool isDestroyed(const Buffer &buffer);
 
 		friend class buffer::BufferRegion;
+		friend void destroyBufferRegion(LunaBuffer);
 
 		explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo);
 

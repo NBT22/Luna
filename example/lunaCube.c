@@ -529,6 +529,7 @@ int main()
 										   0,
 										   0,
 										   0));
-		CHECK_RESULT(lunaDrawFrame());
+		lunaEndRenderPass();
+		CHECK_RESULT(lunaPresentSwapChain());
 	}
 }

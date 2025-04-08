@@ -346,8 +346,8 @@ int main()
 		.depthAttachmentClearValue.depthStencil.depth = 1,
 	};
 
-#ifdef ALWAYS_UPDATE
 	SDL_Event event;
+#ifdef ALWAYS_UPDATE
 	while (true)
 	{
 		while (SDL_PollEvent(&event))
@@ -355,24 +355,30 @@ int main()
 			switch (event.type)
 			{
 				case SDL_EVENT_QUIT:
-					lunaCleanup();
+					CHECK_RESULT(lunaDestroyInstance());
 					return 0;
 				case SDL_EVENT_KEY_UP:
 					if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					{
-						lunaCleanup();
+						CHECK_RESULT(lunaDestroyInstance());
 						return 0;
 					}
 					break;
 				default:;
 			}
 		}
-		lunaBeginRenderPass(renderPass, &beginInfo);
-		lunaDrawBuffer(&drawInfo);
-		lunaDrawFrame();
+		CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
+		CHECK_RESULT(lunaDrawBuffer(vertexBuffer,
+									graphicsPipeline,
+									(LunaGraphicsPipelineBindInfo[]){0},
+									sizeof(vertices) / sizeof(*vertices),
+									1,
+									0,
+									0));
+		lunaEndRenderPass();
+		CHECK_RESULT(lunaPresentSwapChain());
 	}
 #else
-	SDL_Event event;
 	while (SDL_WaitEvent(&event))
 	{
 		switch (event.type)
@@ -397,7 +403,8 @@ int main()
 									1,
 									0,
 									0));
-		CHECK_RESULT(lunaDrawFrame());
+		lunaEndRenderPass();
+		CHECK_RESULT(lunaPresentSwapChain());
 	}
 #endif
 }

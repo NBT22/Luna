@@ -72,7 +72,7 @@ VkResult lunaDrawBufferIndexedIndirectCount(LunaBuffer vertexBuffer,
 											uint32_t stride);
 
 VkResult lunaPushConstants(LunaGraphicsPipeline pipeline);
-VkResult lunaDrawFrame();
+VkResult lunaPresentSwapChain();
 
 #ifdef __cplusplus
 }

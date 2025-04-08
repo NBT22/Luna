@@ -606,3 +606,15 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
 	}
 	return VK_SUCCESS;
 }
+void lunaNextSubpass()
+{
+	const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandBuffers().graphics;
+	assert(commandBuffer.isRecording());
+	vkCmdNextSubpass(commandBuffer.commandBuffer(), VK_SUBPASS_CONTENTS_INLINE);
+}
+void lunaEndRenderPass()
+{
+	const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandBuffers().graphics;
+	assert(commandBuffer.isRecording());
+	vkCmdEndRenderPass(commandBuffer.commandBuffer());
+}

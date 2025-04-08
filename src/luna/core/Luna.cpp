@@ -16,12 +16,11 @@ VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkSha
 	CHECK_RESULT_RETURN(luna::core::device.addShaderModule(&creationInfo, shaderModule));
 	return VK_SUCCESS;
 }
-VkResult lunaDrawFrame()
+VkResult lunaPresentSwapChain()
 {
 	using namespace luna::core;
 	CommandBuffer &commandBuffer = device.commandBuffers().graphics;
 	assert(commandBuffer.isRecording());
-	vkCmdEndRenderPass(commandBuffer.commandBuffer());
 
 	const VkSemaphore &renderFinishedSemaphore = device.renderFinishedSemaphore();
 	constexpr VkPipelineStageFlags waitStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -35,7 +34,7 @@ VkResult lunaDrawFrame()
 		.signalSemaphoreCount = 1,
 		.pSignalSemaphores = &renderFinishedSemaphore,
 	};
-	CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::core::device.familyQueues().graphics, queueSubmitInfo));
+	CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(device.familyQueues().graphics, queueSubmitInfo));
 
 	const VkPresentInfoKHR presentInfo = {
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -45,7 +44,7 @@ VkResult lunaDrawFrame()
 		.pSwapchains = &swapChain.swapChain,
 		.pImageIndices = &swapChain.imageIndex,
 	};
-	CHECK_RESULT_RETURN(vkQueuePresentKHR(luna::core::device.familyQueues().presentation, &presentInfo));
+	CHECK_RESULT_RETURN(vkQueuePresentKHR(device.familyQueues().presentation, &presentInfo));
 
 	swapChain.imageIndex = -1u;
 	unbindAllPipelines();
