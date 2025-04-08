@@ -81,7 +81,7 @@ inline const FamilyValues<CommandBuffer> &Device::commandBuffers() const
 {
 	return commandBuffers_;
 }
-inline VkSemaphore Device::imageAvailableSemaphore() const
+inline const VkSemaphore &Device::imageAvailableSemaphore() const
 {
 	return imageAvailableSemaphore_;
 }

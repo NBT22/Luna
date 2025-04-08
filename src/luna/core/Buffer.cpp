@@ -7,6 +7,34 @@
 #include <luna/core/Instance.hpp>
 #include <luna/luna.h>
 
+namespace luna::helpers
+{
+static VkResult allocateBuffer(const LunaBufferCreationInfo &creationInfo,
+							   std::vector<core::Buffer>::iterator *iterator)
+{
+	core::buffers.reserve(core::buffers.size() + 1);
+	const std::vector<core::Buffer>::iterator &bufferIterator = std::find_if(core::buffers.begin(),
+																			 core::buffers.end(),
+																			 core::Buffer::isDestroyed);
+	const VkBufferCreateInfo bufferCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.flags = creationInfo.flags,
+		.size = creationInfo.size,
+		.usage = creationInfo.usage,
+		.sharingMode = core::device.sharingMode(),
+		.queueFamilyIndexCount = core::device.familyCount(),
+		.pQueueFamilyIndices = core::device.queueFamilyIndices(),
+	};
+	TRY_CATCH_RESULT(core::buffers.emplace(bufferIterator, bufferCreateInfo));
+
+	if (iterator != nullptr)
+	{
+		*iterator = bufferIterator;
+	}
+	return VK_SUCCESS;
+}
+} // namespace luna::helpers
+
 namespace luna::core::buffer
 {
 VkResult BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index)
@@ -16,14 +44,12 @@ VkResult BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo, 
 			   (creationInfo.flags & buffer.creationFlags_) == creationInfo.flags &&
 			   (creationInfo.usage & buffer.usageFlags_) == creationInfo.usage;
 	};
-	std::vector<Buffer>::iterator bufferIterator = std::find_if(instance.buffers_.begin(),
-																instance.buffers_.end(),
-																hasFreeSpace);
-	if (bufferIterator == instance.buffers_.end())
+	std::vector<Buffer>::iterator bufferIterator = std::find_if(buffers.begin(), buffers.end(), hasFreeSpace);
+	if (bufferIterator == buffers.end())
 	{
-		CHECK_RESULT_RETURN(instance.allocateBuffer(creationInfo, &bufferIterator));
+		CHECK_RESULT_RETURN(helpers::allocateBuffer(creationInfo, &bufferIterator));
 	}
-	const uint32_t bufferIndex = bufferIterator - instance.buffers_.begin();
+	const uint32_t bufferIndex = bufferIterator - buffers.begin();
 	Buffer *buffer = bufferIterator.base();
 
 	buffer->regions_.reserve(buffer->regions_.size() + 1);
@@ -38,10 +64,10 @@ VkResult BufferRegion::createBuffer(const LunaBufferCreationInfo &creationInfo, 
 	buffer->usedBytes_ += creationInfo.size;
 	buffer->freeBytes_ -= creationInfo.size;
 
-	instance.bufferRegionIndices_.emplace_back(bufferIndex, bufferRegionIterator - buffer->regions_.begin());
+	bufferRegionIndices.emplace_back(bufferIndex, bufferRegionIterator - buffer->regions_.begin());
 	if (index != nullptr)
 	{
-		*index = &instance.bufferRegionIndices_.back();
+		*index = &bufferRegionIndices.back();
 	}
 	return VK_SUCCESS;
 }
@@ -52,7 +78,7 @@ void BufferRegion::destroy()
 	{
 		return;
 	}
-	Buffer &buffer = instance.buffer(bufferIndex_);
+	Buffer &buffer = buffers.at(bufferIndex_);
 	buffer.freeBytes_ += size_;
 	buffer.usedBytes_ -= size_;
 	isDestroyed_ = true;
@@ -74,7 +100,7 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 		.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		.usage = VMA_MEMORY_USAGE_AUTO,
 	};
-	CHECK_RESULT_THROW(vmaCreateBuffer(instance.device().allocator(),
+	CHECK_RESULT_THROW(vmaCreateBuffer(device.allocator(),
 									   &bufferCreateInfo,
 									   &allocationCreateInfo,
 									   &buffer_,
@@ -90,7 +116,7 @@ void Buffer::destroy()
 	{
 		return;
 	}
-	vmaDestroyBuffer(instance.device().allocator(), buffer_, allocation_);
+	vmaDestroyBuffer(device.allocator(), buffer_, allocation_);
 	usedBytes_ = 0;
 	regions_.clear();
 	regions_.shrink_to_fit();
@@ -101,7 +127,7 @@ void Buffer::destroy()
 VkResult lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	return luna::core::instance.allocateBuffer(*creationInfo, nullptr);
+	return luna::helpers::allocateBuffer(*creationInfo, nullptr);
 }
 
 VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer)
@@ -117,7 +143,7 @@ void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size
 		return;
 	}
 	assert(data);
-	std::copy_n(static_cast<const uint8_t *>(data), bytes, luna::core::instance.bufferRegion(buffer).data_);
+	std::copy_n(static_cast<const uint8_t *>(data), bytes, luna::core::bufferRegion(buffer).data_);
 }
 
 VkResult lunaDrawBuffer(const LunaBuffer vertexBuffer,
@@ -131,15 +157,15 @@ VkResult lunaDrawBuffer(const LunaBuffer vertexBuffer,
 	using namespace luna::core;
 	assert(vertexBuffer && pipeline);
 	const auto bufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
-	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+	const CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+	CHECK_RESULT_RETURN(graphicsPipelines.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
 								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
 						   1,
-						   &instance.buffers_.at(bufferRegionIndex.bufferIndex).buffer(),
-						   &instance.bufferRegion(bufferRegionIndex).offset());
+						   &buffers.at(bufferRegionIndex.bufferIndex).buffer(),
+						   &bufferRegion(bufferRegionIndex).offset());
 	vkCmdDraw(commandBuffer.commandBuffer(), vertexCount, instanceCount, firstVertex, firstInstance);
 	return VK_SUCCESS;
 }
@@ -156,17 +182,17 @@ VkResult lunaDrawBufferIndirect(const LunaBuffer vertexBuffer,
 	assert(vertexBuffer && pipeline && buffer);
 	const auto vertexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
 	const auto drawParameterBufferIndex = static_cast<const buffer::BufferRegionIndex *>(buffer)->bufferIndex;
-	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+	const CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+	CHECK_RESULT_RETURN(graphicsPipelines.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
 								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
 						   1,
-						   &instance.buffers_.at(vertexBufferRegionIndex.bufferIndex).buffer(),
-						   &instance.bufferRegion(vertexBufferRegionIndex).offset());
+						   &buffers.at(vertexBufferRegionIndex.bufferIndex).buffer(),
+						   &bufferRegion(vertexBufferRegionIndex).offset());
 	vkCmdDrawIndirect(commandBuffer.commandBuffer(),
-					  instance.buffers_.at(drawParameterBufferIndex).buffer(),
+					  buffers.at(drawParameterBufferIndex).buffer(),
 					  offset,
 					  drawCount,
 					  stride);
@@ -188,20 +214,20 @@ VkResult lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
 	const auto vertexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
 	const auto drawParameterBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(buffer);
 	const auto countBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(countBuffer);
-	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+	const CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+	CHECK_RESULT_RETURN(graphicsPipelines.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
 								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
 						   1,
-						   &instance.buffers_.at(vertexBufferRegionIndex.bufferIndex).buffer(),
-						   &instance.bufferRegion(vertexBufferRegionIndex).offset());
+						   &buffers.at(vertexBufferRegionIndex.bufferIndex).buffer(),
+						   &bufferRegion(vertexBufferRegionIndex).offset());
 	vkCmdDrawIndirectCount(commandBuffer.commandBuffer(),
-						   instance.buffers_.at(drawParameterBufferRegionIndex.bufferIndex).buffer(),
-						   offset + instance.bufferRegion(drawParameterBufferRegionIndex).offset(),
-						   instance.buffers_.at(countBufferRegionIndex.bufferIndex).buffer(),
-						   countBufferOffset + instance.bufferRegion(countBufferRegionIndex).offset(),
+						   buffers.at(drawParameterBufferRegionIndex.bufferIndex).buffer(),
+						   offset + bufferRegion(drawParameterBufferRegionIndex).offset(),
+						   buffers.at(countBufferRegionIndex.bufferIndex).buffer(),
+						   countBufferOffset + bufferRegion(countBufferRegionIndex).offset(),
 						   maxDrawCount,
 						   stride);
 	return VK_SUCCESS;
@@ -223,18 +249,18 @@ VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
 	assert(vertexBuffer && indexBuffer && pipeline);
 	const auto bufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
 	const auto indexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(indexBuffer);
-	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+	const CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+	CHECK_RESULT_RETURN(graphicsPipelines.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
 								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
 						   1,
-						   &instance.buffers_.at(bufferRegionIndex.bufferIndex).buffer(),
-						   &instance.bufferRegion(bufferRegionIndex).offset());
+						   &buffers.at(bufferRegionIndex.bufferIndex).buffer(),
+						   &bufferRegion(bufferRegionIndex).offset());
 	vkCmdBindIndexBuffer(commandBuffer.commandBuffer(),
-						 instance.buffers_.at(indexBufferRegionIndex.bufferIndex).buffer(),
-						 indexOffset + instance.bufferRegion(indexBufferRegionIndex).offset(),
+						 buffers.at(indexBufferRegionIndex.bufferIndex).buffer(),
+						 indexOffset + bufferRegion(indexBufferRegionIndex).offset(),
 						 indexType);
 	vkCmdDrawIndexed(commandBuffer.commandBuffer(), indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 	return VK_SUCCESS;
@@ -256,22 +282,22 @@ VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
 	const auto vertexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(vertexBuffer);
 	const auto drawParameterBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(buffer);
 	const auto indexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(indexBuffer);
-	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+	const CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+	CHECK_RESULT_RETURN(graphicsPipelines.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
 								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
 						   1,
-						   &instance.buffers_.at(vertexBufferRegionIndex.bufferIndex).buffer(),
-						   &instance.bufferRegion(vertexBufferRegionIndex).offset());
+						   &buffers.at(vertexBufferRegionIndex.bufferIndex).buffer(),
+						   &bufferRegion(vertexBufferRegionIndex).offset());
 	vkCmdBindIndexBuffer(commandBuffer.commandBuffer(),
-						 instance.buffers_.at(indexBufferRegionIndex.bufferIndex).buffer(),
-						 indexOffset + instance.bufferRegion(indexBufferRegionIndex).offset(),
+						 buffers.at(indexBufferRegionIndex.bufferIndex).buffer(),
+						 indexOffset + bufferRegion(indexBufferRegionIndex).offset(),
 						 indexType);
 	vkCmdDrawIndexedIndirect(commandBuffer.commandBuffer(),
-							 instance.buffers_.at(drawParameterBufferRegionIndex.bufferIndex).buffer(),
-							 offset + instance.bufferRegion(drawParameterBufferRegionIndex).offset(),
+							 buffers.at(drawParameterBufferRegionIndex.bufferIndex).buffer(),
+							 offset + bufferRegion(drawParameterBufferRegionIndex).offset(),
 							 drawCount,
 							 stride);
 	return VK_SUCCESS;
@@ -296,24 +322,24 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
 	const auto drawParameterBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(buffer);
 	const auto countBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(countBuffer);
 	const auto indexBufferRegionIndex = *static_cast<const buffer::BufferRegionIndex *>(indexBuffer);
-	const CommandBuffer &commandBuffer = instance.commandBuffers().graphics;
-	CHECK_RESULT_RETURN(instance.graphicsPipelines_.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
+	const CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+	CHECK_RESULT_RETURN(graphicsPipelines.at(static_cast<const GraphicsPipelineIndex *>(pipeline)->index)
 								.bind(*pipelineBindInfo));
 	assert(commandBuffer.isRecording());
 	vkCmdBindVertexBuffers(commandBuffer.commandBuffer(),
 						   0,
 						   1,
-						   &instance.buffers_.at(vertexBufferRegionIndex.bufferIndex).buffer(),
-						   &instance.bufferRegion(vertexBufferRegionIndex).offset());
+						   &buffers.at(vertexBufferRegionIndex.bufferIndex).buffer(),
+						   &bufferRegion(vertexBufferRegionIndex).offset());
 	vkCmdBindIndexBuffer(commandBuffer.commandBuffer(),
-						 instance.buffers_.at(indexBufferRegionIndex.bufferIndex).buffer(),
-						 indexOffset + instance.bufferRegion(indexBufferRegionIndex).offset(),
+						 buffers.at(indexBufferRegionIndex.bufferIndex).buffer(),
+						 indexOffset + bufferRegion(indexBufferRegionIndex).offset(),
 						 indexType);
 	vkCmdDrawIndexedIndirectCount(commandBuffer.commandBuffer(),
-								  instance.buffers_.at(drawParameterBufferRegionIndex.bufferIndex).buffer(),
-								  offset + instance.bufferRegion(drawParameterBufferRegionIndex).offset(),
-								  instance.buffers_.at(countBufferRegionIndex.bufferIndex).buffer(),
-								  countBufferOffset + instance.bufferRegion(countBufferRegionIndex).offset(),
+								  buffers.at(drawParameterBufferRegionIndex.bufferIndex).buffer(),
+								  offset + bufferRegion(drawParameterBufferRegionIndex).offset(),
+								  buffers.at(countBufferRegionIndex.bufferIndex).buffer(),
+								  countBufferOffset + bufferRegion(countBufferRegionIndex).offset(),
 								  maxDrawCount,
 								  stride);
 	return VK_SUCCESS;

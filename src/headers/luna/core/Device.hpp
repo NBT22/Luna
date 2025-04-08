@@ -45,7 +45,7 @@ class Device
 		[[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const;
 		[[nodiscard]] FamilyValues<CommandBuffer> &commandBuffers();
 		[[nodiscard]] const FamilyValues<CommandBuffer> &commandBuffers() const;
-		[[nodiscard]] VkSemaphore imageAvailableSemaphore() const;
+		[[nodiscard]] const VkSemaphore &imageAvailableSemaphore() const;
 		[[nodiscard]] VkSemaphore renderFinishedSemaphore() const;
 
 	private:

@@ -16,14 +16,14 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 {
 	assert(isDestroyed_);
 	uint32_t deviceCount = 0;
-	CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, nullptr));
+	CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr));
 	if (deviceCount == 0)
 	{
 		throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
 	}
 	std::vector<VkPhysicalDevice> devices(deviceCount);
-	CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance.instance(), &deviceCount, devices.data()));
-	switch (instance.minorVersion())
+	CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data()));
+	switch (VK_API_VERSION_MINOR(apiVersion))
 	{
 		case 1:
 			vulkan11Features_ = {
@@ -86,7 +86,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 			};
 			break;
 		default:
-			assert(1 <= instance.minorVersion() && instance.minorVersion() <= 4);
+			assert(1 <= VK_API_VERSION_MINOR(apiVersion) && VK_API_VERSION_MINOR(apiVersion) <= 4);
 	}
 	for (const VkPhysicalDevice device: devices)
 	{
@@ -156,8 +156,8 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 		.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
 		.physicalDevice = physicalDevice_,
 		.device = logicalDevice_,
-		.instance = instance.instance(),
-		.vulkanApiVersion = VK_MAKE_API_VERSION(0, 1, instance.minorVersion(), 0),
+		.instance = instance,
+		.vulkanApiVersion = apiVersion,
 	};
 	CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
@@ -180,23 +180,25 @@ VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
 		.requiredFeatures = requiredFeatures2,
 		.surface = creationInfo->surface,
 	};
-	return luna::core::instance.addNewDevice(creationInfo2);
+	TRY_CATCH_RESULT(luna::core::device = luna::core::Device(creationInfo2));
+	return VK_SUCCESS;
 }
 
 VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
 	assert(creationInfo);
-	return luna::core::instance.addNewDevice(*creationInfo);
+	TRY_CATCH_RESULT(luna::core::device = luna::core::Device(*creationInfo));
+	return VK_SUCCESS;
 }
 
 VkPhysicalDeviceProperties lunaGetPhysicalDeviceProperties() {
 	VkPhysicalDeviceProperties properties;
-	vkGetPhysicalDeviceProperties(luna::core::instance.device().physicalDevice(), &properties);
+	vkGetPhysicalDeviceProperties(luna::core::device.physicalDevice(), &properties);
 	return properties;
 }
 
 VkPhysicalDeviceProperties2 lunaGetPhysicalDeviceProperties2() {
 	VkPhysicalDeviceProperties2 properties;
-	vkGetPhysicalDeviceProperties2(luna::core::instance.device().physicalDevice(), &properties);
+	vkGetPhysicalDeviceProperties2(luna::core::device.physicalDevice(), &properties);
 	return properties;
 }

@@ -122,148 +122,40 @@ static VkResult createSwapChainImages(const VkDevice logicalDevice, core::SwapCh
 
 namespace luna::core
 {
-Instance instance;
-Instance::Instance(const LunaInstanceCreationInfo &creationInfo)
+SwapChain swapChain{};
+VkFormat depthImageFormat{};
+uint32_t apiVersion{};
+VkInstance instance{};
+Device device{};
+VkSurfaceKHR surface{};
+std::list<RenderPassIndex> renderPassIndices{};
+std::vector<RenderPass> renderPasses{};
+std::list<DescriptorPoolIndex> descriptorPoolIndices{};
+std::list<DescriptorSetLayoutIndex> descriptorSetLayoutIndices{};
+std::list<DescriptorSetIndex> descriptorSetIndices{};
+std::vector<VkDescriptorPool> descriptorPools{};
+std::vector<DescriptorSetLayout> descriptorSetLayouts{};
+std::vector<VkDescriptorSet> descriptorSets{};
+std::list<GraphicsPipelineIndex> graphicsPipelineIndices{};
+std::vector<GraphicsPipeline> graphicsPipelines{};
+std::list<buffer::BufferRegionIndex> bufferRegionIndices{};
+std::vector<Buffer> buffers{};
+LunaBuffer stagingBufferIndex{};
+std::list<SamplerIndex> samplerIndices{};
+std::vector<VkSampler> samplers{};
+std::list<ImageIndex> imageIndices{};
+std::vector<Image> images{};
+
+VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 {
-	apiVersion_ = creationInfo.apiVersion;
-
-	const uint32_t enabledLayerCount = creationInfo.enableValidation ? creationInfo.layerCount + 1
-																	 : creationInfo.layerCount;
-	std::vector<const char *> enabledLayers;
-	enabledLayers.reserve(enabledLayerCount);
-	for (uint32_t i = 0; i < creationInfo.layerCount; i++)
-	{
-		enabledLayers.emplace_back(creationInfo.layerNames[i]);
-	}
-	if (creationInfo.enableValidation)
-	{
-		enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
-	}
-
-	[[maybe_unused]] bool surfaceExtensionRequested = false;
-	for (uint32_t i = 0; i < creationInfo.extensionCount; i++)
-	{
-		if (std::strncmp(creationInfo.extensionNames[i], "VK_KHR_surface", 14) == 0)
-		{
-			surfaceExtensionRequested = true;
-			break;
-		}
-	}
-	assert(surfaceExtensionRequested);
-
-	const VkApplicationInfo vulkanApplicationInfo = {
-		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.apiVersion = creationInfo.apiVersion,
-	};
-	const VkInstanceCreateInfo createInfo = {
-		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pApplicationInfo = &vulkanApplicationInfo,
-		.enabledLayerCount = enabledLayerCount,
-		.ppEnabledLayerNames = enabledLayers.data(),
-		.enabledExtensionCount = creationInfo.extensionCount,
-		.ppEnabledExtensionNames = creationInfo.extensionNames,
-	};
-	CHECK_RESULT_THROW(vkCreateInstance(&createInfo, nullptr, &instance_));
-}
-
-VkResult Instance::destroy()
-{
-	const VkDevice logicalDevice = device_.logicalDevice();
-	CHECK_RESULT_RETURN(vkDeviceWaitIdle(logicalDevice));
-
-
-	for (uint32_t i = 0; i < swapChain.imageCount; i++)
-	{
-		vkDestroyFramebuffer(logicalDevice, swapChain.framebuffers.at(i), nullptr);
-		vkDestroyImageView(logicalDevice, swapChain.imageViews.at(i), nullptr);
-	}
-	vkDestroySwapchainKHR(logicalDevice, swapChain.swapChain, nullptr);
-
-	for (const VkSampler sampler: samplers_)
-	{
-		vkDestroySampler(logicalDevice, sampler, nullptr);
-	}
-	for (Image image: images_)
-	{
-		image.destroy();
-	}
-
-	for (GraphicsPipeline pipeline: graphicsPipelines_)
-	{
-		pipeline.destroy();
-	}
-	for (RenderPass renderPass: renderPasses_)
-	{
-		renderPass.destroy();
-	}
-
-	for (const VkDescriptorPool descriptorPool: descriptorPools_)
-	{
-		vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
-	}
-	for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts_)
-	{
-		descriptorSetLayout.destroy();
-	}
-
-	for (Buffer buffer: buffers_)
-	{
-		buffer.destroy();
-	}
-
-	device_.destroy();
-	vkDestroySurfaceKHR(instance_, surface_, nullptr);
-	vkDestroyInstance(instance_, nullptr);
-
-
-	swapChain.images.clear();
-	swapChain.images.shrink_to_fit();
-	swapChain.imageViews.clear();
-	swapChain.imageViews.shrink_to_fit();
-	swapChain.framebuffers.clear();
-	swapChain.framebuffers.shrink_to_fit();
-
-	samplerIndices_.clear();
-	samplers_.clear();
-	samplers_.shrink_to_fit();
-	imageIndices_.clear();
-	images_.clear();
-	images_.shrink_to_fit();
-
-	graphicsPipelineIndices_.clear();
-	graphicsPipelines_.clear();
-	graphicsPipelines_.shrink_to_fit();
-	renderPassIndices_.clear();
-	renderPasses_.clear();
-	renderPasses_.shrink_to_fit();
-
-	descriptorPoolIndices_.clear();
-	descriptorSetLayoutIndices_.clear();
-	descriptorSetIndices_.clear();
-	descriptorPools_.clear();
-	descriptorPools_.shrink_to_fit();
-	descriptorSetLayouts_.clear();
-	descriptorSetLayouts_.shrink_to_fit();
-	descriptorSets_.clear();
-	descriptorSets_.shrink_to_fit();
-
-	bufferRegionIndices_.clear();
-	buffers_.clear();
-	buffers_.shrink_to_fit();
-
-	return VK_SUCCESS;
-}
-
-VkResult Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
-{
-	surface_ = creationInfo.surface;
+	surface = creationInfo.surface;
 
 	VkSurfaceCapabilitiesKHR capabilities;
-	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_.physicalDevice(), surface_, &capabilities));
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice(), surface, &capabilities));
 	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 
-	CHECK_RESULT_RETURN(helpers::findSwapChainFormat(device_.physicalDevice(),
-													 surface_,
+	CHECK_RESULT_RETURN(helpers::findSwapChainFormat(device.physicalDevice(),
+													 surface,
 													 creationInfo.formatCount,
 													 creationInfo.formatPriorityList,
 													 swapChain.format));
@@ -279,8 +171,8 @@ VkResult Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo
 	assert(capabilities.minImageExtent.height <= swapChain.extent.height &&
 		   swapChain.extent.height <= capabilities.maxImageExtent.height);
 
-	CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(device_.physicalDevice(),
-														 surface_,
+	CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(device.physicalDevice(),
+														 surface,
 														 creationInfo.presentModeCount,
 														 creationInfo.presentModePriorityList,
 														 swapChain.presentMode));
@@ -293,35 +185,35 @@ VkResult Instance::createSwapChain(const LunaSwapChainCreationInfo &creationInfo
 															   : creationInfo.compositeAlpha;
 	const VkSwapchainCreateInfoKHR createInfo = {
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-		.surface = surface_,
+		.surface = surface,
 		.minImageCount = swapChain.imageCount,
 		.imageFormat = swapChain.format.format,
 		.imageColorSpace = swapChain.format.colorSpace,
 		.imageExtent = swapChain.extent,
 		.imageArrayLayers = 1,
 		.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : creationInfo.imageUsage,
-		.imageSharingMode = device_.sharingMode(),
-		.queueFamilyIndexCount = device_.familyCount(),
-		.pQueueFamilyIndices = device_.queueFamilyIndices(),
+		.imageSharingMode = device.sharingMode(),
+		.queueFamilyIndexCount = device.familyCount(),
+		.pQueueFamilyIndices = device.queueFamilyIndices(),
 		.preTransform = capabilities.currentTransform,
 		.compositeAlpha = compositeAlpha,
 		.presentMode = swapChain.presentMode,
 		.clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
 	};
-	CHECK_RESULT_RETURN(vkCreateSwapchainKHR(device_.logicalDevice(), &createInfo, nullptr, &swapChain.swapChain));
+	CHECK_RESULT_RETURN(vkCreateSwapchainKHR(device.logicalDevice(), &createInfo, nullptr, &swapChain.swapChain));
 
-	CHECK_RESULT_RETURN(helpers::createSwapChainImages(device_.logicalDevice(), swapChain));
+	CHECK_RESULT_RETURN(helpers::createSwapChainImages(device.logicalDevice(), swapChain));
 	swapChain.imageIndex = -1u;
 	return VK_SUCCESS;
 }
-VkResult Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
-							   uint32_t depth,
-							   uint32_t arrayLayers,
-							   LunaImage *imageIndex)
+VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
+					 uint32_t depth,
+					 uint32_t arrayLayers,
+					 LunaImage *imageIndex)
 {
-	imageIndices_.emplace_back(images_.size());
-	TRY_CATCH_RESULT(images_.emplace_back(creationInfo, depth, arrayLayers));
-	const Image image = images_.back();
+	imageIndices.emplace_back(images.size());
+	TRY_CATCH_RESULT(images.emplace_back(creationInfo, depth, arrayLayers));
+	const Image image = images.back();
 	if (creationInfo.descriptorSet != nullptr)
 	{
 		assert(creationInfo.descriptorLayoutBindingName);
@@ -332,7 +224,7 @@ VkResult Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 		};
 		DescriptorSetLayout descriptorSetLayout;
 		VkDescriptorSet descriptorSet;
-		Instance::descriptorSet(creationInfo.descriptorSet, nullptr, &descriptorSetLayout, &descriptorSet);
+		core::descriptorSet(creationInfo.descriptorSet, nullptr, &descriptorSetLayout, &descriptorSet);
 		const char *bindingName = creationInfo.descriptorLayoutBindingName;
 		const DescriptorSetLayout::Binding binding = descriptorSetLayout.binding(bindingName);
 		const VkWriteDescriptorSet writeDescriptor = {
@@ -343,12 +235,12 @@ VkResult Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 			.descriptorType = binding.type,
 			.pImageInfo = &imageInfo,
 		};
-		vkUpdateDescriptorSets(device_.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
+		vkUpdateDescriptorSets(device.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
 	}
 
 	if (imageIndex != nullptr)
 	{
-		*imageIndex = &imageIndices_.back();
+		*imageIndex = &imageIndices.back();
 	}
 	return VK_SUCCESS;
 }
@@ -357,34 +249,156 @@ VkResult Instance::createImage(const LunaSampledImageCreationInfo &creationInfo,
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	TRY_CATCH_RESULT(luna::core::instance = luna::core::Instance(*creationInfo));
+	luna::core::apiVersion = creationInfo->apiVersion;
+
+	const uint32_t enabledLayerCount = creationInfo->enableValidation ? creationInfo->layerCount + 1
+																	  : creationInfo->layerCount;
+	std::vector<const char *> enabledLayers;
+	enabledLayers.reserve(enabledLayerCount);
+	for (uint32_t i = 0; i < creationInfo->layerCount; i++)
+	{
+		enabledLayers.emplace_back(creationInfo->layerNames[i]);
+	}
+	if (creationInfo->enableValidation)
+	{
+		enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
+	}
+
+	[[maybe_unused]] bool surfaceExtensionRequested = false;
+	for (uint32_t i = 0; i < creationInfo->extensionCount; i++)
+	{
+		if (std::strncmp(creationInfo->extensionNames[i], "VK_KHR_surface", 14) == 0)
+		{
+			surfaceExtensionRequested = true;
+			break;
+		}
+	}
+	assert(surfaceExtensionRequested);
+
+	const VkApplicationInfo vulkanApplicationInfo = {
+		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+		.apiVersion = creationInfo->apiVersion,
+	};
+	const VkInstanceCreateInfo createInfo = {
+		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.pApplicationInfo = &vulkanApplicationInfo,
+		.enabledLayerCount = enabledLayerCount,
+		.ppEnabledLayerNames = enabledLayers.data(),
+		.enabledExtensionCount = creationInfo->extensionCount,
+		.ppEnabledExtensionNames = creationInfo->extensionNames,
+	};
+	CHECK_RESULT_RETURN(vkCreateInstance(&createInfo, nullptr, &luna::core::instance));
 	return VK_SUCCESS;
 }
 VkResult lunaDestroyInstance()
 {
-	return luna::core::instance.destroy();
+	using namespace luna::core;
+	const VkDevice logicalDevice = device.logicalDevice();
+	CHECK_RESULT_RETURN(vkDeviceWaitIdle(logicalDevice));
+
+
+	for (uint32_t i = 0; i < swapChain.imageCount; i++)
+	{
+		vkDestroyFramebuffer(logicalDevice, swapChain.framebuffers.at(i), nullptr);
+		vkDestroyImageView(logicalDevice, swapChain.imageViews.at(i), nullptr);
+	}
+	vkDestroySwapchainKHR(logicalDevice, swapChain.swapChain, nullptr);
+
+	for (const VkSampler sampler: samplers)
+	{
+		vkDestroySampler(logicalDevice, sampler, nullptr);
+	}
+	for (Image image: images)
+	{
+		image.destroy();
+	}
+
+	for (GraphicsPipeline pipeline: graphicsPipelines)
+	{
+		pipeline.destroy();
+	}
+	for (RenderPass renderPass: renderPasses)
+	{
+		renderPass.destroy();
+	}
+
+	for (const VkDescriptorPool descriptorPool: descriptorPools)
+	{
+		vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+	}
+	for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts)
+	{
+		descriptorSetLayout.destroy();
+	}
+
+	for (Buffer buffer: buffers)
+	{
+		buffer.destroy();
+	}
+
+	device.destroy();
+	vkDestroySurfaceKHR(instance, surface, nullptr);
+	vkDestroyInstance(instance, nullptr);
+
+
+	swapChain.images.clear();
+	swapChain.images.shrink_to_fit();
+	swapChain.imageViews.clear();
+	swapChain.imageViews.shrink_to_fit();
+	swapChain.framebuffers.clear();
+	swapChain.framebuffers.shrink_to_fit();
+
+	samplerIndices.clear();
+	samplers.clear();
+	samplers.shrink_to_fit();
+	imageIndices.clear();
+	images.clear();
+	images.shrink_to_fit();
+
+	graphicsPipelineIndices.clear();
+	graphicsPipelines.clear();
+	graphicsPipelines.shrink_to_fit();
+	renderPassIndices.clear();
+	renderPasses.clear();
+	renderPasses.shrink_to_fit();
+
+	descriptorPoolIndices.clear();
+	descriptorSetLayoutIndices.clear();
+	descriptorSetIndices.clear();
+	descriptorPools.clear();
+	descriptorPools.shrink_to_fit();
+	descriptorSetLayouts.clear();
+	descriptorSetLayouts.shrink_to_fit();
+	descriptorSets.clear();
+	descriptorSets.shrink_to_fit();
+
+	bufferRegionIndices.clear();
+	buffers.clear();
+	buffers.shrink_to_fit();
+
+	return VK_SUCCESS;
 }
 VkInstance lunaGetInstance()
 {
-	return luna::core::instance.instance();
+	return luna::core::instance;
 }
 VkResult lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	return luna::core::instance.createSwapChain(*creationInfo);
+	return luna::core::createSwapChain(*creationInfo);
 }
 VkFormat lunaGetSwapChainFormat()
 {
-	return luna::core::instance.swapChain.format.format;
+	return luna::core::swapChain.format.format;
 }
 VkExtent2D lunaGetSwapChainExtent()
 {
-	return luna::core::instance.swapChain.extent;
+	return luna::core::swapChain.extent;
 }
 VkResult lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities)
 {
 	assert(capabilities);
-	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::instance.device().physicalDevice(),
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::device.physicalDevice(),
 																  surface,
 																  capabilities));
 	capabilities->maxImageCount = capabilities->maxImageCount == 0 ? UINT32_MAX : capabilities->maxImageCount;
@@ -396,18 +410,18 @@ void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatP
 	VkFormatProperties properties;
 	for (uint32_t i = 0; i < formatCount; i++)
 	{
-		vkGetPhysicalDeviceFormatProperties(luna::core::instance.device().physicalDevice(),
+		vkGetPhysicalDeviceFormatProperties(luna::core::device.physicalDevice(),
 											formatPriorityList[i],
 											&properties);
 		if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) ==
 			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		{
-			luna::core::instance.depthImageFormat = formatPriorityList[i];
+			luna::core::depthImageFormat = formatPriorityList[i];
 			return;
 		}
 	}
 }
 VkFormat lunaGetDepthImageFormat()
 {
-	return luna::core::instance.depthImageFormat;
+	return luna::core::depthImageFormat;
 }
