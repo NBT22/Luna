@@ -25,15 +25,13 @@ class GraphicsPipeline
 
 		void destroy();
 
-		VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo);
-		void unbind();
+		VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
 
 	private:
 		bool isDestroyed_{true};
 		VkPipeline pipeline_{};
 		VkPipelineLayout layout_{};
 		std::vector<LunaPushConstantsRange> pushConstantsRanges_{};
-		bool bound_{};
 };
 } // namespace luna::core
 

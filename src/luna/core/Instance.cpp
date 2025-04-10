@@ -118,6 +118,69 @@ static VkResult createSwapChainImages(const VkDevice logicalDevice, core::SwapCh
 	}
 	return VK_SUCCESS;
 }
+
+VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
+{
+	core::surface = creationInfo.surface;
+
+	VkSurfaceCapabilitiesKHR capabilities;
+	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(core::device.physicalDevice(),
+																  core::surface,
+																  &capabilities));
+	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
+
+	CHECK_RESULT_RETURN(helpers::findSwapChainFormat(core::device.physicalDevice(),
+													 core::surface,
+													 creationInfo.formatCount,
+													 creationInfo.formatPriorityList,
+													 core::swapChain.format));
+
+	core::swapChain.extent = capabilities.currentExtent;
+	if (core::swapChain.extent.width == UINT32_MAX || core::swapChain.extent.height == UINT32_MAX)
+	{
+		core::swapChain.extent.width = creationInfo.width;
+		core::swapChain.extent.height = creationInfo.height;
+	}
+	assert(capabilities.minImageExtent.width <= core::swapChain.extent.width &&
+		   core::swapChain.extent.width <= capabilities.maxImageExtent.width);
+	assert(capabilities.minImageExtent.height <= core::swapChain.extent.height &&
+		   core::swapChain.extent.height <= capabilities.maxImageExtent.height);
+
+	CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(core::device.physicalDevice(),
+														 core::surface,
+														 creationInfo.presentModeCount,
+														 creationInfo.presentModePriorityList,
+														 core::swapChain.presentMode));
+
+	core::swapChain.imageCount = creationInfo.minImageCount;
+	assert(capabilities.minImageCount <= core::swapChain.imageCount && core::swapChain.imageCount <= capabilities.maxImageCount);
+
+	const VkCompositeAlphaFlagBitsKHR compositeAlpha = creationInfo.compositeAlpha == 0
+															   ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
+															   : creationInfo.compositeAlpha;
+	const VkSwapchainCreateInfoKHR createInfo = {
+		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		.surface = core::surface,
+		.minImageCount = core::swapChain.imageCount,
+		.imageFormat = core::swapChain.format.format,
+		.imageColorSpace = core::swapChain.format.colorSpace,
+		.imageExtent = core::swapChain.extent,
+		.imageArrayLayers = 1,
+		.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : creationInfo.imageUsage,
+		.imageSharingMode = core::device.sharingMode(),
+		.queueFamilyIndexCount = core::device.familyCount(),
+		.pQueueFamilyIndices = core::device.queueFamilyIndices(),
+		.preTransform = capabilities.currentTransform,
+		.compositeAlpha = compositeAlpha,
+		.presentMode = core::swapChain.presentMode,
+		.clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
+	};
+	CHECK_RESULT_RETURN(vkCreateSwapchainKHR(core::device.logicalDevice(), &createInfo, nullptr, &core::swapChain.swapChain));
+
+	CHECK_RESULT_RETURN(helpers::createSwapChainImages(core::device.logicalDevice(), core::swapChain));
+	core::swapChain.imageIndex = -1u;
+	return VK_SUCCESS;
+}
 } // namespace luna::helpers
 
 namespace luna::core
@@ -128,6 +191,9 @@ uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
 VkSurfaceKHR surface{};
+VkPipeline boundPipeline{};
+VkBuffer boundVertexBuffer{};
+VkBuffer boundIndexBuffer{};
 std::list<RenderPassIndex> renderPassIndices{};
 std::vector<RenderPass> renderPasses{};
 std::list<DescriptorPoolIndex> descriptorPoolIndices{};
@@ -145,105 +211,6 @@ std::list<SamplerIndex> samplerIndices{};
 std::vector<VkSampler> samplers{};
 std::list<ImageIndex> imageIndices{};
 std::vector<Image> images{};
-
-VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
-{
-	surface = creationInfo.surface;
-
-	VkSurfaceCapabilitiesKHR capabilities;
-	CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice(), surface, &capabilities));
-	capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
-
-	CHECK_RESULT_RETURN(helpers::findSwapChainFormat(device.physicalDevice(),
-													 surface,
-													 creationInfo.formatCount,
-													 creationInfo.formatPriorityList,
-													 swapChain.format));
-
-	swapChain.extent = capabilities.currentExtent;
-	if (swapChain.extent.width == UINT32_MAX || swapChain.extent.height == UINT32_MAX)
-	{
-		swapChain.extent.width = creationInfo.width;
-		swapChain.extent.height = creationInfo.height;
-	}
-	assert(capabilities.minImageExtent.width <= swapChain.extent.width &&
-		   swapChain.extent.width <= capabilities.maxImageExtent.width);
-	assert(capabilities.minImageExtent.height <= swapChain.extent.height &&
-		   swapChain.extent.height <= capabilities.maxImageExtent.height);
-
-	CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(device.physicalDevice(),
-														 surface,
-														 creationInfo.presentModeCount,
-														 creationInfo.presentModePriorityList,
-														 swapChain.presentMode));
-
-	swapChain.imageCount = creationInfo.minImageCount;
-	assert(capabilities.minImageCount <= swapChain.imageCount && swapChain.imageCount <= capabilities.maxImageCount);
-
-	const VkCompositeAlphaFlagBitsKHR compositeAlpha = creationInfo.compositeAlpha == 0
-															   ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
-															   : creationInfo.compositeAlpha;
-	const VkSwapchainCreateInfoKHR createInfo = {
-		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-		.surface = surface,
-		.minImageCount = swapChain.imageCount,
-		.imageFormat = swapChain.format.format,
-		.imageColorSpace = swapChain.format.colorSpace,
-		.imageExtent = swapChain.extent,
-		.imageArrayLayers = 1,
-		.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : creationInfo.imageUsage,
-		.imageSharingMode = device.sharingMode(),
-		.queueFamilyIndexCount = device.familyCount(),
-		.pQueueFamilyIndices = device.queueFamilyIndices(),
-		.preTransform = capabilities.currentTransform,
-		.compositeAlpha = compositeAlpha,
-		.presentMode = swapChain.presentMode,
-		.clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
-	};
-	CHECK_RESULT_RETURN(vkCreateSwapchainKHR(device.logicalDevice(), &createInfo, nullptr, &swapChain.swapChain));
-
-	CHECK_RESULT_RETURN(helpers::createSwapChainImages(device.logicalDevice(), swapChain));
-	swapChain.imageIndex = -1u;
-	return VK_SUCCESS;
-}
-VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
-					 uint32_t depth,
-					 uint32_t arrayLayers,
-					 LunaImage *imageIndex)
-{
-	imageIndices.emplace_back(images.size());
-	TRY_CATCH_RESULT(images.emplace_back(creationInfo, depth, arrayLayers));
-	const Image image = images.back();
-	if (creationInfo.descriptorSet != nullptr)
-	{
-		assert(creationInfo.descriptorLayoutBindingName);
-		const VkDescriptorImageInfo imageInfo = {
-			.sampler = image.sampler(),
-			.imageView = image.imageView(),
-			.imageLayout = creationInfo.layout,
-		};
-		DescriptorSetLayout descriptorSetLayout;
-		VkDescriptorSet descriptorSet;
-		core::descriptorSet(creationInfo.descriptorSet, nullptr, &descriptorSetLayout, &descriptorSet);
-		const char *bindingName = creationInfo.descriptorLayoutBindingName;
-		const DescriptorSetLayout::Binding binding = descriptorSetLayout.binding(bindingName);
-		const VkWriteDescriptorSet writeDescriptor = {
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = descriptorSet,
-			.dstBinding = binding.index,
-			.descriptorCount = 1,
-			.descriptorType = binding.type,
-			.pImageInfo = &imageInfo,
-		};
-		vkUpdateDescriptorSets(device.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
-	}
-
-	if (imageIndex != nullptr)
-	{
-		*imageIndex = &imageIndices.back();
-	}
-	return VK_SUCCESS;
-}
 } // namespace luna::core
 
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
@@ -385,7 +352,7 @@ VkInstance lunaGetInstance()
 VkResult lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo)
 {
 	assert(creationInfo);
-	return luna::core::createSwapChain(*creationInfo);
+	return luna::helpers::createSwapChain(*creationInfo);
 }
 VkFormat lunaGetSwapChainFormat()
 {
@@ -410,9 +377,7 @@ void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatP
 	VkFormatProperties properties;
 	for (uint32_t i = 0; i < formatCount; i++)
 	{
-		vkGetPhysicalDeviceFormatProperties(luna::core::device.physicalDevice(),
-											formatPriorityList[i],
-											&properties);
+		vkGetPhysicalDeviceFormatProperties(luna::core::device.physicalDevice(), formatPriorityList[i], &properties);
 		if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) ==
 			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		{

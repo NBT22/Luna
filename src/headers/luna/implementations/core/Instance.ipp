@@ -6,19 +6,6 @@
 
 namespace luna::core
 {
-inline void unbindAllPipelines()
-{
-	for (GraphicsPipeline &pipeline: graphicsPipelines)
-	{
-		pipeline.unbind();
-	}
-}
-inline void destroyBufferRegion(const LunaBuffer buffer)
-{
-	const buffer::BufferRegionIndex index = *static_cast<const buffer::BufferRegionIndex *>(buffer);
-	buffers.at(index.bufferIndex).regions_.at(index.bufferRegionIndex).destroy();
-}
-
 inline const RenderPass &renderPass(const LunaRenderPass renderPass)
 {
 	return renderPasses.at(static_cast<const RenderPassIndex *>(renderPass)->index);

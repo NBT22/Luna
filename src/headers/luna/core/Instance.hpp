@@ -16,13 +16,6 @@
 
 namespace luna::core
 {
-void unbindAllPipelines();
-VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo);
-VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
-					 uint32_t depth,
-					 uint32_t arrayLayers,
-					 LunaImage *imageIndex);
-
 [[nodiscard]] const RenderPass &renderPass(LunaRenderPass renderPass);
 [[nodiscard]] VkDescriptorPool descriptorPool(LunaDescriptorPool descriptorPool);
 [[nodiscard]] const DescriptorSetLayout &descriptorSetLayout(LunaDescriptorSetLayout layout);
@@ -44,6 +37,10 @@ extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
 extern VkSurfaceKHR surface;
+
+extern VkPipeline boundPipeline;
+extern VkBuffer boundVertexBuffer;
+extern VkBuffer boundIndexBuffer;
 
 extern std::list<RenderPassIndex> renderPassIndices;
 extern std::vector<RenderPass> renderPasses;

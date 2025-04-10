@@ -44,10 +44,13 @@ VkResult lunaPresentSwapChain()
 		.pSwapchains = &swapChain.swapChain,
 		.pImageIndices = &swapChain.imageIndex,
 	};
-	CHECK_RESULT_RETURN(vkQueuePresentKHR(device.familyQueues().presentation, &presentInfo));
+	// TODO: This...
+	vkQueuePresentKHR(device.familyQueues().presentation, &presentInfo);
 
 	swapChain.imageIndex = -1u;
-	unbindAllPipelines();
+	boundPipeline = VK_NULL_HANDLE;
+	boundVertexBuffer = VK_NULL_HANDLE;
+	boundIndexBuffer = VK_NULL_HANDLE;
 	return VK_SUCCESS;
 }
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
@@ -146,12 +149,12 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
 	writes.reserve(writeCount);
 	for (uint32_t i = 0; i < writeCount; i++)
 	{
-		const auto [descriptorSetIndex,
-					bindingName,
-					descriptorArrayElement,
-					descriptorCount,
-					imageInfo,
-					bufferInfo] = descriptorWrites[i];
+		const auto &[descriptorSetIndex,
+					 bindingName,
+					 descriptorArrayElement,
+					 descriptorCount,
+					 imageInfo,
+					 bufferInfo] = descriptorWrites[i];
 		DescriptorSetLayout descriptorSetLayout;
 		VkDescriptorSet descriptorSet;
 		luna::core::descriptorSet(descriptorSetIndex, nullptr, &descriptorSetLayout, &descriptorSet);

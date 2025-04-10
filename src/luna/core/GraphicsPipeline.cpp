@@ -86,13 +86,12 @@ void GraphicsPipeline::destroy()
 	pushConstantsRanges_.shrink_to_fit();
 	isDestroyed_ = true;
 }
-VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo)
+VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) const
 {
-	if (bound_)
+	if (pipeline_ == boundPipeline)
 	{
 		return VK_SUCCESS;
 	}
-	unbindAllPipelines();
 	CommandBuffer commandBuffer = device.commandBuffers().graphics;
 	if (!commandBuffer.isRecording())
 	{
@@ -117,7 +116,7 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo)
 								bindInfo.dynamicOffsetCount,
 								bindInfo.dynamicOffsets);
 	}
-	bound_ = true;
+	boundPipeline = pipeline_;
 	return VK_SUCCESS;
 }
 } // namespace luna::core

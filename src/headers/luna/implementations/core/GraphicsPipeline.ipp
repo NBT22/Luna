@@ -10,10 +10,4 @@ inline bool GraphicsPipeline::isDestroyed(const GraphicsPipeline &graphicsPipeli
 {
 	return graphicsPipeline.isDestroyed_;
 }
-
-inline void GraphicsPipeline::unbind()
-{
-	bound_ = false;
-}
-
 } // namespace luna::core

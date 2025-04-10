@@ -306,7 +306,8 @@ static VkResult writeImage(const VkImage image,
 	{
 		if (core::stagingBufferIndex != nullptr)
 		{
-			core::destroyBufferRegion(core::stagingBufferIndex);
+			const auto index = *static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBufferIndex);
+			core::buffers.at(index.bufferIndex).destroyBufferRegion(index.bufferRegionIndex);
 		}
 		const LunaBufferCreationInfo bufferCreationInfo = {
 			.size = bytes,
@@ -392,6 +393,44 @@ static VkResult writeImage(const VkImage image,
 	};
 	CHECK_RESULT_RETURN(transferCommandBuffer.submitCommandBuffer(core::device.familyQueues().transfer,
 																  queueSubmitInfo));
+	return VK_SUCCESS;
+}
+static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
+							uint32_t depth,
+							uint32_t arrayLayers,
+							LunaImage *imageIndex)
+{
+	core::imageIndices.emplace_back(core::images.size());
+	TRY_CATCH_RESULT(core::images.emplace_back(creationInfo, depth, arrayLayers));
+	const core::Image image = core::images.back();
+	if (creationInfo.descriptorSet != nullptr)
+	{
+		assert(creationInfo.descriptorLayoutBindingName);
+		const VkDescriptorImageInfo imageInfo = {
+			.sampler = image.sampler(),
+			.imageView = image.imageView(),
+			.imageLayout = creationInfo.layout,
+		};
+		core::DescriptorSetLayout descriptorSetLayout;
+		VkDescriptorSet descriptorSet;
+		core::descriptorSet(creationInfo.descriptorSet, nullptr, &descriptorSetLayout, &descriptorSet);
+		const char *bindingName = creationInfo.descriptorLayoutBindingName;
+		const core::DescriptorSetLayout::Binding binding = descriptorSetLayout.binding(bindingName);
+		const VkWriteDescriptorSet writeDescriptor = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = descriptorSet,
+			.dstBinding = binding.index,
+			.descriptorCount = 1,
+			.descriptorType = binding.type,
+			.pImageInfo = &imageInfo,
+		};
+		vkUpdateDescriptorSets(core::device.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
+	}
+
+	if (imageIndex != nullptr)
+	{
+		*imageIndex = &core::imageIndices.back();
+	}
 	return VK_SUCCESS;
 }
 } // namespace luna::helpers
@@ -530,19 +569,19 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
 VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image)
 {
 	assert(creationInfo);
-	return luna::core::createImage(*creationInfo, 0, 1, image);
+	return luna::helpers::createImage(*creationInfo, 0, 1, image);
 }
 VkResult lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo,
 							  const uint32_t arrayLayers,
 							  LunaImage *image)
 {
 	assert(creationInfo && arrayLayers);
-	return luna::core::createImage(*creationInfo, 0, arrayLayers, image);
+	return luna::helpers::createImage(*creationInfo, 0, arrayLayers, image);
 }
 VkResult lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
 {
 	assert(creationInfo);
-	return luna::core::createImage(*creationInfo, depth, 1, image);
+	return luna::helpers::createImage(*creationInfo, depth, 1, image);
 }
 VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
 								const uint32_t depth,
@@ -550,5 +589,5 @@ VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo
 								LunaImage *image)
 {
 	assert(creationInfo && arrayLayers);
-	return luna::core::createImage(*creationInfo, depth, arrayLayers, image);
+	return luna::helpers::createImage(*creationInfo, depth, arrayLayers, image);
 }
