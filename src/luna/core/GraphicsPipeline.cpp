@@ -138,6 +138,25 @@ VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *crea
 	return VK_SUCCESS;
 }
 
+void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaGraphicsPipelineBindInfo *bindInfo)
+{
+	std::vector<VkDescriptorSet> descriptorSets;
+	descriptorSets.reserve(bindInfo->descriptorSetCount);
+	for (uint32_t i = 0; i < bindInfo->descriptorSetCount; i++)
+	{
+		descriptorSets.emplace_back(luna::core::descriptorSet(bindInfo->descriptorSets[i]));
+	}
+	const uint32_t pipelineIndex = static_cast<const luna::core::GraphicsPipelineIndex *>(pipeline)->index;
+	vkCmdBindDescriptorSets(luna::core::device.commandBuffers().graphics.commandBuffer(),
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							luna::core::graphicsPipelines.at(pipelineIndex).layout(),
+							bindInfo->firstSet,
+							bindInfo->descriptorSetCount,
+							descriptorSets.data(),
+							bindInfo->dynamicOffsetCount,
+							bindInfo->dynamicOffsets);
+}
+
 VkResult lunaPushConstants(const LunaGraphicsPipeline pipeline)
 {
 	const uint32_t pipelineIndex = static_cast<const luna::core::GraphicsPipelineIndex *>(pipeline)->index;

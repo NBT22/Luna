@@ -10,4 +10,9 @@ inline bool GraphicsPipeline::isDestroyed(const GraphicsPipeline &graphicsPipeli
 {
 	return graphicsPipeline.isDestroyed_;
 }
+
+inline VkPipelineLayout GraphicsPipeline::layout() const
+{
+	return layout_;
+}
 } // namespace luna::core

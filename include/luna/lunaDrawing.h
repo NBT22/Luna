@@ -71,6 +71,8 @@ VkResult lunaDrawBufferIndexedIndirectCount(LunaBuffer vertexBuffer,
 											uint32_t maxDrawCount,
 											uint32_t stride);
 
+// TODO: This should take a pipeline layout, but those don't exist yet
+void lunaBindDescriptorSets(LunaGraphicsPipeline pipeline, const LunaGraphicsPipelineBindInfo *bindInfo);
 VkResult lunaPushConstants(LunaGraphicsPipeline pipeline);
 VkResult lunaPresentSwapChain();
 

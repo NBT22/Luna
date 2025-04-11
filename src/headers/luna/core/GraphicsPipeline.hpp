@@ -27,6 +27,8 @@ class GraphicsPipeline
 
 		VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
 
+		[[nodiscard]] VkPipelineLayout layout() const;
+
 	private:
 		bool isDestroyed_{true};
 		VkPipeline pipeline_{};
