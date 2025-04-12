@@ -27,24 +27,24 @@ inline void descriptorSet(const LunaDescriptorSet index,
 						  DescriptorSetLayout *layout,
 						  VkDescriptorSet *descriptorSet)
 {
-	const DescriptorSetIndex descriptorSetIndex = *static_cast<const DescriptorSetIndex *>(index);
+	const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(index);
 	if (pool != nullptr)
 	{
-		*pool = descriptorPools.at(descriptorSetIndex.poolIndex->index);
+		*pool = descriptorPools.at(descriptorSetIndex->poolIndex->index);
 	}
 	if (layout != nullptr)
 	{
-		*layout = descriptorSetLayout(descriptorSetIndex.layoutIndex);
+		*layout = descriptorSetLayout(descriptorSetIndex->layoutIndex);
 	}
 	if (descriptorSet != nullptr)
 	{
-		*descriptorSet = descriptorSets.at(descriptorSetIndex.index);
+		*descriptorSet = descriptorSets.at(descriptorSetIndex->index);
 	}
 }
 inline const buffer::BufferRegion &bufferRegion(const LunaBuffer buffer)
 {
-	const buffer::BufferRegionIndex index = *static_cast<const buffer::BufferRegionIndex *>(buffer);
-	return buffers.at(index.bufferIndex).region(index.bufferRegionIndex);
+	const buffer::BufferRegionIndex *index = static_cast<const buffer::BufferRegionIndex *>(buffer);
+	return buffers.at(index->bufferIndex).region(index->bufferRegionIndex);
 }
 inline const buffer::BufferRegion &bufferRegion(const buffer::BufferRegionIndex index)
 {
@@ -52,8 +52,8 @@ inline const buffer::BufferRegion &bufferRegion(const buffer::BufferRegionIndex 
 }
 inline VkBuffer stagingBuffer()
 {
-	const buffer::BufferRegionIndex index = *static_cast<const buffer::BufferRegionIndex *>(stagingBufferIndex);
-	return buffers.at(index.bufferIndex).buffer();
+	const buffer::BufferRegionIndex *index = static_cast<const buffer::BufferRegionIndex *>(stagingBufferIndex);
+	return buffers.at(index->bufferIndex).buffer();
 }
 inline size_t stagingBufferOffset()
 {

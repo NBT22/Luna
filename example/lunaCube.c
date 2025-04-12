@@ -388,7 +388,7 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
 	return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline) == VK_SUCCESS;
 }
 
-int main()
+int main(void)
 {
 	if (!SDL_Init(SDL_INIT_VIDEO))
 	{

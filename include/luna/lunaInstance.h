@@ -13,17 +13,17 @@ extern "C"
 #endif
 
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
-VkResult lunaDestroyInstance();
-VkInstance lunaGetInstance();
+VkResult lunaDestroyInstance(void);
+VkInstance lunaGetInstance(void);
 
 VkResult lunaGetSurfaceCapabilities(VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 
 VkResult lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo);
-VkFormat lunaGetSwapChainFormat();
-VkExtent2D lunaGetSwapChainExtent();
+VkFormat lunaGetSwapChainFormat(void);
+VkExtent2D lunaGetSwapChainExtent(void);
 
 void lunaSetDepthImageFormat(uint32_t formatCount, const VkFormat *formatPriorityList);
-VkFormat lunaGetDepthImageFormat();
+VkFormat lunaGetDepthImageFormat(void);
 
 #ifdef __cplusplus
 }

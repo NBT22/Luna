@@ -17,7 +17,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
 	bindings.reserve(creationInfo.bindingCount);
 	for (uint32_t i = 0; i < creationInfo.bindingCount; i++)
 	{
-		const LunaDescriptorSetLayoutBinding binding = creationInfo.bindings[i];
+		const LunaDescriptorSetLayoutBinding &binding = creationInfo.bindings[i];
 		assert(!bindingIndexMap_.contains(binding.bindingName));
 		const uint32_t bindingIndex = bindingIndexMap_.size();
 		bindingIndexMap_.emplace(binding.bindingName, Binding{.index = bindingIndex, .type = binding.descriptorType});

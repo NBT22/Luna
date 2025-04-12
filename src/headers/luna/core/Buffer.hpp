@@ -81,6 +81,7 @@ class Buffer
 										   std::vector<buffer::BufferRegion>::const_iterator &regionIterator);
 
 		friend class buffer::BufferRegion;
+		friend void ::lunaDestroyBuffer(LunaBuffer);
 
 		explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo);
 

@@ -292,7 +292,7 @@ static VkResult writeImage(const VkImage image,
 						   const LunaSampledImageCreationInfo &creationInfo,
 						   const VkImageAspectFlags aspectMask)
 {
-	core::CommandBuffer transferCommandBuffer = core::device.commandBuffers().transfer;
+	core::CommandBuffer &transferCommandBuffer = core::device.commandBuffers().transfer;
 	if (!transferCommandBuffer.isRecording())
 	{
 		const VkDevice logicalDevice = core::device.logicalDevice();
@@ -306,8 +306,8 @@ static VkResult writeImage(const VkImage image,
 	{
 		if (core::stagingBufferIndex != nullptr)
 		{
-			const auto index = *static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBufferIndex);
-			core::buffers.at(index.bufferIndex).destroyBufferRegion(index.bufferRegionIndex);
+			const auto *index = static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBufferIndex);
+			core::buffers.at(index->bufferIndex).destroyBufferRegion(index->bufferRegionIndex);
 		}
 		const LunaBufferCreationInfo bufferCreationInfo = {
 			.size = bytes,
@@ -402,7 +402,7 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
 {
 	core::imageIndices.emplace_back(core::images.size());
 	TRY_CATCH_RESULT(core::images.emplace_back(creationInfo, depth, arrayLayers));
-	const core::Image image = core::images.back();
+	const core::Image &image = core::images.back();
 	if (creationInfo.descriptorSet != nullptr)
 	{
 		assert(creationInfo.descriptorLayoutBindingName);
@@ -415,7 +415,7 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
 		VkDescriptorSet descriptorSet;
 		core::descriptorSet(creationInfo.descriptorSet, nullptr, &descriptorSetLayout, &descriptorSet);
 		const char *bindingName = creationInfo.descriptorLayoutBindingName;
-		const core::DescriptorSetLayout::Binding binding = descriptorSetLayout.binding(bindingName);
+		const core::DescriptorSetLayout::Binding &binding = descriptorSetLayout.binding(bindingName);
 		const VkWriteDescriptorSet writeDescriptor = {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			.dstSet = descriptorSet,
