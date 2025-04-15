@@ -25,7 +25,13 @@ static VkResult allocateBuffer(const LunaBufferCreationInfo &creationInfo,
 		.queueFamilyIndexCount = core::device.familyCount(),
 		.pQueueFamilyIndices = core::device.queueFamilyIndices(),
 	};
-	TRY_CATCH_RESULT(core::buffers.emplace(bufferIterator, bufferCreateInfo));
+	if (bufferIterator == core::buffers.end())
+	{
+		TRY_CATCH_RESULT(core::buffers.emplace_back(bufferCreateInfo));
+	} else
+	{
+		TRY_CATCH_RESULT(*bufferIterator.base() = std::move(core::Buffer(bufferCreateInfo)));
+	}
 
 	if (iterator != nullptr)
 	{
