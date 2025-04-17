@@ -7,7 +7,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #define CHECK_RESULT(value) \
-	if (value != VK_SUCCESS) \
+	if ((value) != VK_SUCCESS) \
 	{ \
 		return 5; \
 	}
@@ -100,28 +100,36 @@ static const Vertex vertices[3] = {
 };
 #pragma endregion constants
 
+static bool shouldQuit()
+{
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+			case SDL_EVENT_QUIT:
+				return true;
+			case SDL_EVENT_KEY_UP:
+				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+				{
+					return true;
+				}
+			default:;
+		}
+	}
+	return false;
+}
+
 static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
 {
-	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
-
 	const LunaRenderPassCreationInfo renderPassCreationInfo = {
 		.samples = VK_SAMPLE_COUNT_4_BIT,
 		.createColorAttachment = true,
 		.colorAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_CLEAR,
-		.createDepthAttachment = true,
-		.depthAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_CLEAR,
 		.subpassCount = 1,
 		.subpasses = (const LunaSubpassCreationInfo[]){{
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.useColorAttachment = true,
-			.useDepthAttachment = true,
-		}},
-		.dependencyCount = 1,
-		.dependencies = (const VkSubpassDependency[]){{
-			.srcSubpass = VK_SUBPASS_EXTERNAL,
-			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		}},
 		.extent = extent,
 	};
@@ -134,14 +142,19 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 
 	VkShaderModule vertexShaderModule;
 	VkShaderModule fragmentShaderModule;
-	if (lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule) != VK_SUCCESS)
+	VkResult vertexShaderCreationResult = lunaCreateShaderModule(VERTEX_SHADER_SPIRV,
+																 sizeof(VERTEX_SHADER_SPIRV),
+																 &vertexShaderModule);
+	if (vertexShaderCreationResult != VK_SUCCESS)
 	{
-		return false;
+		return vertexShaderCreationResult;
 	}
-	if (lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV, sizeof(FRAGMENT_SHADER_SPIRV), &fragmentShaderModule) !=
-		VK_SUCCESS)
+	VkResult fragmentShaderCreationResult = lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV,
+																   sizeof(FRAGMENT_SHADER_SPIRV),
+																   &fragmentShaderModule);
+	if (fragmentShaderCreationResult != VK_SUCCESS)
 	{
-		return false;
+		return fragmentShaderCreationResult;
 	}
 	const VkPipelineShaderStageCreateInfo shaderStages[2] = {
 		{
@@ -209,41 +222,19 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 	const VkPipelineRasterizationStateCreateInfo rasterizer = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.polygonMode = VK_POLYGON_MODE_FILL,
-		.cullMode = VK_CULL_MODE_NONE,
-		.frontFace = VK_FRONT_FACE_CLOCKWISE,
 		.lineWidth = 1,
 	};
 
 	const VkPipelineMultisampleStateCreateInfo multisampling = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 		.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT,
-		.minSampleShading = 1,
-	};
-
-	const VkPipelineDepthStencilStateCreateInfo depthStencil = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-		.depthTestEnable = VK_TRUE,
-		.depthWriteEnable = VK_TRUE,
-		.depthCompareOp = VK_COMPARE_OP_LESS,
-		.maxDepthBounds = 1,
 	};
 
 	const VkPipelineColorBlendAttachmentState colorBlendAttachment = {
-		.blendEnable = VK_TRUE,
-		.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-		.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-		.colorBlendOp = VK_BLEND_OP_ADD,
-		.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-		.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-		.alphaBlendOp = VK_BLEND_OP_ADD,
-		.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-						  VK_COLOR_COMPONENT_G_BIT |
-						  VK_COLOR_COMPONENT_B_BIT |
-						  VK_COLOR_COMPONENT_A_BIT,
+		.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
 	};
 	const VkPipelineColorBlendStateCreateInfo colorBlending = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		.logicOp = VK_LOGIC_OP_COPY,
 		.attachmentCount = 1,
 		.pAttachments = &colorBlendAttachment,
 	};
@@ -256,7 +247,6 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 		.viewportState = &viewportState,
 		.rasterizationState = &rasterizer,
 		.multisampleState = &multisampling,
-		.depthStencilState = &depthStencil,
 		.colorBlendState = &colorBlending,
 		.subpass = subpass,
 	};
@@ -297,18 +287,15 @@ int main()
 	{
 		return 4;
 	}
-	const VkPhysicalDeviceFeatures requiredFeatures = {
-		.logicOp = VK_TRUE,
-		.samplerAnisotropy = VK_TRUE,
-	};
 	const LunaDeviceCreationInfo deviceCreationInfo = {
 		.extensionCount = 1,
 		.extensionNames = (const char *const[]){VK_KHR_SWAPCHAIN_EXTENSION_NAME},
-		.requiredFeatures = requiredFeatures,
 		.surface = surface,
 	};
 	CHECK_RESULT(lunaAddNewDevice(&deviceCreationInfo));
 
+	VkSurfaceCapabilitiesKHR capabilities;
+	CHECK_RESULT(lunaGetSurfaceCapabilities(surface, &capabilities));
 	const VkExtent3D extent = {
 		.width = 1080,
 		.height = 720,
@@ -318,11 +305,11 @@ int main()
 		.surface = surface,
 		.width = extent.width,
 		.height = extent.height,
-		.minImageCount = 3,
+		.minImageCount = capabilities.minImageCount,
 		.formatCount = 1,
 		.formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}},
-		.presentModeCount = 2,
-		.presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR},
+		.presentModeCount = 1,
+		.presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_FIFO_KHR},
 	};
 	CHECK_RESULT(lunaCreateSwapChain(&swapChainCreationInfo));
 
@@ -346,27 +333,8 @@ int main()
 		.depthAttachmentClearValue.depthStencil.depth = 1,
 	};
 
-	SDL_Event event;
-#ifdef ALWAYS_UPDATE
-	while (true)
+	while (!shouldQuit())
 	{
-		while (SDL_PollEvent(&event))
-		{
-			switch (event.type)
-			{
-				case SDL_EVENT_QUIT:
-					CHECK_RESULT(lunaDestroyInstance());
-					return 0;
-				case SDL_EVENT_KEY_UP:
-					if (event.key.scancode == SDL_SCANCODE_ESCAPE)
-					{
-						CHECK_RESULT(lunaDestroyInstance());
-						return 0;
-					}
-					break;
-				default:;
-			}
-		}
 		CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
 		CHECK_RESULT(lunaDrawBuffer(vertexBuffer,
 									graphicsPipeline,
@@ -378,33 +346,6 @@ int main()
 		lunaEndRenderPass();
 		CHECK_RESULT(lunaPresentSwapChain());
 	}
-#else
-	while (SDL_WaitEvent(&event))
-	{
-		switch (event.type)
-		{
-			case SDL_EVENT_QUIT:
-				CHECK_RESULT(lunaDestroyInstance());
-				return 0;
-			case SDL_EVENT_KEY_UP:
-				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
-				{
-					CHECK_RESULT(lunaDestroyInstance());
-					return 0;
-				}
-				break;
-			default:;
-		}
-		CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
-		CHECK_RESULT(lunaDrawBuffer(vertexBuffer,
-									graphicsPipeline,
-									(LunaGraphicsPipelineBindInfo[]){0},
-									sizeof(vertices) / sizeof(*vertices),
-									1,
-									0,
-									0));
-		lunaEndRenderPass();
-		CHECK_RESULT(lunaPresentSwapChain());
-	}
-#endif
+	CHECK_RESULT(lunaDestroyInstance());
+	return 0;
 }

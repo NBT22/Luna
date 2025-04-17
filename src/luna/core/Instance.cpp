@@ -231,17 +231,6 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 		enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
 	}
 
-	[[maybe_unused]] bool surfaceExtensionRequested = false;
-	for (uint32_t i = 0; i < creationInfo->extensionCount; i++)
-	{
-		if (std::strncmp(creationInfo->extensionNames[i], "VK_KHR_surface", 14) == 0)
-		{
-			surfaceExtensionRequested = true;
-			break;
-		}
-	}
-	assert(surfaceExtensionRequested);
-
 	const VkApplicationInfo vulkanApplicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.apiVersion = creationInfo->apiVersion,

@@ -42,7 +42,7 @@ class RenderPass
 
 		const RenderPassSubpassIndex *getFirstSubpass() const;
 		const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
-		VkResult createAttachmentImages();
+		VkResult createAttachmentImages(bool createDepthImage);
 		VkResult createSwapChainFramebuffers(VkRenderPass renderPass,
 											 uint32_t attachmentCount,
 											 std::vector<VkImageView> &attachmentImages) const;

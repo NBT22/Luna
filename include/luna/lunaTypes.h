@@ -102,8 +102,8 @@ typedef struct
 		bool createDepthAttachment;
 		LunaAttachmentLoadMode depthAttachmentLoadMode;
 
-		uint32_t attachmentCount;
-		const VkAttachmentDescription *attachments;
+		// uint32_t attachmentCount;
+		// const VkAttachmentDescription *attachments;
 
 		uint32_t subpassCount;
 		const LunaSubpassCreationInfo *subpasses;
@@ -139,8 +139,8 @@ typedef struct
 		bool createDepthAttachment;
 		LunaAttachmentLoadMode depthAttachmentLoadMode;
 
-		uint32_t attachmentCount;
-		const VkAttachmentDescription2 *attachments;
+		// uint32_t attachmentCount;
+		// const VkAttachmentDescription2 *attachments;
 
 		uint32_t subpassCount;
 		const LunaSubpassCreationInfo2 *subpasses;

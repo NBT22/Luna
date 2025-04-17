@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #define CHECK_RESULT(value) \
-	if (value != VK_SUCCESS) \
+	if ((value) != VK_SUCCESS) \
 	{ \
 		return 5; \
 	}
@@ -140,6 +140,26 @@ static const uint32_t indices[] = {
 };
 #pragma endregion constants
 
+static bool shouldQuit()
+{
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+			case SDL_EVENT_QUIT:
+				return true;
+			case SDL_EVENT_KEY_UP:
+				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+				{
+					return true;
+				}
+			default:;
+		}
+	}
+	return false;
+}
+
 static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
 {
 	lunaSetDepthImageFormat(2, (VkFormat[]){VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT});
@@ -156,13 +176,6 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
 			.useColorAttachment = true,
 			.useDepthAttachment = true,
 		}},
-		.dependencyCount = 1,
-		.dependencies = (const VkSubpassDependency[]){{
-			.srcSubpass = VK_SUBPASS_EXTERNAL,
-			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-		}},
 		.extent = extent,
 	};
 	return lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
@@ -173,77 +186,6 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
 									   mat4 *const pushConstantData,
 									   LunaGraphicsPipeline *pipeline)
 {
-	const LunaDescriptorSetLayoutBinding binding = {
-		.bindingName = "Texture",
-		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.descriptorCount = 1,
-		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-	};
-	const LunaDescriptorSetLayoutCreationInfo descriptorSetLayoutCreationInfo = {
-		.bindingCount = 1,
-		.bindings = &binding,
-	};
-	LunaDescriptorSetLayout descriptorSetLayout;
-	CHECK_RESULT(lunaCreateDescriptorSetLayout(&descriptorSetLayoutCreationInfo, &descriptorSetLayout));
-
-	const LunaDescriptorPoolCreationInfo descriptorPoolCreationInfo = {
-		.maxSets = 1,
-		.poolSizeCount = 1,
-		.poolSizes = (VkDescriptorPoolSize[]){{
-			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = 1,
-		}},
-	};
-	LunaDescriptorPool descriptorPool;
-	CHECK_RESULT(lunaCreateDescriptorPool(&descriptorPoolCreationInfo, &descriptorPool));
-	const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
-		.descriptorPool = descriptorPool,
-		.descriptorSetCount = 1,
-		.setLayouts = &descriptorSetLayout,
-	};
-	CHECK_RESULT(lunaAllocateDescriptorSets(&descriptorSetAllocationInfo, descriptorSet));
-
-	uint8_t *pixels;
-	uint32_t width;
-	uint32_t height;
-	uint32_t result = lodepng_decode32_file(&pixels, &width, &height, "logo.png");
-	if (result != 0)
-	{
-		printf("\x1b[31mGot error %d (%s) when loading image!\n", result, lodepng_error_text(result));
-		fflush(stdout);
-		return result;
-	}
-
-	const LunaSamplerCreationInfo samplerCreationInfo = {
-		.magFilter = VK_FILTER_LINEAR,
-		.minFilter = VK_FILTER_LINEAR,
-		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-		.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-		.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-		.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-		.maxAnisotropy = 1,
-		.compareOp = VK_COMPARE_OP_ALWAYS,
-		.maxLod = VK_LOD_CLAMP_NONE,
-		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-	};
-	const LunaSampledImageCreationInfo imageCreationInfo = {
-		.format = VK_FORMAT_R8G8B8A8_UNORM,
-		.width = width,
-		.height = height,
-		.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-		.pixels = pixels,
-		.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		.descriptorSet = *descriptorSet,
-		.descriptorLayoutBindingName = "Texture",
-		.samplerCreationInfo = &samplerCreationInfo,
-		.sourceStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		.destinationStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
-	};
-	CHECK_RESULT(lunaCreateImage(&imageCreationInfo, NULL));
-	free(pixels);
-
-	const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
-
 	VkShaderModule vertexShaderModule;
 	VkShaderModule fragmentShaderModule;
 	if (lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule) != VK_SUCCESS)
@@ -302,6 +244,7 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 	};
 
+	const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
 	const VkViewport viewport = {
 		.width = (float)swapChainExtent.width,
 		.height = (float)swapChainExtent.height,
@@ -321,15 +264,12 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
 	const VkPipelineRasterizationStateCreateInfo rasterizer = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.polygonMode = VK_POLYGON_MODE_FILL,
-		.cullMode = VK_CULL_MODE_NONE,
-		.frontFace = VK_FRONT_FACE_CLOCKWISE,
 		.lineWidth = 1,
 	};
 
 	const VkPipelineMultisampleStateCreateInfo multisampling = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 		.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT,
-		.minSampleShading = 1,
 	};
 
 	const VkPipelineDepthStencilStateCreateInfo depthStencil = {
@@ -341,25 +281,26 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
 	};
 
 	const VkPipelineColorBlendAttachmentState colorBlendAttachment = {
-		.blendEnable = VK_TRUE,
-		.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-		.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-		.colorBlendOp = VK_BLEND_OP_ADD,
-		.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-		.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-		.alphaBlendOp = VK_BLEND_OP_ADD,
-		.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-						  VK_COLOR_COMPONENT_G_BIT |
-						  VK_COLOR_COMPONENT_B_BIT |
-						  VK_COLOR_COMPONENT_A_BIT,
+		.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
 	};
 	const VkPipelineColorBlendStateCreateInfo colorBlending = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		.logicOp = VK_LOGIC_OP_COPY,
 		.attachmentCount = 1,
 		.pAttachments = &colorBlendAttachment,
 	};
 
+	const LunaDescriptorSetLayoutBinding binding = {
+		.bindingName = "Texture",
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.descriptorCount = 1,
+		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+	};
+	const LunaDescriptorSetLayoutCreationInfo descriptorSetLayoutCreationInfo = {
+		.bindingCount = 1,
+		.bindings = &binding,
+	};
+	LunaDescriptorSetLayout descriptorSetLayout;
+	CHECK_RESULT(lunaCreateDescriptorSetLayout(&descriptorSetLayoutCreationInfo, &descriptorSetLayout));
 	const LunaPushConstantsRange pushConstantsRange = {
 		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 		.size = 64,
@@ -385,7 +326,58 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
 		.layoutCreationInfo = &layoutCreationInfo,
 		.subpass = subpass,
 	};
-	return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline) == VK_SUCCESS;
+	CHECK_RESULT(lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline));
+
+	const LunaDescriptorPoolCreationInfo descriptorPoolCreationInfo = {
+		.maxSets = 1,
+		.poolSizeCount = 1,
+		.poolSizes = (VkDescriptorPoolSize[]){{
+			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = 1,
+		}},
+	};
+	LunaDescriptorPool descriptorPool;
+	CHECK_RESULT(lunaCreateDescriptorPool(&descriptorPoolCreationInfo, &descriptorPool));
+	const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = 1,
+		.setLayouts = &descriptorSetLayout,
+	};
+	CHECK_RESULT(lunaAllocateDescriptorSets(&descriptorSetAllocationInfo, descriptorSet));
+
+	uint8_t *pixels;
+	uint32_t width;
+	uint32_t height;
+	uint32_t result = lodepng_decode32_file(&pixels, &width, &height, "logo.png");
+	if (result != 0)
+	{
+		printf("\x1b[31mGot error %d (%s) when loading image!\n", result, lodepng_error_text(result));
+		fflush(stdout);
+		return result;
+	}
+
+	const LunaSamplerCreationInfo samplerCreationInfo = {
+		.magFilter = VK_FILTER_LINEAR,
+		.minFilter = VK_FILTER_LINEAR,
+		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+	};
+	const LunaSampledImageCreationInfo imageCreationInfo = {
+		.format = VK_FORMAT_R8G8B8A8_UNORM,
+		.width = width,
+		.height = height,
+		.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+		.pixels = pixels,
+		.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		.descriptorSet = *descriptorSet,
+		.descriptorLayoutBindingName = "Texture",
+		.samplerCreationInfo = &samplerCreationInfo,
+		.sourceStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		.destinationStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+	};
+	CHECK_RESULT(lunaCreateImage(&imageCreationInfo, NULL));
+	free(pixels);
+
+	return 0;
 }
 
 int main(void)
@@ -422,18 +414,15 @@ int main(void)
 	{
 		return 4;
 	}
-	const VkPhysicalDeviceFeatures requiredFeatures = {
-		.logicOp = VK_TRUE,
-		.samplerAnisotropy = VK_TRUE,
-	};
 	const LunaDeviceCreationInfo deviceCreationInfo = {
 		.extensionCount = 1,
 		.extensionNames = (const char *const[]){VK_KHR_SWAPCHAIN_EXTENSION_NAME},
-		.requiredFeatures = requiredFeatures,
 		.surface = surface,
 	};
 	CHECK_RESULT(lunaAddNewDevice(&deviceCreationInfo));
 
+	VkSurfaceCapabilitiesKHR capabilities;
+	CHECK_RESULT(lunaGetSurfaceCapabilities(surface, &capabilities));
 	const VkExtent3D extent = {
 		.width = 720,
 		.height = 720,
@@ -443,12 +432,11 @@ int main(void)
 		.surface = surface,
 		.width = extent.width,
 		.height = extent.height,
-		// TODO: Fix magic number
-		.minImageCount = 3,
+		.minImageCount = capabilities.minImageCount,
 		.formatCount = 1,
 		.formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}},
-		.presentModeCount = 2,
-		.presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR},
+		.presentModeCount = 1,
+		.presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_FIFO_KHR},
 	};
 	CHECK_RESULT(lunaCreateSwapChain(&swapChainCreationInfo));
 
@@ -464,10 +452,10 @@ int main(void)
 
 	LunaGraphicsPipeline graphicsPipeline;
 	LunaDescriptorSet descriptorSet;
-	createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
-						   &descriptorSet,
-						   &transformMatrix,
-						   &graphicsPipeline);
+	CHECK_RESULT(createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
+										&descriptorSet,
+										&transformMatrix,
+										&graphicsPipeline));
 
 	const LunaBufferCreationInfo vertexBufferCreationInfo = {
 		.size = sizeof(vertices),
@@ -495,27 +483,9 @@ int main(void)
 		.descriptorSets = &descriptorSet,
 	};
 
-	SDL_Event event;
-	while (true)
+	while (!shouldQuit())
 	{
-		while (SDL_PollEvent(&event))
-		{
-			switch (event.type)
-			{
-				case SDL_EVENT_QUIT:
-					CHECK_RESULT(lunaDestroyInstance());
-					return 0;
-				case SDL_EVENT_KEY_UP:
-					if (event.key.scancode == SDL_SCANCODE_ESCAPE)
-					{
-						CHECK_RESULT(lunaDestroyInstance());
-						return 0;
-					}
-					break;
-				default:;
-			}
-		}
-		glm_rotate(transformMatrix, 0.00015f, GLM_ZUP);
+		glm_rotate(transformMatrix, 0.0125f, GLM_ZUP);
 		CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
 		CHECK_RESULT(lunaPushConstants(graphicsPipeline));
 		CHECK_RESULT(lunaDrawBufferIndexed(vertexBuffer,
@@ -532,4 +502,6 @@ int main(void)
 		lunaEndRenderPass();
 		CHECK_RESULT(lunaPresentSwapChain());
 	}
+	CHECK_RESULT(lunaDestroyInstance());
+	return 0;
 }
