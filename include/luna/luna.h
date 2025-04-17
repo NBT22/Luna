@@ -19,11 +19,11 @@ extern "C"
 #endif
 
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
-								  LunaDescriptorPool *descriptorPool);
+                                  LunaDescriptorPool *descriptorPool);
 VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
-									   LunaDescriptorSetLayout *descriptorSetLayout);
+                                       LunaDescriptorSetLayout *descriptorSetLayout);
 VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
-									LunaDescriptorSet *descriptorSets);
+                                    LunaDescriptorSet *descriptorSets);
 void lunaWriteDescriptorSets(uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites);
 
 VkResult lunaCreateShaderModule(const uint32_t *spirv, size_t bytes, VkShaderModule *shaderModule);

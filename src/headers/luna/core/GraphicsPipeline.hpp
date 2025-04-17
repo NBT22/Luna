@@ -11,29 +11,29 @@ namespace luna::core
 {
 struct GraphicsPipelineIndex
 {
-		uint32_t index;
+        uint32_t index;
 };
 class GraphicsPipeline
 {
-	public:
-		static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
+    public:
+        static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
 
-		friend VkResult(::lunaPushConstants(LunaGraphicsPipeline));
+        friend VkResult(::lunaPushConstants(LunaGraphicsPipeline));
 
-		GraphicsPipeline() = default;
-		explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
+        GraphicsPipeline() = default;
+        explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 
-		void destroy();
+        void destroy();
 
-		VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
+        VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
 
-		[[nodiscard]] VkPipelineLayout layout() const;
+        [[nodiscard]] VkPipelineLayout layout() const;
 
-	private:
-		bool isDestroyed_{true};
-		VkPipeline pipeline_{};
-		VkPipelineLayout layout_{};
-		std::vector<LunaPushConstantsRange> pushConstantsRanges_{};
+    private:
+        bool isDestroyed_{true};
+        VkPipeline pipeline_{};
+        VkPipelineLayout layout_{};
+        std::vector<LunaPushConstantsRange> pushConstantsRanges_{};
 };
 } // namespace luna::core
 

@@ -21,9 +21,9 @@ namespace luna::core
 [[nodiscard]] const DescriptorSetLayout &descriptorSetLayout(LunaDescriptorSetLayout layout);
 [[nodiscard]] VkDescriptorSet descriptorSet(LunaDescriptorSet descriptorSet);
 void descriptorSet(LunaDescriptorSet index,
-				   VkDescriptorPool *pool,
-				   DescriptorSetLayout *layout,
-				   VkDescriptorSet *descriptorSet);
+                   VkDescriptorPool *pool,
+                   DescriptorSetLayout *layout,
+                   VkDescriptorSet *descriptorSet);
 [[nodiscard]] const buffer::BufferRegion &bufferRegion(LunaBuffer buffer);
 [[nodiscard]] const buffer::BufferRegion &bufferRegion(buffer::BufferRegionIndex index);
 [[nodiscard]] VkBuffer stagingBuffer();

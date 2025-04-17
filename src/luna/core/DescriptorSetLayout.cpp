@@ -10,65 +10,65 @@ namespace luna::core
 {
 DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo)
 {
-	assert(isDestroyed_);
-	std::vector<VkDescriptorBindingFlags> bindingFlags;
-	bindingFlags.reserve(creationInfo.bindingCount);
-	std::vector<VkDescriptorSetLayoutBinding> bindings;
-	bindings.reserve(creationInfo.bindingCount);
-	for (uint32_t i = 0; i < creationInfo.bindingCount; i++)
-	{
-		const LunaDescriptorSetLayoutBinding &binding = creationInfo.bindings[i];
-		assert(!bindingIndexMap_.contains(binding.bindingName));
-		const uint32_t bindingIndex = bindingIndexMap_.size();
-		bindingIndexMap_.emplace(binding.bindingName, Binding{.index = bindingIndex, .type = binding.descriptorType});
-		bindings.emplace_back(bindingIndex,
-							  binding.descriptorType,
-							  binding.descriptorCount,
-							  binding.stageFlags,
-							  binding.immutableSamplers);
-		bindingFlags.emplace_back(binding.bindingFlags);
-	}
-	const VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-		.bindingCount = creationInfo.bindingCount,
-		.pBindingFlags = bindingFlags.data(),
-	};
-	const VkDescriptorSetLayoutCreateInfo createInfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.pNext = VK_API_VERSION_MINOR(apiVersion) >= 2 ? &bindingFlagsCreateInfo : nullptr,
-		.flags = creationInfo.flags,
-		.bindingCount = creationInfo.bindingCount,
-		.pBindings = bindings.data(),
-	};
-	CHECK_RESULT_THROW(vkCreateDescriptorSetLayout(device.logicalDevice(), &createInfo, nullptr, &layout_));
-	isDestroyed_ = false;
+    assert(isDestroyed_);
+    std::vector<VkDescriptorBindingFlags> bindingFlags;
+    bindingFlags.reserve(creationInfo.bindingCount);
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    bindings.reserve(creationInfo.bindingCount);
+    for (uint32_t i = 0; i < creationInfo.bindingCount; i++)
+    {
+        const LunaDescriptorSetLayoutBinding &binding = creationInfo.bindings[i];
+        assert(!bindingIndexMap_.contains(binding.bindingName));
+        const uint32_t bindingIndex = bindingIndexMap_.size();
+        bindingIndexMap_.emplace(binding.bindingName, Binding{.index = bindingIndex, .type = binding.descriptorType});
+        bindings.emplace_back(bindingIndex,
+                              binding.descriptorType,
+                              binding.descriptorCount,
+                              binding.stageFlags,
+                              binding.immutableSamplers);
+        bindingFlags.emplace_back(binding.bindingFlags);
+    }
+    const VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+        .bindingCount = creationInfo.bindingCount,
+        .pBindingFlags = bindingFlags.data(),
+    };
+    const VkDescriptorSetLayoutCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = VK_API_VERSION_MINOR(apiVersion) >= 2 ? &bindingFlagsCreateInfo : nullptr,
+        .flags = creationInfo.flags,
+        .bindingCount = creationInfo.bindingCount,
+        .pBindings = bindings.data(),
+    };
+    CHECK_RESULT_THROW(vkCreateDescriptorSetLayout(device.logicalDevice(), &createInfo, nullptr, &layout_));
+    isDestroyed_ = false;
 }
 
 void DescriptorSetLayout::destroy()
 {
-	if (isDestroyed_)
-	{
-		return;
-	}
-	vkDestroyDescriptorSetLayout(device.logicalDevice(), layout_, nullptr);
-	bindingIndexMap_.clear();
-	isDestroyed_ = true;
+    if (isDestroyed_)
+    {
+        return;
+    }
+    vkDestroyDescriptorSetLayout(device.logicalDevice(), layout_, nullptr);
+    bindingIndexMap_.clear();
+    isDestroyed_ = true;
 }
 } // namespace luna::core
 
 VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
-									   LunaDescriptorSetLayout *descriptorSetLayout)
+                                       LunaDescriptorSetLayout *descriptorSetLayout)
 {
-	using namespace luna::core;
-	assert(creationInfo);
-	const std::vector<DescriptorSetLayout>::iterator &layoutIterator = std::find_if(descriptorSetLayouts.begin(),
-																					descriptorSetLayouts.end(),
-																					DescriptorSetLayout::isDestroyed);
-	descriptorSetLayoutIndices.emplace_back(layoutIterator - descriptorSetLayouts.begin());
-	TRY_CATCH_RESULT(descriptorSetLayouts.emplace(layoutIterator, *creationInfo));
-	if (descriptorSetLayout != nullptr)
-	{
-		*descriptorSetLayout = &descriptorSetLayoutIndices.back();
-	}
-	return VK_SUCCESS;
+    using namespace luna::core;
+    assert(creationInfo);
+    const std::vector<DescriptorSetLayout>::iterator &layoutIterator = std::find_if(descriptorSetLayouts.begin(),
+                                                                                    descriptorSetLayouts.end(),
+                                                                                    DescriptorSetLayout::isDestroyed);
+    descriptorSetLayoutIndices.emplace_back(layoutIterator - descriptorSetLayouts.begin());
+    TRY_CATCH_RESULT(descriptorSetLayouts.emplace(layoutIterator, *creationInfo));
+    if (descriptorSetLayout != nullptr)
+    {
+        *descriptorSetLayout = &descriptorSetLayoutIndices.back();
+    }
+    return VK_SUCCESS;
 }

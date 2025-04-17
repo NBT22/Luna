@@ -250,6 +250,6 @@ TableGenBreakInsideDAGArg: DontBreak
 #TemplateNames is in the documentation but is not recognized here
 #TypeNames:
 #TypenameMacros:
-UseTab: Always
+UseTab: Never
 VerilogBreakBetweenInstancePorts: true
 #WhitespaceSensitiveMacros:

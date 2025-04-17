@@ -18,9 +18,9 @@ VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaI
 VkResult lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo, uint32_t arrayLayers, LunaImage *image);
 VkResult lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, uint32_t depth, LunaImage *image);
 VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
-								uint32_t depth,
-								uint32_t arrayLayers,
-								LunaImage *image);
+                                uint32_t depth,
+                                uint32_t arrayLayers,
+                                LunaImage *image);
 
 #ifdef __cplusplus
 }

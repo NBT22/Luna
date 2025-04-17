@@ -10,28 +10,28 @@ namespace luna::core
 {
 inline bool RenderPass::isDestroyed(const RenderPass &renderPass)
 {
-	return renderPass.isDestroyed_;
+    return renderPass.isDestroyed_;
 }
 
 inline VkRenderPass RenderPass::renderPass() const
 {
-	return renderPass_;
+    return renderPass_;
 }
 inline const RenderPassSubpassIndex *RenderPass::getFirstSubpass() const
 {
-	assert(!subpassIndices_.empty());
-	return subpassIndices_.data();
+    assert(!subpassIndices_.empty());
+    return subpassIndices_.data();
 }
 inline const RenderPassSubpassIndex *RenderPass::getSubpassIndexByName(const std::string &name) const
 {
-	assert(!subpassMap_.empty());
-	try
-	{
-		return &subpassIndices_.at(subpassMap_.at(name));
-	} catch (const std::out_of_range &)
-	{
-		assert(subpassMap_.contains(name));
-		return nullptr;
-	}
+    assert(!subpassMap_.empty());
+    try
+    {
+        return &subpassIndices_.at(subpassMap_.at(name));
+    } catch (const std::out_of_range &)
+    {
+        assert(subpassMap_.contains(name));
+        return nullptr;
+    }
 }
 } // namespace luna::core

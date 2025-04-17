@@ -9,16 +9,16 @@ namespace luna::core
 {
 inline bool DescriptorSetLayout::isDestroyed(const DescriptorSetLayout &layout)
 {
-	return layout.isDestroyed_;
+    return layout.isDestroyed_;
 }
 
 inline VkDescriptorSetLayout DescriptorSetLayout::layout() const
 {
-	return layout_;
+    return layout_;
 }
 inline const DescriptorSetLayout::Binding &DescriptorSetLayout::binding(const std::string &bindingName) const
 {
-	return bindingIndexMap_.at(bindingName);
+    return bindingIndexMap_.at(bindingName);
 }
 
 } // namespace luna::core

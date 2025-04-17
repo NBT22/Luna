@@ -11,21 +11,21 @@ namespace luna::core::buffer
 {
 inline bool BufferRegion::isDestroyed(const BufferRegion &region)
 {
-	return region.isDestroyed_;
+    return region.isDestroyed_;
 }
 
 inline void BufferRegion::copyToBuffer(const uint8_t *data, const size_t bytes) const
 {
-	std::copy_n(data, bytes, data_);
+    std::copy_n(data, bytes, data_);
 }
 
 inline size_t BufferRegion::size() const
 {
-	return size_;
+    return size_;
 }
 inline const size_t &BufferRegion::offset() const
 {
-	return offset_;
+    return offset_;
 }
 } // namespace luna::core::buffer
 
@@ -33,25 +33,25 @@ namespace luna::core
 {
 inline bool Buffer::isDestroyed(const Buffer &buffer)
 {
-	return buffer.isDestroyed_;
+    return buffer.isDestroyed_;
 }
 
 inline void Buffer::destroyBufferRegion(const uint32_t index)
 {
-	regions_.at(index).destroy();
+    regions_.at(index).destroy();
 }
 inline void Buffer::destroyBufferRegionSubRegion(const uint32_t regionIndex, const buffer::SubRegion *subRegion)
 {
-	regions_.at(regionIndex).destroySubRegion(subRegion);
+    regions_.at(regionIndex).destroySubRegion(subRegion);
 }
 
 inline const VkBuffer &Buffer::buffer() const
 {
-	return buffer_;
+    return buffer_;
 }
 
 inline const buffer::BufferRegion &Buffer::region(const uint32_t index) const
 {
-	return regions_.at(index);
+    return regions_.at(index);
 }
 } // namespace luna::core

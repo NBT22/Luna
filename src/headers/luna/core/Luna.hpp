@@ -12,50 +12,50 @@ namespace luna::helpers
 {
 class VkResultException final: public std::exception
 {
-	public:
-		explicit VkResultException(const VkResult result): result(result) {};
-		VkResult result;
+    public:
+        explicit VkResultException(const VkResult result): result(result) {};
+        VkResult result;
 };
 } // namespace luna::helpers
 
 // TODO: This really needs more work. It should log a message (or not, based on settings provided by the application).
 //  Maybe also non fatal? I'm not really sure what the best way to do this function is.
 #define CHECK_RESULT_RETURN(value) \
-	if (const VkResult result = value; result != VK_SUCCESS) \
-	{ \
-		assert(result == VK_SUCCESS); \
-		return result; \
-	}
+    if (const VkResult result = value; result != VK_SUCCESS) \
+    { \
+        assert(result == VK_SUCCESS); \
+        return result; \
+    }
 #define CHECK_RESULT_THROW(value) \
-	if (const VkResult result = value; result != VK_SUCCESS) \
-	{ \
-		throw luna::helpers::VkResultException(result); \
-	}
+    if (const VkResult result = value; result != VK_SUCCESS) \
+    { \
+        throw luna::helpers::VkResultException(result); \
+    }
 #define TRY_CATCH_RESULT(expression) \
-	try \
-	{ \
-		expression; \
-	} catch (const luna::helpers::VkResultException &exception) \
-	{ \
-		return exception.result; \
-	}
+    try \
+    { \
+        expression; \
+    } catch (const luna::helpers::VkResultException &exception) \
+    { \
+        return exception.result; \
+    }
 
 namespace luna::core
 {
 struct SwapChain
 {
-		VkSurfaceFormatKHR format;
-		VkExtent2D extent;
-		VkPresentModeKHR presentMode;
-		uint32_t imageCount;
-		uint32_t imageIndex;
-		VkSwapchainKHR swapChain;
-		std::vector<VkImage> images;
-		std::vector<VkImageView> imageViews;
-		std::vector<VkFramebuffer> framebuffers;
+        VkSurfaceFormatKHR format;
+        VkExtent2D extent;
+        VkPresentModeKHR presentMode;
+        uint32_t imageCount;
+        uint32_t imageIndex;
+        VkSwapchainKHR swapChain;
+        std::vector<VkImage> images;
+        std::vector<VkImageView> imageViews;
+        std::vector<VkFramebuffer> framebuffers;
 };
 struct SamplerIndex
 {
-		uint32_t index;
+        uint32_t index;
 };
 } // namespace luna::core

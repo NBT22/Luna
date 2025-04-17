@@ -13,7 +13,7 @@ extern "C"
 #endif
 
 VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo,
-									LunaGraphicsPipeline *pipeline);
+                                    LunaGraphicsPipeline *pipeline);
 
 #ifdef __cplusplus
 }
