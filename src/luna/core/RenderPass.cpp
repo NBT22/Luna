@@ -258,9 +258,11 @@ static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
 							   subpassCreationInfo.inputAttachmentCount,
 							   subpassCreationInfo.inputAttachments,
 							   subpassCreationInfo.useColorAttachment ? 1u : 0,
-							   attachmentReferences[1],
-							   attachmentReferences[2],
-							   attachmentReferences[0],
+							   subpassCreationInfo.useColorAttachment ? attachmentReferences[1] : nullptr,
+							   subpassCreationInfo.useColorAttachment && samples != VK_SAMPLE_COUNT_1_BIT
+									   ? attachmentReferences[2]
+									   : nullptr,
+							   subpassCreationInfo.useDepthAttachment ? attachmentReferences[0] : nullptr,
 							   subpassCreationInfo.preserveAttachmentCount,
 							   subpassCreationInfo.preserveAttachments);
 	}
