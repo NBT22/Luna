@@ -335,6 +335,7 @@ VkResult lunaDestroyInstance()
     bufferRegionIndices.clear();
     buffers.clear();
     buffers.shrink_to_fit();
+    stagingBufferIndex = nullptr;
 
     return VK_SUCCESS;
 }

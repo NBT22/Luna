@@ -28,8 +28,8 @@ class BufferRegion
 {
     public:
         // TODO: Maybe move this to Instance where the others live and friend it here?
-        static VkResult createBuffer(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index);
-        static VkResult createBuffers(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer *buffers);
+        static VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index);
+        static VkResult createBufferRegions(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer *buffers);
         static bool isDestroyed(const BufferRegion &region);
 
         friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t);
@@ -78,7 +78,8 @@ class Buffer
         static bool isDestroyed(const Buffer &buffer);
         static VkResult findSpaceForRegion(const LunaBufferCreationInfo &creationInfo,
                                            std::vector<Buffer>::iterator &bufferIterator,
-                                           std::vector<buffer::BufferRegion>::const_iterator &regionIterator);
+                                           buffer::BufferRegion *&bufferRegion,
+                                           uint32_t &regionIndex);
 
         friend class buffer::BufferRegion;
         friend void ::lunaDestroyBuffer(LunaBuffer);

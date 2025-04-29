@@ -2,7 +2,6 @@
 // Created by NBT22 on 2/13/25.
 //
 
-#define VMA_IMPLEMENTATION
 #include <array>
 #include <luna/core/Device.hpp>
 #include <luna/core/Instance.hpp>

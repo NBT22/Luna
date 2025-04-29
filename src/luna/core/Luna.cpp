@@ -6,6 +6,9 @@
 #include <luna/core/Luna.hpp>
 #include <luna/luna.h>
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkShaderModule *shaderModule)
 {
     const VkShaderModuleCreateInfo creationInfo = {

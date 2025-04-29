@@ -313,7 +313,7 @@ static VkResult writeImage(const VkImage image,
             .size = bytes,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         };
-        CHECK_RESULT_RETURN(core::buffer::BufferRegion::createBuffer(bufferCreationInfo, &core::stagingBufferIndex));
+        CHECK_RESULT_RETURN(core::buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &core::stagingBufferIndex));
     }
 
     core::bufferRegion(core::stagingBufferIndex).copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
@@ -525,7 +525,6 @@ VkSampler Image::sampler(const LunaSampler sampler)
     sampler_ = core::sampler(sampler);
     return sampler_;
 }
-
 } // namespace luna::core
 
 VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
