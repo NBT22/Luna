@@ -11,29 +11,27 @@ namespace luna::core
 class CommandBuffer
 {
     public:
-        CommandBuffer();
+        friend class CommandPool;
 
-        void destroy(VkDevice logicalDevice);
+        CommandBuffer(VkDevice logicalDevice,
+                      VkCommandPool commandPool,
+                      VkCommandBufferLevel commandBufferLevel,
+                      const void *allocateInfoPNext);
 
-        VkResult allocateCommandBuffer(VkDevice logicalDevice,
-                                       const VkCommandPoolCreateInfo &poolCreateInfo,
-                                       VkCommandBufferLevel commandBufferLevel,
-                                       const void *allocateInfoPNext);
+        operator const VkCommandBuffer&() const;
+        const VkCommandBuffer *operator &() const;
+
         VkResult beginSingleUseCommandBuffer();
         VkResult submitCommandBuffer(VkQueue queue, const VkSubmitInfo &submitInfo);
         void setRecording(bool value);
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
         VkResult resetFence(VkDevice logicalDevice) const;
 
-        [[nodiscard]] const VkCommandBuffer &commandBuffer() const;
         [[nodiscard]] bool isRecording() const;
 
     private:
-        bool isDestroyed_{true};
         bool isRecording_{};
         VkCommandBuffer commandBuffer_{};
-        // TODO: Having a single command buffer per pool is not really ideal
-        VkCommandPool commandPool_{};
         VkFence fence_{};
 };
 } // namespace luna::core

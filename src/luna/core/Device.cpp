@@ -160,7 +160,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     };
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
-    CHECK_RESULT_THROW(createCommandPoolsAndBuffers());
+    CHECK_RESULT_THROW(createCommandPools());
     CHECK_RESULT_THROW(createSemaphores());
     isDestroyed_ = false;
 }

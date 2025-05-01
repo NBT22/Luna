@@ -239,7 +239,7 @@ static void transitionImageLayout(const VkImage image,
         .image = image,
         .subresourceRange = subresourceRange,
     };
-    vkCmdPipelineBarrier(core::device.commandBuffers().graphics.commandBuffer(),
+    vkCmdPipelineBarrier(core::device.commandPools().graphics.commandBuffer(0),
                          sourceStageMask,
                          destinationStageMask,
                          0,
@@ -284,7 +284,7 @@ static void transitionImageLayout2(const VkImage image,
         .imageMemoryBarrierCount = 1,
         .pImageMemoryBarriers = &memoryBarrier,
     };
-    vkCmdPipelineBarrier2(core::device.commandBuffers().graphics.commandBuffer(), &dependencyInfo);
+    vkCmdPipelineBarrier2(core::device.commandPools().graphics.commandBuffer(0), &dependencyInfo);
 }
 static VkResult writeImage(const VkImage image,
                            const VkExtent3D &extent,
@@ -292,7 +292,7 @@ static VkResult writeImage(const VkImage image,
                            const LunaSampledImageCreationInfo &creationInfo,
                            const VkImageAspectFlags aspectMask)
 {
-    core::CommandBuffer &commandBuffer = core::device.commandBuffers().graphics;
+    core::CommandBuffer &commandBuffer = core::device.commandPools().graphics.commandBuffer(0);
     if (!commandBuffer.isRecording())
     {
         const VkDevice logicalDevice = core::device.logicalDevice();
@@ -357,7 +357,7 @@ static VkResult writeImage(const VkImage image,
         .imageSubresource = subresourceLayers,
         .imageExtent = extent,
     };
-    vkCmdCopyBufferToImage(commandBuffer.commandBuffer(),
+    vkCmdCopyBufferToImage(commandBuffer,
                            core::stagingBuffer(),
                            image,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -393,7 +393,7 @@ static VkResult writeImage(const VkImage image,
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .commandBufferCount = 1,
-        .pCommandBuffers = &commandBuffer.commandBuffer(),
+        .pCommandBuffers = &commandBuffer,
     };
     CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(core::device.familyQueues().graphics, queueSubmitInfo));
     return VK_SUCCESS;

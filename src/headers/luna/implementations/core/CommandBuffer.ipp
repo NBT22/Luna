@@ -9,47 +9,36 @@
 
 namespace luna::core
 {
-inline CommandBuffer::CommandBuffer()
+inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
+                                    const VkCommandPool commandPool,
+                                    const VkCommandBufferLevel commandBufferLevel,
+                                    const void *allocateInfoPNext)
 {
-    assert(isDestroyed_);
-    isDestroyed_ = false;
-}
-
-inline void CommandBuffer::destroy(const VkDevice logicalDevice)
-{
-    if (isDestroyed_)
-    {
-        return;
-    }
-    assert(!isRecording_);
-    vkDestroyFence(logicalDevice, fence_, nullptr);
-    vkDestroyCommandPool(logicalDevice, commandPool_, nullptr);
-    isDestroyed_ = true;
-}
-
-inline VkResult CommandBuffer::allocateCommandBuffer(const VkDevice logicalDevice,
-                                                     const VkCommandPoolCreateInfo &poolCreateInfo,
-                                                     const VkCommandBufferLevel commandBufferLevel,
-                                                     const void *allocateInfoPNext)
-{
-    CHECK_RESULT_RETURN(vkCreateCommandPool(logicalDevice, &poolCreateInfo, nullptr, &commandPool_));
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .pNext = allocateInfoPNext,
-        .commandPool = commandPool_,
+        .commandPool = commandPool,
         .level = commandBufferLevel,
         .commandBufferCount = 1,
     };
-    CHECK_RESULT_RETURN(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, &commandBuffer_));
+    CHECK_RESULT_THROW(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, &commandBuffer_));
 
     constexpr VkFenceCreateInfo fenceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    CHECK_RESULT_RETURN(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence_));
-
-    return VK_SUCCESS;
+    CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence_));
 }
+
+inline CommandBuffer::operator const VkCommandBuffer &() const
+{
+    return commandBuffer_;
+}
+inline const VkCommandBuffer *CommandBuffer::operator&() const
+{
+    return &commandBuffer_;
+}
+
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
 {
     assert(!isRecording_);
@@ -86,10 +75,6 @@ inline VkResult CommandBuffer::resetFence(const VkDevice logicalDevice) const
     return vkResetFences(logicalDevice, 1, &fence_);
 }
 
-inline const VkCommandBuffer &CommandBuffer::commandBuffer() const
-{
-    return commandBuffer_;
-}
 inline bool CommandBuffer::isRecording() const
 {
     return isRecording_;

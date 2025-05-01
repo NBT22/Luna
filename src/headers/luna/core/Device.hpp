@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <luna/core/CommandBuffer.hpp>
+#include <luna/core/CommandPool.hpp>
 #include <luna/luna.h>
 #include <vector>
 #include <vk_mem_alloc.h>
@@ -43,8 +43,8 @@ class Device
         [[nodiscard]] const uint32_t *queueFamilyIndices() const;
         [[nodiscard]] VmaAllocator allocator() const;
         [[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const;
-        [[nodiscard]] FamilyValues<CommandBuffer> &commandBuffers();
-        [[nodiscard]] const FamilyValues<CommandBuffer> &commandBuffers() const;
+        [[nodiscard]] FamilyValues<CommandPool> &commandPools();
+        [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
         [[nodiscard]] const VkSemaphore &imageAvailableSemaphore() const;
         [[nodiscard]] VkSemaphore renderFinishedSemaphore() const;
 
@@ -54,7 +54,7 @@ class Device
         [[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
         [[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
         [[nodiscard]] bool checkUsability(VkPhysicalDevice device, VkSurfaceKHR surface);
-        VkResult createCommandPoolsAndBuffers();
+        VkResult createCommandPools();
         VkResult createSemaphores();
 
         bool isDestroyed_{true};
@@ -73,7 +73,7 @@ class Device
         FamilyValues<bool> hasFamily_{};
         FamilyValues<VkQueue> familyQueues_{};
         FamilyValues<uint32_t> familyIndices_{};
-        FamilyValues<CommandBuffer> commandBuffers_{};
+        FamilyValues<CommandPool> commandPools_{};
         VkSemaphore imageAvailableSemaphore_{};
         VkSemaphore renderFinishedSemaphore_{};
 

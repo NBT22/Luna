@@ -19,9 +19,9 @@ inline void Device::destroy()
     {
         vkDestroyShaderModule(logicalDevice_, shaderModule, nullptr);
     }
-    commandBuffers_.graphics.destroy(logicalDevice_);
-    commandBuffers_.transfer.destroy(logicalDevice_);
-    commandBuffers_.presentation.destroy(logicalDevice_);
+    // commandBuffers_.graphics.destroy(logicalDevice_);
+    // commandBuffers_.transfer.destroy(logicalDevice_);
+    // commandBuffers_.presentation.destroy(logicalDevice_);
     vkDestroySemaphore(logicalDevice_, imageAvailableSemaphore_, nullptr);
     vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore_, nullptr);
     vmaDestroyAllocator(allocator_);
@@ -73,13 +73,13 @@ inline const FamilyValues<VkQueue> &Device::familyQueues() const
 {
     return familyQueues_;
 }
-inline FamilyValues<CommandBuffer> &Device::commandBuffers()
+inline FamilyValues<CommandPool> &Device::commandPools()
 {
-    return commandBuffers_;
+    return commandPools_;
 }
-inline const FamilyValues<CommandBuffer> &Device::commandBuffers() const
+inline const FamilyValues<CommandPool> &Device::commandPools() const
 {
-    return commandBuffers_;
+    return commandPools_;
 }
 inline const VkSemaphore &Device::imageAvailableSemaphore() const
 {
@@ -315,42 +315,44 @@ inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfac
     }
     return false;
 }
-inline VkResult Device::createCommandPoolsAndBuffers()
+inline VkResult Device::createCommandPools()
 {
     const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = familyIndices_.graphics,
     };
-    CHECK_RESULT_RETURN(commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
-                                                                       graphicsCommandPoolCreateInfo,
-                                                                       VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                       nullptr));
-    CHECK_RESULT_RETURN(commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
-                                                                       graphicsCommandPoolCreateInfo,
-                                                                       VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                       nullptr));
-    const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = familyIndices_.transfer,
-    };
-    CHECK_RESULT_RETURN(commandBuffers_.transfer.allocateCommandBuffer(logicalDevice_,
-                                                                       transferCommandPoolCreateInfo,
-                                                                       VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                       nullptr));
-    if (hasFamily_.presentation)
-    {
-        const VkCommandPoolCreateInfo presentationCommandPoolCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = familyIndices_.presentation,
-        };
-        CHECK_RESULT_RETURN(commandBuffers_.presentation.allocateCommandBuffer(logicalDevice_,
-                                                                               presentationCommandPoolCreateInfo,
-                                                                               VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                               nullptr));
-    }
+    CHECK_RESULT_RETURN(commandPools_.graphics.allocate(logicalDevice_, graphicsCommandPoolCreateInfo));
+    CHECK_RESULT_RETURN(commandPools_.graphics.allocateCommandBuffer(logicalDevice_,
+                                                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                     nullptr));
+    // CHECK_RESULT_RETURN(commandPools_.graphics.allocateCommandBuffer(logicalDevice_,
+    //                                                                  VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    //                                                                  nullptr));
+
+    // TODO: Both the transfer and presentation families are currently unused
+    // const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {
+    //     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    //     .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+    //     .queueFamilyIndex = familyIndices_.transfer,
+    // };
+    // CHECK_RESULT_RETURN(commandPools_.transfer.allocate(logicalDevice_, transferCommandPoolCreateInfo));
+    // CHECK_RESULT_RETURN(commandPools_.transfer.allocateCommandBuffer(logicalDevice_,
+    //                                                                  VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    //                                                                  nullptr));
+
+    // if (hasFamily_.presentation)
+    // {
+    //     const VkCommandPoolCreateInfo presentationCommandPoolCreateInfo = {
+    //         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    //         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+    //         .queueFamilyIndex = familyIndices_.presentation,
+    //     };
+    //     CHECK_RESULT_RETURN(commandPools_.presentation.allocate(logicalDevice_, presentationCommandPoolCreateInfo));
+    //     CHECK_RESULT_RETURN(commandPools_.presentation.allocateCommandBuffer(logicalDevice_,
+    //                                                                          VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    //                                                                          nullptr));
+    // }
     return VK_SUCCESS;
 }
 inline VkResult Device::createSemaphores()

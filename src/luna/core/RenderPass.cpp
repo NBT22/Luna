@@ -551,7 +551,7 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
 {
     using namespace luna::core;
     assert(renderPass);
-    CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(0);
     const RenderPass &renderPassObject = luna::core::renderPass(renderPass);
 
     if (swapChain.imageIndex == -1u)
@@ -589,19 +589,19 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
             .clearValueCount = clearValueCount,
             .pClearValues = clearValues.data(),
         };
-        vkCmdBeginRenderPass(commandBuffer.commandBuffer(), &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
     return VK_SUCCESS;
 }
 void lunaNextSubpass()
 {
-    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandBuffers().graphics;
+    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer(0);
     assert(commandBuffer.isRecording());
-    vkCmdNextSubpass(commandBuffer.commandBuffer(), VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 }
 void lunaEndRenderPass()
 {
-    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandBuffers().graphics;
+    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer(0);
     assert(commandBuffer.isRecording());
-    vkCmdEndRenderPass(commandBuffer.commandBuffer());
+    vkCmdEndRenderPass(commandBuffer);
 }

@@ -22,7 +22,7 @@ VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkSha
 VkResult lunaPresentSwapChain()
 {
     using namespace luna::core;
-    CommandBuffer &commandBuffer = device.commandBuffers().graphics;
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(0);
     assert(commandBuffer.isRecording());
 
     const VkSemaphore &renderFinishedSemaphore = device.renderFinishedSemaphore();
@@ -33,7 +33,7 @@ VkResult lunaPresentSwapChain()
         .pWaitSemaphores = &device.imageAvailableSemaphore(),
         .pWaitDstStageMask = &waitStageMask,
         .commandBufferCount = 1,
-        .pCommandBuffers = &commandBuffer.commandBuffer(),
+        .pCommandBuffers = &commandBuffer,
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = &renderFinishedSemaphore,
     };
