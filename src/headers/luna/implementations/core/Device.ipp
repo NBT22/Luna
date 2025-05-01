@@ -326,6 +326,10 @@ inline VkResult Device::createCommandPoolsAndBuffers()
                                                                        graphicsCommandPoolCreateInfo,
                                                                        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                                                        nullptr));
+    CHECK_RESULT_RETURN(commandBuffers_.graphics.allocateCommandBuffer(logicalDevice_,
+                                                                       graphicsCommandPoolCreateInfo,
+                                                                       VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                       nullptr));
     const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,

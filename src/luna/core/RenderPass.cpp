@@ -227,7 +227,6 @@ static void createAttachments(const VkSampleCountFlagBits samples,
 }
 
 static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
-                                 const uint32_t attachmentCount,
                                  const VkSampleCountFlagBits samples,
                                  VkRenderPass &renderPass)
 {
@@ -266,6 +265,10 @@ static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
                                subpassCreationInfo.preserveAttachmentCount,
                                subpassCreationInfo.preserveAttachments);
     }
+    const uint32_t attachmentCount = static_cast<uint32_t>(creationInfo.createDepthAttachment) +
+                                     static_cast<uint32_t>(creationInfo.createColorAttachment) +
+                                     static_cast<uint32_t>(creationInfo.createColorAttachment &&
+                                                           samples != VK_SAMPLE_COUNT_1_BIT);
     const VkRenderPassCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachmentCount,
@@ -279,11 +282,15 @@ static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
     return VK_SUCCESS;
 }
 static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
-                                  const uint32_t attachmentCount,
                                   const VkSampleCountFlagBits samples,
                                   VkRenderPass &renderPass)
 {
     std::array<VkAttachmentReference2 *, 3> attachmentReferences{};
+    attachmentReferences[0] = creationInfo.createDepthAttachment ? new VkAttachmentReference2{} : nullptr;
+    attachmentReferences[1] = creationInfo.createColorAttachment ? new VkAttachmentReference2{} : nullptr;
+    attachmentReferences[2] = creationInfo.createColorAttachment && samples != VK_SAMPLE_COUNT_1_BIT
+                                      ? new VkAttachmentReference2{}
+                                      : nullptr;
     std::array<VkAttachmentDescription2, 3> attachmentDescriptions{};
     createAttachments(samples,
                       creationInfo.createColorAttachment,
@@ -316,6 +323,10 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
                                subpassCreationInfo.preserveAttachmentCount,
                                subpassCreationInfo.preserveAttachments);
     }
+    const uint32_t attachmentCount = static_cast<uint32_t>(creationInfo.createDepthAttachment) +
+                                     static_cast<uint32_t>(creationInfo.createColorAttachment) +
+                                     static_cast<uint32_t>(creationInfo.createColorAttachment &&
+                                                           samples != VK_SAMPLE_COUNT_1_BIT);
     const VkRenderPassCreateInfo2 createInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
         .attachmentCount = attachmentCount,
@@ -334,63 +345,28 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
 
 namespace luna::core
 {
-RenderPass::RenderPass(const LunaRenderPassCreationInfo *creationInfo,
-                       const LunaRenderPassCreationInfo2 *creationInfo2,
-                       const RenderPassIndex *renderPassIndex)
+RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex)
 {
-    assert(isDestroyed_ && creationInfo);
-    extent_ = creationInfo->extent;
-    subpassIndices_.reserve(creationInfo->subpassCount);
-    samples_ = creationInfo->samples != 0 ? creationInfo->samples : VK_SAMPLE_COUNT_1_BIT;
-    const uint32_t attachmentCount = static_cast<uint32_t>(creationInfo->createDepthAttachment) +
-                                     static_cast<uint32_t>(creationInfo->createColorAttachment) +
-                                     static_cast<uint32_t>(creationInfo->createColorAttachment &&
-                                                           samples_ != VK_SAMPLE_COUNT_1_BIT);
-
-    if (creationInfo2 != nullptr)
-    {
-        for (uint32_t i = 0; i < creationInfo2->subpassCount; i++)
-        {
-            if (creationInfo2->subpasses[i].name != nullptr)
-            {
-                subpassMap_[creationInfo2->subpasses[i].name] = i;
-            }
-            subpassIndices_.emplace_back(i, renderPassIndex);
-        }
-        CHECK_RESULT_THROW(helpers::createRenderPass2(*creationInfo2, attachmentCount, samples_, renderPass_));
-    } else
-    {
-        for (uint32_t i = 0; i < creationInfo->subpassCount; i++)
-        {
-            if (creationInfo->subpasses[i].name != nullptr)
-            {
-                subpassMap_[creationInfo->subpasses[i].name] = i;
-            }
-            subpassIndices_.emplace_back(i, renderPassIndex);
-        }
-        CHECK_RESULT_THROW(helpers::createRenderPass(*creationInfo, attachmentCount, samples_, renderPass_));
-    }
-
-    CHECK_RESULT_THROW(createAttachmentImages(creationInfo->createDepthAttachment));
-    const uint32_t framebufferAttachmentCount = creationInfo->framebufferAttachmentCount +
-                                                static_cast<uint32_t>(creationInfo->createDepthAttachment) +
-                                                static_cast<uint32_t>(samples_ != VK_SAMPLE_COUNT_1_BIT);
-    std::vector framebufferAttachments(creationInfo->framebufferAttachments,
-                                       creationInfo->framebufferAttachments + creationInfo->framebufferAttachmentCount);
-    framebufferAttachments.reserve(framebufferAttachmentCount + 1);
-
-    if (creationInfo->createDepthAttachment)
-    {
-        framebufferAttachments.emplace_back(depthImageView_);
-    }
-    if (samples_ != VK_SAMPLE_COUNT_1_BIT)
-    {
-        framebufferAttachments.emplace_back(colorImageView_);
-    }
-    framebufferAttachments.emplace_back(swapChain.imageViews.at(0));
+    assert(isDestroyed_);
+    init_(creationInfo, renderPassIndex);
+    CHECK_RESULT_THROW(helpers::createRenderPass(creationInfo, samples_, renderPass_));
+    CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
     CHECK_RESULT_THROW(createSwapChainFramebuffers(renderPass_,
-                                                   framebufferAttachmentCount + 1,
-                                                   framebufferAttachments));
+                                                   creationInfo.createDepthAttachment,
+                                                   creationInfo.framebufferAttachmentCount,
+                                                   creationInfo.framebufferAttachments));
+    isDestroyed_ = false;
+}
+RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex)
+{
+    assert(isDestroyed_);
+    init_(creationInfo, renderPassIndex);
+    CHECK_RESULT_THROW(helpers::createRenderPass2(creationInfo, samples_, renderPass_));
+    CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
+    CHECK_RESULT_THROW(createSwapChainFramebuffers(renderPass_,
+                                                   creationInfo.createDepthAttachment,
+                                                   creationInfo.framebufferAttachmentCount,
+                                                   creationInfo.framebufferAttachments));
     isDestroyed_ = false;
 }
 
@@ -435,8 +411,8 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .usage =
                     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                     VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT, // TODO: investigate VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT
-            .sharingMode = device.sharingMode(),
-            .queueFamilyIndexCount = device.familyCount(),
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = device.queueFamilyIndices(),
         };
         CHECK_RESULT_RETURN(vmaCreateImage(device.allocator(),
@@ -465,8 +441,8 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .samples = samples_,
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-            .sharingMode = device.sharingMode(),
-            .queueFamilyIndexCount = device.familyCount(),
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = device.queueFamilyIndices(),
         };
         CHECK_RESULT_RETURN(vmaCreateImage(device.allocator(),
@@ -487,18 +463,35 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
 }
 
 inline VkResult RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPass,
-                                                        const uint32_t attachmentCount,
-                                                        std::vector<VkImageView> &attachmentImages) const
+                                                        const bool createDepthAttachment,
+                                                        const uint32_t framebufferAttachmentCount,
+                                                        const VkImageView *framebufferAttachments) const
 {
+    const uint32_t attachmentCount = framebufferAttachmentCount +
+                                     static_cast<uint32_t>(createDepthAttachment) +
+                                     static_cast<uint32_t>(samples_ != VK_SAMPLE_COUNT_1_BIT) +
+                                     1;
+    std::vector<VkImageView> attachments(framebufferAttachments, framebufferAttachments + framebufferAttachmentCount);
+    attachments.reserve(attachmentCount);
+
+    if (createDepthAttachment)
+    {
+        attachments.emplace_back(depthImageView_);
+    }
+    if (samples_ != VK_SAMPLE_COUNT_1_BIT)
+    {
+        attachments.emplace_back(colorImageView_);
+    }
+    attachments.emplace_back(swapChain.imageViews.at(0));
     swapChain.framebuffers.resize(swapChain.imageCount);
     for (uint32_t i = 0; i < swapChain.imageCount; i++)
     {
-        attachmentImages.back() = swapChain.imageViews.at(i);
+        attachments.back() = swapChain.imageViews.at(i);
         const VkFramebufferCreateInfo framebufferCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = renderPass,
             .attachmentCount = attachmentCount,
-            .pAttachments = attachmentImages.data(),
+            .pAttachments = attachments.data(),
             .width = extent_.width,
             .height = extent_.height,
             .layers = 1,
@@ -521,7 +514,7 @@ VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, Lu
                                                                                RenderPass::isDestroyed);
 
     renderPassIndices.emplace_back(renderPassIterator - renderPasses.begin());
-    TRY_CATCH_RESULT(renderPasses.emplace(renderPassIterator, creationInfo, nullptr, &renderPassIndices.back()));
+    TRY_CATCH_RESULT(renderPasses.emplace(renderPassIterator, *creationInfo, &renderPassIndices.back()));
     if (renderPass != nullptr)
     {
         *renderPass = &renderPassIndices.back();
@@ -536,24 +529,8 @@ VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, 
     const std::vector<RenderPass>::iterator &renderPassIterator = std::find_if(renderPasses.begin(),
                                                                                renderPasses.end(),
                                                                                RenderPass::isDestroyed);
-
-    const LunaRenderPassCreationInfo renderPassCreationInfo = {
-        .samples = creationInfo->samples,
-        .createColorAttachment = creationInfo->createColorAttachment,
-        .colorAttachmentLoadMode = creationInfo->colorAttachmentLoadMode,
-        .createDepthAttachment = creationInfo->createDepthAttachment,
-        .depthAttachmentLoadMode = creationInfo->depthAttachmentLoadMode,
-        // .attachmentCount = creationInfo->attachmentCount,
-        .subpassCount = creationInfo->subpassCount,
-        .dependencyCount = creationInfo->dependencyCount,
-        .extent = creationInfo->extent,
-        .framebufferAttachmentCount = creationInfo->framebufferAttachmentCount,
-    };
     renderPassIndices.emplace_back(renderPassIterator - renderPasses.begin());
-    TRY_CATCH_RESULT(renderPasses.emplace(renderPassIterator,
-                                          &renderPassCreationInfo,
-                                          creationInfo,
-                                          &renderPassIndices.back()));
+    TRY_CATCH_RESULT(renderPasses.emplace(renderPassIterator, *creationInfo, &renderPassIndices.back()));
     if (renderPass != nullptr)
     {
         *renderPass = &renderPassIndices.back();

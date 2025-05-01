@@ -26,7 +26,7 @@ VkResult lunaPresentSwapChain()
     assert(commandBuffer.isRecording());
 
     const VkSemaphore &renderFinishedSemaphore = device.renderFinishedSemaphore();
-    constexpr VkPipelineStageFlags waitStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    constexpr VkPipelineStageFlags waitStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount = 1,

@@ -93,3 +93,4 @@ readability-*,
 CheckOptions:
   bugprone-unused-return-value.CheckedReturnTypes: '^::(Vk|Luna).+$;^::luna.+$'
   bugprone-unused-return-value.AllowCastToVoid: true
+  readability-function-cognitive-complexity.IgnoreMacros: true

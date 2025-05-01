@@ -371,8 +371,7 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
         .descriptorSet = *descriptorSet,
         .descriptorLayoutBindingName = "Texture",
         .samplerCreationInfo = &samplerCreationInfo,
-        .sourceStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-        .destinationStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+        .destinationStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
     };
     CHECK_RESULT(lunaCreateImage(&imageCreationInfo, NULL));
     free(pixels);

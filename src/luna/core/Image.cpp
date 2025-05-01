@@ -239,7 +239,7 @@ static void transitionImageLayout(const VkImage image,
         .image = image,
         .subresourceRange = subresourceRange,
     };
-    vkCmdPipelineBarrier(core::device.commandBuffers().transfer.commandBuffer(),
+    vkCmdPipelineBarrier(core::device.commandBuffers().graphics.commandBuffer(),
                          sourceStageMask,
                          destinationStageMask,
                          0,
@@ -284,7 +284,7 @@ static void transitionImageLayout2(const VkImage image,
         .imageMemoryBarrierCount = 1,
         .pImageMemoryBarriers = &memoryBarrier,
     };
-    vkCmdPipelineBarrier2(core::device.commandBuffers().transfer.commandBuffer(), &dependencyInfo);
+    vkCmdPipelineBarrier2(core::device.commandBuffers().graphics.commandBuffer(), &dependencyInfo);
 }
 static VkResult writeImage(const VkImage image,
                            const VkExtent3D &extent,
@@ -292,13 +292,13 @@ static VkResult writeImage(const VkImage image,
                            const LunaSampledImageCreationInfo &creationInfo,
                            const VkImageAspectFlags aspectMask)
 {
-    core::CommandBuffer &transferCommandBuffer = core::device.commandBuffers().transfer;
-    if (!transferCommandBuffer.isRecording())
+    core::CommandBuffer &commandBuffer = core::device.commandBuffers().graphics;
+    if (!commandBuffer.isRecording())
     {
         const VkDevice logicalDevice = core::device.logicalDevice();
-        CHECK_RESULT_RETURN(transferCommandBuffer.waitForFence(logicalDevice));
-        CHECK_RESULT_RETURN(transferCommandBuffer.resetFence(logicalDevice));
-        CHECK_RESULT_RETURN(transferCommandBuffer.beginSingleUseCommandBuffer());
+        CHECK_RESULT_RETURN(commandBuffer.waitForFence(logicalDevice));
+        CHECK_RESULT_RETURN(commandBuffer.resetFence(logicalDevice));
+        CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
     }
 
     const size_t bytes = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format);
@@ -313,7 +313,8 @@ static VkResult writeImage(const VkImage image,
             .size = bytes,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         };
-        CHECK_RESULT_RETURN(core::buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &core::stagingBufferIndex));
+        CHECK_RESULT_RETURN(core::buffer::BufferRegion::createBufferRegion(bufferCreationInfo,
+                                                                           &core::stagingBufferIndex));
     }
 
     core::bufferRegion(core::stagingBufferIndex).copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
@@ -326,7 +327,9 @@ static VkResult writeImage(const VkImage image,
                                VK_IMAGE_ASPECT_COLOR_BIT,
                                mipmapLevels,
                                arrayLayers,
-                               creationInfo.sourceStageMask,
+                               creationInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE
+                                       ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
+                                       : creationInfo.sourceStageMask,
                                VK_ACCESS_NONE,
                                VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                                VK_ACCESS_2_TRANSFER_WRITE_BIT);
@@ -338,7 +341,8 @@ static VkResult writeImage(const VkImage image,
                               VK_IMAGE_ASPECT_COLOR_BIT,
                               mipmapLevels,
                               arrayLayers,
-                              creationInfo.sourceStageMask,
+                              creationInfo.sourceStageMask == VK_PIPELINE_STAGE_NONE ? VK_PIPELINE_STAGE_TRANSFER_BIT
+                                                                                     : creationInfo.sourceStageMask,
                               VK_ACCESS_NONE,
                               VK_PIPELINE_STAGE_TRANSFER_BIT,
                               VK_ACCESS_TRANSFER_WRITE_BIT);
@@ -353,7 +357,7 @@ static VkResult writeImage(const VkImage image,
         .imageSubresource = subresourceLayers,
         .imageExtent = extent,
     };
-    vkCmdCopyBufferToImage(transferCommandBuffer.commandBuffer(),
+    vkCmdCopyBufferToImage(commandBuffer.commandBuffer(),
                            core::stagingBuffer(),
                            image,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -389,10 +393,9 @@ static VkResult writeImage(const VkImage image,
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .commandBufferCount = 1,
-        .pCommandBuffers = &transferCommandBuffer.commandBuffer(),
+        .pCommandBuffers = &commandBuffer.commandBuffer(),
     };
-    CHECK_RESULT_RETURN(transferCommandBuffer.submitCommandBuffer(core::device.familyQueues().transfer,
-                                                                  queueSubmitInfo));
+    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(core::device.familyQueues().graphics, queueSubmitInfo));
     return VK_SUCCESS;
 }
 static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,

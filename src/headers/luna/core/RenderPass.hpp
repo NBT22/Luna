@@ -34,9 +34,8 @@ class RenderPass
         friend VkResult(::lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo));
 
         RenderPass() = default;
-        RenderPass(const LunaRenderPassCreationInfo *creationInfo,
-                   const LunaRenderPassCreationInfo2 *creationInfo2,
-                   const RenderPassIndex *renderPassIndex);
+        RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
+        RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
 
         void destroy();
 
@@ -44,12 +43,16 @@ class RenderPass
         const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
         VkResult createAttachmentImages(bool createDepthImage);
         VkResult createSwapChainFramebuffers(VkRenderPass renderPass,
-                                             uint32_t attachmentCount,
-                                             std::vector<VkImageView> &attachmentImages) const;
+                                             bool createDepthAttachment,
+                                             uint32_t framebufferAttachmentCount,
+                                             const VkImageView *framebufferAttachments) const;
 
         [[nodiscard]] VkRenderPass renderPass() const;
 
     private:
+        void init_(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
+        void init_(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
+
         bool isDestroyed_{true};
         VkRenderPass renderPass_{};
         std::string name_{};
