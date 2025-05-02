@@ -239,7 +239,7 @@ static void transitionImageLayout(const VkImage image,
         .image = image,
         .subresourceRange = subresourceRange,
     };
-    vkCmdPipelineBarrier(core::device.commandPools().graphics.commandBuffer(0),
+    vkCmdPipelineBarrier(core::device.commandPools().graphics.commandBuffer(1),
                          sourceStageMask,
                          destinationStageMask,
                          0,
@@ -284,7 +284,7 @@ static void transitionImageLayout2(const VkImage image,
         .imageMemoryBarrierCount = 1,
         .pImageMemoryBarriers = &memoryBarrier,
     };
-    vkCmdPipelineBarrier2(core::device.commandPools().graphics.commandBuffer(0), &dependencyInfo);
+    vkCmdPipelineBarrier2(core::device.commandPools().graphics.commandBuffer(1), &dependencyInfo);
 }
 static VkResult writeImage(const VkImage image,
                            const VkExtent3D &extent,
@@ -292,7 +292,7 @@ static VkResult writeImage(const VkImage image,
                            const LunaSampledImageCreationInfo &creationInfo,
                            const VkImageAspectFlags aspectMask)
 {
-    core::CommandBuffer &commandBuffer = core::device.commandPools().graphics.commandBuffer(0);
+    core::CommandBuffer &commandBuffer = core::device.commandPools().graphics.commandBuffer(1);
     if (!commandBuffer.isRecording())
     {
         const VkDevice logicalDevice = core::device.logicalDevice();
@@ -390,12 +390,20 @@ static VkResult writeImage(const VkImage image,
                               creationInfo.destinationAccessMask);
     }
 
+    const core::Semaphore &semaphore = commandBuffer.semaphore();
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
+        .pWaitSemaphores = &semaphore,
+        .pWaitDstStageMask = &semaphore.stageMask(),
         .commandBufferCount = 1,
         .pCommandBuffers = &commandBuffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &semaphore,
     };
-    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(core::device.familyQueues().graphics, queueSubmitInfo));
+    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(core::device.familyQueues().graphics,
+                                                          queueSubmitInfo,
+                                                          creationInfo.destinationStageMask));
     return VK_SUCCESS;
 }
 static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,

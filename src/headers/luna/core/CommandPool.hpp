@@ -19,6 +19,10 @@ class CommandPool
         VkResult allocateCommandBuffer(VkDevice logicalDevice,
                                        VkCommandBufferLevel commandBufferLevel,
                                        const void *allocateInfoPNext);
+        VkResult allocateCommandBuffer(VkDevice logicalDevice,
+                                       VkCommandBufferLevel commandBufferLevel,
+                                       const void *allocateInfoPNext,
+                                       const VkSemaphoreCreateInfo *semaphoreCreateInfo);
 
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index) const;
         [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index);

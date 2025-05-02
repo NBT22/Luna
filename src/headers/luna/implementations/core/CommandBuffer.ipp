@@ -7,12 +7,14 @@
 #include <cassert>
 #include "luna/core/Luna.hpp"
 
-namespace luna::core
+namespace luna::helpers
 {
-inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
+static VkResult createCommandBuffer(const VkDevice logicalDevice,
                                     const VkCommandPool commandPool,
                                     const VkCommandBufferLevel commandBufferLevel,
-                                    const void *allocateInfoPNext)
+                                    const void *allocateInfoPNext,
+                                    VkCommandBuffer *commandBuffer,
+                                    VkFence *fence)
 {
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -21,13 +23,45 @@ inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
         .level = commandBufferLevel,
         .commandBufferCount = 1,
     };
-    CHECK_RESULT_THROW(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, &commandBuffer_));
+    CHECK_RESULT_RETURN(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, commandBuffer));
 
     constexpr VkFenceCreateInfo fenceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence_));
+    CHECK_RESULT_RETURN(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, fence));
+
+    return VK_SUCCESS;
+}
+} // namespace luna::helpers
+
+namespace luna::core
+{
+inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
+                                    const VkCommandPool commandPool,
+                                    const VkCommandBufferLevel commandBufferLevel,
+                                    const void *allocateInfoPNext)
+{
+    CHECK_RESULT_THROW(helpers::createCommandBuffer(logicalDevice,
+                                                    commandPool,
+                                                    commandBufferLevel,
+                                                    allocateInfoPNext,
+                                                    &commandBuffer_,
+                                                    &fence_));
+}
+inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
+                                    const VkCommandPool commandPool,
+                                    const VkCommandBufferLevel commandBufferLevel,
+                                    const void *allocateInfoPNext,
+                                    const VkSemaphoreCreateInfo *semaphoreCreateInfo):
+    semaphore_(logicalDevice, semaphoreCreateInfo)
+{
+    CHECK_RESULT_THROW(helpers::createCommandBuffer(logicalDevice,
+                                                    commandPool,
+                                                    commandBufferLevel,
+                                                    allocateInfoPNext,
+                                                    &commandBuffer_,
+                                                    &fence_));
 }
 
 inline CommandBuffer::operator const VkCommandBuffer &() const
@@ -52,16 +86,32 @@ inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
     isRecording_ = true;
     return VK_SUCCESS;
 }
-inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue, const VkSubmitInfo &submitInfo)
+inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
+                                                   const VkSubmitInfo &submitInfo,
+                                                   const VkPipelineStageFlags stageMask)
 {
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
     CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fence_));
     isRecording_ = false;
+    if (submitInfo.signalSemaphoreCount > 0)
+    {
+        for (uint32_t i = 0; i < submitInfo.signalSemaphoreCount; i++)
+        {
+            if (submitInfo.pSignalSemaphores[i] == semaphore_)
+            {
+                semaphore_.setIsSignaled(true);
+                semaphore_.setStageMask(stageMask);
+                break;
+            }
+        }
+    }
     return VK_SUCCESS;
 }
-inline void CommandBuffer::setRecording(const bool value)
+inline bool CommandBuffer::getAndSetIsSignaled(const bool value)
 {
-    isRecording_ = value;
+    const bool oldValue = semaphore_.isSignaled();
+    semaphore_.setIsSignaled(value);
+    return oldValue;
 }
 inline VkResult CommandBuffer::waitForFence(const VkDevice logicalDevice, const uint64_t timeout = UINT64_MAX) const
 {
@@ -78,5 +128,9 @@ inline VkResult CommandBuffer::resetFence(const VkDevice logicalDevice) const
 inline bool CommandBuffer::isRecording() const
 {
     return isRecording_;
+}
+inline const Semaphore &CommandBuffer::semaphore() const
+{
+    return semaphore_;
 }
 } // namespace luna::core

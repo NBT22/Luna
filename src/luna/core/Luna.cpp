@@ -7,6 +7,7 @@
 #include <luna/luna.h>
 
 #define VMA_IMPLEMENTATION
+#include <array>
 #include <vk_mem_alloc.h>
 
 VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkShaderModule *shaderModule)
@@ -25,24 +26,26 @@ VkResult lunaPresentSwapChain()
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(0);
     assert(commandBuffer.isRecording());
 
-    const VkSemaphore &renderFinishedSemaphore = device.renderFinishedSemaphore();
-    constexpr VkPipelineStageFlags waitStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    const Semaphore &secondaryGraphicsSemaphore = device.commandPools().graphics.commandBuffer(1).semaphore();
+    const std::array<VkSemaphore, 2> waitSemaphores = {device.imageAvailableSemaphore(), secondaryGraphicsSemaphore};
+    const std::array<VkPipelineStageFlags, 2> waitStageMasks = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                                                secondaryGraphicsSemaphore.stageMask()};
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &device.imageAvailableSemaphore(),
-        .pWaitDstStageMask = &waitStageMask,
+        .waitSemaphoreCount = device.commandPools().graphics.commandBuffer(1).getAndSetIsSignaled(false) ? 2u : 1u,
+        .pWaitSemaphores = waitSemaphores.data(),
+        .pWaitDstStageMask = waitStageMasks.data(),
         .commandBufferCount = 1,
         .pCommandBuffers = &commandBuffer,
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &renderFinishedSemaphore,
+        .pSignalSemaphores = &device.renderFinishedSemaphore(),
     };
     CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(device.familyQueues().graphics, queueSubmitInfo));
 
     const VkPresentInfoKHR presentInfo = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &renderFinishedSemaphore,
+        .pWaitSemaphores = &device.renderFinishedSemaphore(),
         .swapchainCount = 1,
         .pSwapchains = &swapChain.swapChain,
         .pImageIndices = &swapChain.imageIndex,

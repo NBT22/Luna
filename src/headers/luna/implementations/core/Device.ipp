@@ -19,9 +19,9 @@ inline void Device::destroy()
     {
         vkDestroyShaderModule(logicalDevice_, shaderModule, nullptr);
     }
-    // commandBuffers_.graphics.destroy(logicalDevice_);
-    // commandBuffers_.transfer.destroy(logicalDevice_);
-    // commandBuffers_.presentation.destroy(logicalDevice_);
+    commandPools_.graphics.destroy(logicalDevice_);
+    commandPools_.transfer.destroy(logicalDevice_);
+    commandPools_.presentation.destroy(logicalDevice_);
     vkDestroySemaphore(logicalDevice_, imageAvailableSemaphore_, nullptr);
     vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore_, nullptr);
     vmaDestroyAllocator(allocator_);
@@ -85,7 +85,7 @@ inline const VkSemaphore &Device::imageAvailableSemaphore() const
 {
     return imageAvailableSemaphore_;
 }
-inline VkSemaphore Device::renderFinishedSemaphore() const
+inline const VkSemaphore &Device::renderFinishedSemaphore() const
 {
     return renderFinishedSemaphore_;
 }
@@ -326,9 +326,13 @@ inline VkResult Device::createCommandPools()
     CHECK_RESULT_RETURN(commandPools_.graphics.allocateCommandBuffer(logicalDevice_,
                                                                      VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                                                      nullptr));
-    // CHECK_RESULT_RETURN(commandPools_.graphics.allocateCommandBuffer(logicalDevice_,
-    //                                                                  VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-    //                                                                  nullptr));
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    CHECK_RESULT_RETURN(commandPools_.graphics.allocateCommandBuffer(logicalDevice_,
+                                                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                     nullptr,
+                                                                     &semaphoreCreateInfo));
 
     // TODO: Both the transfer and presentation families are currently unused
     // const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {

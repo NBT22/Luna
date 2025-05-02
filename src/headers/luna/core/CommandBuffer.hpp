@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <vulkan/vulkan_core.h>
+#include <luna/core/Semaphore.hpp>
 
 namespace luna::core
 {
@@ -17,22 +17,31 @@ class CommandBuffer
                       VkCommandPool commandPool,
                       VkCommandBufferLevel commandBufferLevel,
                       const void *allocateInfoPNext);
+        CommandBuffer(VkDevice logicalDevice,
+                      VkCommandPool commandPool,
+                      VkCommandBufferLevel commandBufferLevel,
+                      const void *allocateInfoPNext,
+                      const VkSemaphoreCreateInfo *semaphoreCreateInfo);
 
-        operator const VkCommandBuffer&() const;
-        const VkCommandBuffer *operator &() const;
+        operator const VkCommandBuffer &() const;
+        const VkCommandBuffer *operator&() const;
 
         VkResult beginSingleUseCommandBuffer();
-        VkResult submitCommandBuffer(VkQueue queue, const VkSubmitInfo &submitInfo);
-        void setRecording(bool value);
+        VkResult submitCommandBuffer(VkQueue queue,
+                                     const VkSubmitInfo &submitInfo,
+                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        bool getAndSetIsSignaled(bool value);
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
         VkResult resetFence(VkDevice logicalDevice) const;
 
         [[nodiscard]] bool isRecording() const;
+        [[nodiscard]] const Semaphore &semaphore() const;
 
     private:
         bool isRecording_{};
         VkCommandBuffer commandBuffer_{};
         VkFence fence_{};
+        Semaphore semaphore_{};
 };
 } // namespace luna::core
 

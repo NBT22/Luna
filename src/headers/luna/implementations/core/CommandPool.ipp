@@ -20,8 +20,9 @@ inline void CommandPool::destroy(const VkDevice logicalDevice)
     }
     for (const CommandBuffer &commandBuffer: commandBuffers_)
     {
-        assert(commandBuffer.isRecording_);
+        assert(!commandBuffer.isRecording_);
         vkDestroyFence(logicalDevice, commandBuffer.fence_, nullptr);
+        commandBuffer.semaphore_.destroy(logicalDevice);
     }
     vkDestroyCommandPool(logicalDevice, commandPool_, nullptr);
     isDestroyed_ = true;
@@ -37,6 +38,18 @@ inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
                                                    const void *allocateInfoPNext)
 {
     TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice, commandPool_, commandBufferLevel, allocateInfoPNext));
+    return VK_SUCCESS;
+}
+inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
+                                                   VkCommandBufferLevel commandBufferLevel,
+                                                   const void *allocateInfoPNext,
+                                                   const VkSemaphoreCreateInfo *semaphoreCreateInfo)
+{
+    TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice,
+                                                  commandPool_,
+                                                  commandBufferLevel,
+                                                  allocateInfoPNext,
+                                                  semaphoreCreateInfo));
     return VK_SUCCESS;
 }
 

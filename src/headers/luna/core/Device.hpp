@@ -46,7 +46,7 @@ class Device
         [[nodiscard]] FamilyValues<CommandPool> &commandPools();
         [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
         [[nodiscard]] const VkSemaphore &imageAvailableSemaphore() const;
-        [[nodiscard]] VkSemaphore renderFinishedSemaphore() const;
+        [[nodiscard]] const VkSemaphore &renderFinishedSemaphore() const;
 
     private:
         VkResult findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
