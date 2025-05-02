@@ -23,7 +23,7 @@ VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkSha
 VkResult lunaPresentSwapChain()
 {
     using namespace luna::core;
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(0);
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
     assert(commandBuffer.isRecording());
 
     const Semaphore &secondaryGraphicsSemaphore = device.commandPools().graphics.commandBuffer(1).semaphore();
@@ -76,7 +76,7 @@ VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creation
         .poolSizeCount = creationInfo->poolSizeCount,
         .pPoolSizes = creationInfo->poolSizes,
     };
-    CHECK_RESULT_RETURN(vkCreateDescriptorPool(device.logicalDevice(), &createInfo, nullptr, poolIterator.base()));
+    CHECK_RESULT_RETURN(vkCreateDescriptorPool(device, &createInfo, nullptr, poolIterator.base()));
     descriptorPoolIndices.emplace_back(poolIterator - descriptorPools.begin());
     if (descriptorPool != nullptr)
     {
@@ -98,7 +98,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
         const auto *poolIndex = static_cast<const DescriptorPoolIndex *>(allocationInfo->descriptorPool);
         for (uint32_t i = 0; i < allocationInfo->descriptorSetCount; i++)
         {
-            const VkDescriptorSetLayout layout = descriptorSetLayout(allocationInfo->setLayouts[i]).layout();
+            const VkDescriptorSetLayout layout = descriptorSetLayout(allocationInfo->setLayouts[i]);
             const auto *layoutIndex = static_cast<const DescriptorSetLayoutIndex *>(allocationInfo->setLayouts[i]);
             layouts.emplace_back(layout);
 
@@ -122,9 +122,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
                         .descriptorSetCount = 1,
                         .pSetLayouts = &layout,
                     };
-                    CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device.logicalDevice(),
-                                                                 &allocateInfo,
-                                                                 descriptorSetIterator.base()));
+                    CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device, &allocateInfo, descriptorSetIterator.base()));
                     slotsFound++;
                     continue;
                 }
@@ -142,7 +140,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
         };
         const size_t oldSize = luna::core::descriptorSets.size();
         luna::core::descriptorSets.resize(oldSize + allocationInfo->descriptorSetCount - slotsFound);
-        CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device.logicalDevice(),
+        CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device,
                                                      &allocateInfo,
                                                      luna::core::descriptorSets.data() + oldSize));
     }
@@ -188,7 +186,7 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
             const buffer::BufferRegion &bufferRegion = luna::core::bufferRegion(bufferInfo->buffer);
             const auto *bufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(bufferInfo->buffer);
             const VkDescriptorBufferInfo descriptorBufferInfo = {
-                .buffer = buffers.at(bufferRegionIndex->bufferIndex).buffer(),
+                .buffer = buffers.at(bufferRegionIndex->bufferIndex),
                 .offset = bufferInfo->offset + bufferRegion.offset(),
                 .range = bufferInfo->range == 0 ? bufferRegion.size() : bufferInfo->range,
             };
@@ -204,5 +202,5 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
                                 nullptr);
         }
     }
-    vkUpdateDescriptorSets(device.logicalDevice(), writeCount, writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device, writeCount, writes.data(), 0, nullptr);
 }

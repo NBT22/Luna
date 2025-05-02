@@ -193,13 +193,13 @@ VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 VkPhysicalDeviceProperties lunaGetPhysicalDeviceProperties()
 {
     VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(luna::core::device.physicalDevice(), &properties);
+    vkGetPhysicalDeviceProperties(luna::core::device, &properties);
     return properties;
 }
 
 VkPhysicalDeviceProperties2 lunaGetPhysicalDeviceProperties2()
 {
     VkPhysicalDeviceProperties2 properties;
-    vkGetPhysicalDeviceProperties2(luna::core::device.physicalDevice(), &properties);
+    vkGetPhysicalDeviceProperties2(luna::core::device, &properties);
     return properties;
 }

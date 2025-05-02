@@ -37,6 +37,8 @@ class RenderPass
         RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
         RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
 
+        operator const VkRenderPass &() const;
+
         void destroy();
 
         const RenderPassSubpassIndex *getFirstSubpass() const;
@@ -46,8 +48,6 @@ class RenderPass
                                              bool createDepthAttachment,
                                              uint32_t framebufferAttachmentCount,
                                              const VkImageView *framebufferAttachments) const;
-
-        [[nodiscard]] VkRenderPass renderPass() const;
 
     private:
         void init_(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);

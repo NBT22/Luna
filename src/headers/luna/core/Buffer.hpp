@@ -29,7 +29,9 @@ class BufferRegion
     public:
         // TODO: Maybe move this to Instance where the others live and friend it here?
         static VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index);
-        static VkResult createBufferRegions(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer *buffers);
+        static VkResult createBufferRegions(uint32_t count,
+                                            const LunaBufferCreationInfo *creationInfos,
+                                            LunaBuffer *buffers);
         static bool isDestroyed(const BufferRegion &region);
 
         friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t);
@@ -86,11 +88,12 @@ class Buffer
 
         explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo);
 
+        operator const VkBuffer &() const;
+
         void destroy();
         void destroyBufferRegion(uint32_t index);
         void destroyBufferRegionSubRegion(uint32_t regionIndex, const buffer::SubRegion *subRegion);
 
-        [[nodiscard]] const VkBuffer &buffer() const;
         [[nodiscard]] const buffer::BufferRegion &region(uint32_t index) const;
 
     private:

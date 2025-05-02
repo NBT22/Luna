@@ -124,12 +124,10 @@ VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
     core::surface = creationInfo.surface;
 
     VkSurfaceCapabilitiesKHR capabilities;
-    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(core::device.physicalDevice(),
-                                                                  core::surface,
-                                                                  &capabilities));
+    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(core::device, core::surface, &capabilities));
     capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 
-    CHECK_RESULT_RETURN(helpers::findSwapChainFormat(core::device.physicalDevice(),
+    CHECK_RESULT_RETURN(helpers::findSwapChainFormat(core::device,
                                                      core::surface,
                                                      creationInfo.formatCount,
                                                      creationInfo.formatPriorityList,
@@ -146,7 +144,7 @@ VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
     assert(capabilities.minImageExtent.height <= core::swapChain.extent.height &&
            core::swapChain.extent.height <= capabilities.maxImageExtent.height);
 
-    CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(core::device.physicalDevice(),
+    CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(core::device,
                                                          core::surface,
                                                          creationInfo.presentModeCount,
                                                          creationInfo.presentModePriorityList,
@@ -176,12 +174,9 @@ VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
         .presentMode = core::swapChain.presentMode,
         .clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
     };
-    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(core::device.logicalDevice(),
-                                             &createInfo,
-                                             nullptr,
-                                             &core::swapChain.swapChain));
+    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(core::device, &createInfo, nullptr, &core::swapChain.swapChain));
 
-    CHECK_RESULT_RETURN(helpers::createSwapChainImages(core::device.logicalDevice(), core::swapChain));
+    CHECK_RESULT_RETURN(helpers::createSwapChainImages(core::device, core::swapChain));
     core::swapChain.imageIndex = -1u;
     return VK_SUCCESS;
 }
@@ -253,7 +248,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 VkResult lunaDestroyInstance()
 {
     using namespace luna::core;
-    const VkDevice logicalDevice = device.logicalDevice();
+    const VkDevice logicalDevice = device;
     CHECK_RESULT_RETURN(vkDeviceWaitIdle(logicalDevice));
 
 
@@ -359,9 +354,7 @@ VkExtent2D lunaGetSwapChainExtent()
 VkResult lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities)
 {
     assert(capabilities);
-    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::device.physicalDevice(),
-                                                                  surface,
-                                                                  capabilities));
+    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::core::device, surface, capabilities));
     capabilities->maxImageCount = capabilities->maxImageCount == 0 ? UINT32_MAX : capabilities->maxImageCount;
     return VK_SUCCESS;
 }
@@ -371,7 +364,7 @@ void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatP
     VkFormatProperties properties;
     for (uint32_t i = 0; i < formatCount; i++)
     {
-        vkGetPhysicalDeviceFormatProperties(luna::core::device.physicalDevice(), formatPriorityList[i], &properties);
+        vkGetPhysicalDeviceFormatProperties(luna::core::device, formatPriorityList[i], &properties);
         if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) ==
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {

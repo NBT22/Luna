@@ -24,8 +24,8 @@ class CommandPool
                                        const void *allocateInfoPNext,
                                        const VkSemaphoreCreateInfo *semaphoreCreateInfo);
 
-        [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index) const;
-        [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index);
+        [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
+        [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index = 0);
 
     private:
         bool isDestroyed_{true};

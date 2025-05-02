@@ -278,7 +278,7 @@ static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
         .dependencyCount = creationInfo.dependencyCount,
         .pDependencies = creationInfo.dependencies,
     };
-    CHECK_RESULT_RETURN(vkCreateRenderPass(core::device.logicalDevice(), &createInfo, nullptr, &renderPass));
+    CHECK_RESULT_RETURN(vkCreateRenderPass(core::device, &createInfo, nullptr, &renderPass));
     return VK_SUCCESS;
 }
 static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
@@ -338,7 +338,7 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
         .correlatedViewMaskCount = creationInfo.correlatedViewMaskCount,
         .pCorrelatedViewMasks = creationInfo.correlatedViewMasks,
     };
-    CHECK_RESULT_RETURN(vkCreateRenderPass2(core::device.logicalDevice(), &createInfo, nullptr, &renderPass));
+    CHECK_RESULT_RETURN(vkCreateRenderPass2(core::device, &createInfo, nullptr, &renderPass));
     return VK_SUCCESS;
 }
 } // namespace luna::helpers
@@ -376,11 +376,11 @@ void RenderPass::destroy()
     {
         return;
     }
-    vkDestroyImageView(device.logicalDevice(), colorImageView_, nullptr);
-    vkDestroyImageView(device.logicalDevice(), depthImageView_, nullptr);
+    vkDestroyImageView(device, colorImageView_, nullptr);
+    vkDestroyImageView(device, depthImageView_, nullptr);
     vmaDestroyImage(device.allocator(), colorImage_, colorImageAllocation_);
     vmaDestroyImage(device.allocator(), depthImage_, depthImageAllocation_);
-    vkDestroyRenderPass(device.logicalDevice(), renderPass_, nullptr);
+    vkDestroyRenderPass(device, renderPass_, nullptr);
     name_.clear();
     name_.shrink_to_fit();
     subpassIndices_.clear();
@@ -421,7 +421,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
                                            &colorImage_,
                                            &colorImageAllocation_,
                                            nullptr));
-        CHECK_RESULT_RETURN(helpers::createImageView(device.logicalDevice(),
+        CHECK_RESULT_RETURN(helpers::createImageView(device,
                                                      colorImage_,
                                                      swapChain.format.format,
                                                      VK_IMAGE_ASPECT_COLOR_BIT,
@@ -451,7 +451,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
                                            &depthImage_,
                                            &depthImageAllocation_,
                                            nullptr));
-        CHECK_RESULT_RETURN(helpers::createImageView(device.logicalDevice(),
+        CHECK_RESULT_RETURN(helpers::createImageView(device,
                                                      depthImage_,
                                                      depthImageFormat,
                                                      VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
@@ -496,10 +496,7 @@ inline VkResult RenderPass::createSwapChainFramebuffers(const VkRenderPass rende
             .height = extent_.height,
             .layers = 1,
         };
-        CHECK_RESULT_RETURN(vkCreateFramebuffer(device.logicalDevice(),
-                                                &framebufferCreateInfo,
-                                                nullptr,
-                                                &swapChain.framebuffers[i]));
+        CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &swapChain.framebuffers[i]));
     }
     return VK_SUCCESS;
 }
@@ -551,15 +548,15 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
 {
     using namespace luna::core;
     assert(renderPass);
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(0);
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
     const RenderPass &renderPassObject = luna::core::renderPass(renderPass);
 
     if (swapChain.imageIndex == -1u)
     {
         // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
-        CHECK_RESULT_RETURN(commandBuffer.waitForFence(device.logicalDevice_));
-        CHECK_RESULT_RETURN(commandBuffer.resetFence(device.logicalDevice_));
-        CHECK_RESULT_RETURN(vkAcquireNextImageKHR(device.logicalDevice_,
+        CHECK_RESULT_RETURN(commandBuffer.waitForFence(device));
+        CHECK_RESULT_RETURN(commandBuffer.resetFence(device));
+        CHECK_RESULT_RETURN(vkAcquireNextImageKHR(device,
                                                   swapChain.swapChain,
                                                   UINT64_MAX,
                                                   device.imageAvailableSemaphore_,
@@ -595,13 +592,13 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
 }
 void lunaNextSubpass()
 {
-    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer(0);
+    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer();
     assert(commandBuffer.isRecording());
     vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 }
 void lunaEndRenderPass()
 {
-    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer(0);
+    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer();
     assert(commandBuffer.isRecording());
     vkCmdEndRenderPass(commandBuffer);
 }

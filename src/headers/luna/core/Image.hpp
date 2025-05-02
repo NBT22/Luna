@@ -29,7 +29,7 @@ struct ImageIndex
 class Image
 {
     public:
-        explicit Image(const LunaSampledImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
+        Image(const LunaSampledImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
 
         void destroy();
 

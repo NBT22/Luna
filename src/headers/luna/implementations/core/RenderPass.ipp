@@ -13,10 +13,11 @@ inline bool RenderPass::isDestroyed(const RenderPass &renderPass)
     return renderPass.isDestroyed_;
 }
 
-inline VkRenderPass RenderPass::renderPass() const
+inline RenderPass::operator const VkRenderPass &() const
 {
     return renderPass_;
 }
+
 inline const RenderPassSubpassIndex *RenderPass::getFirstSubpass() const
 {
     assert(!subpassIndices_.empty());

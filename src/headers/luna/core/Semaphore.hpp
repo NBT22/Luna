@@ -15,7 +15,7 @@ class Semaphore
         explicit Semaphore(VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo);
 
         operator const VkSemaphore &() const;
-        const VkSemaphore *operator &() const;
+        const VkSemaphore *operator&() const;
 
         void destroy(VkDevice logicalDevice) const;
 

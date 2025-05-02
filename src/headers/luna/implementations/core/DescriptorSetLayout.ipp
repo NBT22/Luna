@@ -12,10 +12,11 @@ inline bool DescriptorSetLayout::isDestroyed(const DescriptorSetLayout &layout)
     return layout.isDestroyed_;
 }
 
-inline VkDescriptorSetLayout DescriptorSetLayout::layout() const
+inline DescriptorSetLayout::operator const VkDescriptorSetLayout &() const
 {
     return layout_;
 }
+
 inline const DescriptorSetLayout::Binding &DescriptorSetLayout::binding(const std::string &bindingName) const
 {
     return bindingIndexMap_.at(bindingName);

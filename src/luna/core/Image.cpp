@@ -295,7 +295,7 @@ static VkResult writeImage(const VkImage image,
     core::CommandBuffer &commandBuffer = core::device.commandPools().graphics.commandBuffer(1);
     if (!commandBuffer.isRecording())
     {
-        const VkDevice logicalDevice = core::device.logicalDevice();
+        const VkDevice logicalDevice = core::device;
         CHECK_RESULT_RETURN(commandBuffer.waitForFence(logicalDevice));
         CHECK_RESULT_RETURN(commandBuffer.resetFence(logicalDevice));
         CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
@@ -435,7 +435,7 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
             .descriptorType = binding.type,
             .pImageInfo = &imageInfo,
         };
-        vkUpdateDescriptorSets(core::device.logicalDevice(), 1, &writeDescriptor, 0, nullptr);
+        vkUpdateDescriptorSets(core::device, 1, &writeDescriptor, 0, nullptr);
     }
 
     if (imageIndex != nullptr)
@@ -496,7 +496,7 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         }
     }
-    CHECK_RESULT_THROW(helpers::createImageView(device.logicalDevice(),
+    CHECK_RESULT_THROW(helpers::createImageView(device,
                                                 image_,
                                                 creationInfo.format,
                                                 aspectMask,
@@ -522,7 +522,7 @@ void Image::destroy()
     {
         return;
     }
-    vkDestroyImageView(device.logicalDevice(), imageView_, nullptr);
+    vkDestroyImageView(device, imageView_, nullptr);
     vmaDestroyImage(device.allocator(), image_, allocation_);
     isDestroyed_ = true;
 }
@@ -566,10 +566,7 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
         .borderColor = creationInfo->borderColor,
         .unnormalizedCoordinates = creationInfo->unnormalizedCoordinates,
     };
-    CHECK_RESULT_RETURN(vkCreateSampler(luna::core::device.logicalDevice(),
-                                        &createInfo,
-                                        nullptr,
-                                        samplerIterator.base()));
+    CHECK_RESULT_RETURN(vkCreateSampler(luna::core::device, &createInfo, nullptr, samplerIterator.base()));
     if (sampler != nullptr)
     {
         *sampler = &luna::core::samplerIndices.back();

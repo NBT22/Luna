@@ -40,7 +40,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
         .bindingCount = creationInfo.bindingCount,
         .pBindings = bindings.data(),
     };
-    CHECK_RESULT_THROW(vkCreateDescriptorSetLayout(device.logicalDevice(), &createInfo, nullptr, &layout_));
+    CHECK_RESULT_THROW(vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &layout_));
     isDestroyed_ = false;
 }
 
@@ -50,7 +50,7 @@ void DescriptorSetLayout::destroy()
     {
         return;
     }
-    vkDestroyDescriptorSetLayout(device.logicalDevice(), layout_, nullptr);
+    vkDestroyDescriptorSetLayout(device, layout_, nullptr);
     bindingIndexMap_.clear();
     isDestroyed_ = true;
 }

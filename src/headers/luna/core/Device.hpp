@@ -26,16 +26,13 @@ class Device
         Device() = default;
         explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
 
+        operator const VkPhysicalDevice &() const;
+        operator const VkDevice &() const;
+
         void destroy();
 
         VkResult addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule);
 
-        /// A getter for the @c physicalDevice_ value
-        /// @return The Vulkan handle for the physical device described in this instance
-        [[nodiscard]] VkPhysicalDevice physicalDevice() const;
-        /// A getter for the @c logicalDevice_ value
-        /// @return The Vulkan handle for the physical device described in this instance
-        [[nodiscard]] VkDevice logicalDevice() const;
         [[nodiscard]] VkSharingMode sharingMode() const;
         /// A getter for the @c familyCount_ value
         /// @return The total count of unique families

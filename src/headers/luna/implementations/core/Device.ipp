@@ -9,6 +9,15 @@
 
 namespace luna::core
 {
+inline Device::operator const VkPhysicalDevice &() const
+{
+    return physicalDevice_;
+}
+inline Device::operator const VkDevice &() const
+{
+    return logicalDevice_;
+}
+
 inline void Device::destroy()
 {
     if (isDestroyed_)
@@ -45,14 +54,6 @@ inline VkResult Device::addShaderModule(const VkShaderModuleCreateInfo *creation
     return VK_SUCCESS;
 }
 
-inline VkPhysicalDevice Device::physicalDevice() const
-{
-    return physicalDevice_;
-}
-inline VkDevice Device::logicalDevice() const
-{
-    return logicalDevice_;
-}
 inline VkSharingMode Device::sharingMode() const
 {
     return familyCount_ == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;

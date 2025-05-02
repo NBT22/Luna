@@ -39,9 +39,10 @@ class DescriptorSetLayout
         DescriptorSetLayout() = default;
         explicit DescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo);
 
+        operator const VkDescriptorSetLayout &() const;
+
         void destroy();
 
-        [[nodiscard]] VkDescriptorSetLayout layout() const;
         [[nodiscard]] const Binding &binding(const std::string &bindingName) const;
 
     private:

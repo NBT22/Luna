@@ -50,10 +50,9 @@ inline const buffer::BufferRegion &bufferRegion(const buffer::BufferRegionIndex 
 {
     return buffers.at(index.bufferIndex).region(index.bufferRegionIndex);
 }
-inline VkBuffer stagingBuffer()
+inline Buffer stagingBuffer()
 {
-    const buffer::BufferRegionIndex *index = static_cast<const buffer::BufferRegionIndex *>(stagingBufferIndex);
-    return buffers.at(index->bufferIndex).buffer();
+    return buffers.at(static_cast<const buffer::BufferRegionIndex *>(stagingBufferIndex)->bufferIndex);
 }
 inline size_t stagingBufferOffset()
 {

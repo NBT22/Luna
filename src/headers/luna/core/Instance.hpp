@@ -26,7 +26,7 @@ void descriptorSet(LunaDescriptorSet index,
                    VkDescriptorSet *descriptorSet);
 [[nodiscard]] const buffer::BufferRegion &bufferRegion(LunaBuffer buffer);
 [[nodiscard]] const buffer::BufferRegion &bufferRegion(buffer::BufferRegionIndex index);
-[[nodiscard]] VkBuffer stagingBuffer();
+[[nodiscard]] Buffer stagingBuffer();
 [[nodiscard]] size_t stagingBufferOffset();
 [[nodiscard]] VkSampler sampler(LunaSampler sampler);
 
