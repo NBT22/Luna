@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <array>
 #include <luna/core/Image.hpp>
 #include <luna/core/Instance.hpp>
 #include <luna/luna.h>
@@ -212,22 +213,16 @@ static uint8_t bytesPerPixel(const VkFormat format)
             throw std::runtime_error("Unhandled image format!");
     }
 }
-static void transitionImageLayout(const VkImage image,
+static void transitionImageLayout(const VkCommandBuffer &commandBuffer,
+                                  const VkImage image,
+                                  const VkAccessFlags sourceAccessMask,
+                                  const VkAccessFlags destinationAccessMask,
                                   const VkImageLayout oldLayout,
                                   const VkImageLayout newLayout,
-                                  const VkImageAspectFlags aspectMask,
-                                  const uint32_t mipmapLevels,
-                                  const uint32_t arrayLayers,
+                                  const VkImageSubresourceRange &subresourceRange,
                                   const VkPipelineStageFlags sourceStageMask,
-                                  const VkAccessFlags sourceAccessMask,
-                                  const VkPipelineStageFlags destinationStageMask,
-                                  const VkAccessFlags destinationAccessMask)
+                                  const VkPipelineStageFlags destinationStageMask)
 {
-    const VkImageSubresourceRange subresourceRange = {
-        .aspectMask = aspectMask,
-        .levelCount = mipmapLevels,
-        .layerCount = arrayLayers,
-    };
     const VkImageMemoryBarrier memoryBarrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = sourceAccessMask,
@@ -239,7 +234,7 @@ static void transitionImageLayout(const VkImage image,
         .image = image,
         .subresourceRange = subresourceRange,
     };
-    vkCmdPipelineBarrier(core::device.commandPools().graphics.commandBuffer(1),
+    vkCmdPipelineBarrier(commandBuffer,
                          sourceStageMask,
                          destinationStageMask,
                          0,
@@ -250,22 +245,16 @@ static void transitionImageLayout(const VkImage image,
                          1,
                          &memoryBarrier);
 }
-static void transitionImageLayout2(const VkImage image,
-                                   const VkImageLayout oldLayout,
-                                   const VkImageLayout newLayout,
-                                   const VkImageAspectFlags aspectMask,
-                                   const uint32_t mipmapLevels,
-                                   const uint32_t arrayLayers,
+static void transitionImageLayout2(const VkCommandBuffer &commandBuffer,
+                                   const VkImage image,
                                    const VkPipelineStageFlags2 sourceStageMask,
                                    const VkAccessFlags2 sourceAccessMask,
                                    const VkPipelineStageFlags2 destinationStageMask,
-                                   const VkAccessFlags2 destinationAccessMask)
+                                   const VkAccessFlags2 destinationAccessMask,
+                                   const VkImageLayout oldLayout,
+                                   const VkImageLayout newLayout,
+                                   const VkImageSubresourceRange &subresourceRange)
 {
-    const VkImageSubresourceRange subresourceRange = {
-        .aspectMask = aspectMask,
-        .levelCount = mipmapLevels,
-        .layerCount = arrayLayers,
-    };
     const VkImageMemoryBarrier2 memoryBarrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .srcStageMask = sourceStageMask,
@@ -284,7 +273,136 @@ static void transitionImageLayout2(const VkImage image,
         .imageMemoryBarrierCount = 1,
         .pImageMemoryBarriers = &memoryBarrier,
     };
-    vkCmdPipelineBarrier2(core::device.commandPools().graphics.commandBuffer(1), &dependencyInfo);
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+}
+// TODO: Support filtering with something other than linear
+// TODO: Check support for images with multiple layers
+static void generateMipmaps(const core::CommandBuffer &commandBuffer,
+                            const VkImage image,
+                            VkExtent3D extent,
+                            const uint32_t mipmapLevels,
+                            const VkImageAspectFlags aspectMask,
+                            const uint32_t arrayLayers,
+                            const LunaSampledImageCreationInfo &creationInfo)
+{
+    for (uint32_t i = 0; i < mipmapLevels - 1; i++)
+    {
+        const VkOffset3D oldExtent = std::bit_cast<VkOffset3D>(extent);
+        extent.width /= 2;
+        extent.height /= 2;
+
+        const VkImageSubresourceRange subresourceRange = {
+            .aspectMask = aspectMask,
+            .baseMipLevel = i,
+            .levelCount = 1,
+            .layerCount = arrayLayers,
+        };
+        const VkImageSubresourceLayers sourceSubresourceLayers = {
+            .aspectMask = aspectMask,
+            .mipLevel = i,
+            .layerCount = arrayLayers,
+        };
+        const VkImageSubresourceLayers destinationSubresourceLayers = {
+            .aspectMask = aspectMask,
+            .mipLevel = i + 1,
+            .layerCount = arrayLayers,
+        };
+        if (VK_API_VERSION_MINOR(core::apiVersion) >= 3)
+        {
+            transitionImageLayout2(commandBuffer,
+                                   image,
+                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                   VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                   VK_ACCESS_2_TRANSFER_READ_BIT,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                   subresourceRange);
+        } else
+        {
+            transitionImageLayout(commandBuffer,
+                                  image,
+                                  VK_ACCESS_TRANSFER_WRITE_BIT,
+                                  VK_ACCESS_TRANSFER_READ_BIT,
+                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                  subresourceRange,
+                                  VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                  VK_PIPELINE_STAGE_TRANSFER_BIT);
+            const VkImageBlit blitRegion = {
+                .srcSubresource = sourceSubresourceLayers,
+                .srcOffsets = {{}, oldExtent},
+                .dstSubresource = destinationSubresourceLayers,
+                .dstOffsets = {{}, std::bit_cast<VkOffset3D>(extent)},
+            };
+            vkCmdBlitImage(commandBuffer,
+                           image,
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           image,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1,
+                           &blitRegion,
+                           VK_FILTER_LINEAR);
+        }
+    }
+    const VkImageSubresourceRange blittedSubresourceRange = {
+        .aspectMask = aspectMask,
+        .levelCount = mipmapLevels - 1,
+        .layerCount = arrayLayers,
+    };
+    const VkImageSubresourceRange lastSubresourceRange = {
+        .aspectMask = aspectMask,
+        .baseMipLevel = mipmapLevels - 1,
+        .levelCount = 1,
+        .layerCount = arrayLayers,
+    };
+    if (VK_API_VERSION_MINOR(core::apiVersion) >= 3)
+    {
+        // transitionImageLayout2(commandBuffer,
+        //                        image,
+        //                        VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        //                        VK_ACCESS_2_TRANSFER_READ_BIT,
+        //                        creationInfo.destinationStageMask,
+        //                        creationInfo.destinationAccessMask,
+        //                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        //                        creationInfo.layout,
+        //                        subresourceRange);
+    } else
+    {
+        const VkImageMemoryBarrier blittedRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+            .dstAccessMask = creationInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .newLayout = creationInfo.layout,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image,
+            .subresourceRange = blittedSubresourceRange,
+        };
+        const VkImageMemoryBarrier lastRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstAccessMask = creationInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = creationInfo.layout,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image,
+            .subresourceRange = lastSubresourceRange,
+        };
+        const std::array<VkImageMemoryBarrier, 2> memoryBarriers = {lastRegionBarrier, blittedRegionBarrier};
+        vkCmdPipelineBarrier(commandBuffer,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             creationInfo.destinationStageMask,
+                             0,
+                             0,
+                             nullptr,
+                             0,
+                             nullptr,
+                             2,
+                             memoryBarriers.data());
+    }
 }
 static VkResult writeImage(const VkImage image,
                            const VkExtent3D &extent,
@@ -319,38 +437,41 @@ static VkResult writeImage(const VkImage image,
 
     core::bufferRegion(core::stagingBufferIndex).copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
     const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
+    const VkImageSubresourceRange subresourceRange = {
+        .aspectMask = aspectMask,
+        .levelCount = mipmapLevels,
+        .layerCount = arrayLayers,
+    };
     if (VK_API_VERSION_MINOR(core::apiVersion) >= 3)
     {
-        transitionImageLayout2(image,
-                               VK_IMAGE_LAYOUT_UNDEFINED,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                               VK_IMAGE_ASPECT_COLOR_BIT,
-                               mipmapLevels,
-                               arrayLayers,
+        transitionImageLayout2(commandBuffer,
+                               image,
                                creationInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE
                                        ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
                                        : creationInfo.sourceStageMask,
-                               VK_ACCESS_NONE,
+                               VK_ACCESS_2_NONE,
                                VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                               VK_ACCESS_2_TRANSFER_WRITE_BIT);
+                               VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                               VK_IMAGE_LAYOUT_UNDEFINED,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               subresourceRange);
     } else
     {
-        transitionImageLayout(image,
+        transitionImageLayout(commandBuffer,
+                              image,
+                              VK_ACCESS_NONE,
+                              VK_ACCESS_TRANSFER_WRITE_BIT,
                               VK_IMAGE_LAYOUT_UNDEFINED,
                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                              VK_IMAGE_ASPECT_COLOR_BIT,
-                              mipmapLevels,
-                              arrayLayers,
+                              subresourceRange,
                               creationInfo.sourceStageMask == VK_PIPELINE_STAGE_NONE ? VK_PIPELINE_STAGE_TRANSFER_BIT
                                                                                      : creationInfo.sourceStageMask,
-                              VK_ACCESS_NONE,
-                              VK_PIPELINE_STAGE_TRANSFER_BIT,
-                              VK_ACCESS_TRANSFER_WRITE_BIT);
+                              VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
 
-    constexpr VkImageSubresourceLayers subresourceLayers = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .layerCount = 1,
+    const VkImageSubresourceLayers subresourceLayers = {
+        .aspectMask = aspectMask,
+        .layerCount = arrayLayers,
     };
     const VkBufferImageCopy bufferCopyInfo = {
         .bufferOffset = core::stagingBufferOffset(),
@@ -364,37 +485,41 @@ static VkResult writeImage(const VkImage image,
                            1,
                            &bufferCopyInfo);
 
-    if (VK_API_VERSION_MINOR(core::apiVersion) >= 3)
+    if (creationInfo.generateMipmaps && creationInfo.mipmapLevels > 1)
     {
-        transitionImageLayout2(image,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                               creationInfo.layout,
-                               aspectMask,
-                               mipmapLevels,
-                               arrayLayers,
-                               VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                               VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                               creationInfo.destinationStageMask,
-                               creationInfo.destinationAccessMask);
+        generateMipmaps(commandBuffer, image, extent, mipmapLevels, aspectMask, arrayLayers, creationInfo);
     } else
     {
-        transitionImageLayout(image,
-                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                              creationInfo.layout,
-                              aspectMask,
-                              mipmapLevels,
-                              arrayLayers,
-                              VK_PIPELINE_STAGE_TRANSFER_BIT,
-                              VK_ACCESS_TRANSFER_WRITE_BIT,
-                              creationInfo.destinationStageMask,
-                              creationInfo.destinationAccessMask);
+        if (VK_API_VERSION_MINOR(core::apiVersion) >= 3)
+        {
+            transitionImageLayout2(commandBuffer,
+                                   image,
+                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                   VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                   creationInfo.destinationStageMask,
+                                   creationInfo.destinationAccessMask,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   creationInfo.layout,
+                                   subresourceRange);
+        } else
+        {
+            transitionImageLayout(commandBuffer,
+                                  image,
+                                  VK_ACCESS_TRANSFER_WRITE_BIT,
+                                  creationInfo.destinationAccessMask,
+                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                  creationInfo.layout,
+                                  subresourceRange,
+                                  VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                  creationInfo.destinationStageMask);
+        }
     }
 
     const core::Semaphore &semaphore = commandBuffer.semaphore();
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
-        .pWaitSemaphores = &semaphore,
+        .pWaitSemaphores = semaphore.isSignaled() ? &semaphore : nullptr,
         .pWaitDstStageMask = &semaphore.stageMask(),
         .commandBufferCount = 1,
         .pCommandBuffers = &commandBuffer,
@@ -458,6 +583,8 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
         .depth = depth == 0 ? 1 : depth,
     };
     const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
+    VkImageUsageFlags usage = creationInfo.usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    usage |= creationInfo.generateMipmaps && creationInfo.mipmapLevels > 1 ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0;
     const VkImageCreateInfo imageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .flags = creationInfo.flags,
@@ -468,7 +595,7 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
         .arrayLayers = arrayLayers,
         .samples = creationInfo.samples == 0 ? VK_SAMPLE_COUNT_1_BIT : creationInfo.samples,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = creationInfo.usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .usage = usage,
         .sharingMode = device.sharingMode(),
         .queueFamilyIndexCount = device.familyCount(),
         .pQueueFamilyIndices = device.queueFamilyIndices(),

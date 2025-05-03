@@ -285,6 +285,7 @@ typedef struct
         VkBool32 unnormalizedCoordinates;
 } LunaSamplerCreationInfo;
 
+// TODO: There should also be a `LunaSampledImageCreationInfo2`
 typedef struct
 {
         VkImageCreateFlags flags;
@@ -292,6 +293,7 @@ typedef struct
         uint32_t width;
         uint32_t height;
         uint32_t mipmapLevels;
+        bool generateMipmaps;
         VkSampleCountFlagBits samples;
         VkImageUsageFlags usage;
 
