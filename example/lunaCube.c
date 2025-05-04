@@ -140,7 +140,7 @@ static const uint32_t indices[] = {
 };
 #pragma endregion constants
 
-static bool shouldQuit()
+static bool shouldQuit(void)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event))

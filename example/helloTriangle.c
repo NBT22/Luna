@@ -100,7 +100,7 @@ static const Vertex vertices[3] = {
 };
 #pragma endregion constants
 
-static bool shouldQuit()
+static bool shouldQuit(void)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event))
@@ -253,7 +253,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
     return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
 }
 
-int main()
+int main(void)
 {
     if (!SDL_Init(SDL_INIT_EVENTS))
     {
