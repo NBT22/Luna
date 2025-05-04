@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 namespace luna::core
 {
@@ -105,8 +106,7 @@ inline VkResult Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDe
     bool presentationFound = false;
     uint32_t familyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, nullptr);
-    std::vector<VkQueueFamilyProperties> families;
-    families.reserve(familyCount);
+    std::vector<VkQueueFamilyProperties> families(familyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families.data());
     for (uint32_t index = 0; index < familyCount; index++)
     {
@@ -301,8 +301,7 @@ inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfac
     {
         return false;
     }
-    std::vector<VkExtensionProperties> availableExtensions;
-    availableExtensions.reserve(extensionCount);
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
     CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(device,
                                                             nullptr,
                                                             &extensionCount,

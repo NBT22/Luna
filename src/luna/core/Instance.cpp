@@ -23,8 +23,7 @@ static VkResult findSwapChainFormat(const VkPhysicalDevice physicalDevice,
     {
         return VK_ERROR_UNKNOWN;
     }
-    std::vector<VkSurfaceFormatKHR> formats;
-    formats.reserve(formatCount);
+    std::vector<VkSurfaceFormatKHR> formats(formatCount);
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data()));
     for (uint32_t i = 0; i < targetFormatCount; i++)
     {
@@ -68,8 +67,7 @@ static VkResult getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
     {
         return VK_ERROR_UNKNOWN;
     }
-    std::vector<VkPresentModeKHR> presentModes;
-    presentModes.reserve(presentModeCount);
+    std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice,
                                                                   surface,
                                                                   &presentModeCount,
