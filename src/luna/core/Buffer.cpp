@@ -228,17 +228,16 @@ void BufferRegion::destroySubRegion(const SubRegion *subRegion)
                                                                  [subRegion](const SubRegion &region) -> bool {
                                                                      return region.offset == subRegion->offset;
                                                                  });
-    const auto &[size, offset] = *subRegion;
     Buffer &buffer = buffers.at(bufferIndex_);
-    buffer.freeBytes_ += size;
-    buffer.usedBytes_ -= size;
-    size_ -= size;
+    buffer.freeBytes_ += subRegion->size;
+    buffer.usedBytes_ -= subRegion->size;
+    size_ -= subRegion->size;
     const std::list<SubRegion>::iterator endIterator = subRegions_.end();
     for (std::list<SubRegion>::iterator regionIterator = iterator; regionIterator != endIterator; ++regionIterator)
     {
-        if (regionIterator->offset > offset)
+        if (regionIterator->offset > subRegion->offset)
         {
-            regionIterator->size -= size;
+            regionIterator->size -= subRegion->size;
         }
     }
     subRegions_.erase(iterator);

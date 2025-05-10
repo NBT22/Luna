@@ -287,7 +287,7 @@ static void generateMipmaps(const core::CommandBuffer &commandBuffer,
 {
     for (uint32_t i = 0; i < mipmapLevels - 1; i++)
     {
-        const VkOffset3D oldExtent = std::bit_cast<VkOffset3D>(extent);
+        const VkOffset3D oldExtent = std::bit_cast<VkOffset3D>(extent); // NOLINT(missing-ref)
         extent.width /= 2;
         extent.height /= 2;
 

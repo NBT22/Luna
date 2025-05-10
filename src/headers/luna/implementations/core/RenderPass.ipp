@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <luna/core/Instance.hpp>
-
 namespace luna::core
 {
 inline bool RenderPass::isDestroyed(const RenderPass &renderPass)

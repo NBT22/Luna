@@ -6,7 +6,6 @@
 
 #include <cassert>
 #include <cstring>
-#include <iostream>
 
 namespace luna::core
 {
@@ -182,11 +181,9 @@ inline void Device::initQueueFamilyIndices()
 }
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
-    const VkBool32 *requiredFeatureArray = std::bit_cast<const VkBool32 *,
-                                                         const VkPhysicalDeviceFeatures2 *>(&requiredFeatures);
+    const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures);
     constexpr int featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
-    const VkBool32 *supportedFeatureArray = std::bit_cast<const VkBool32 *,
-                                                          const VkPhysicalDeviceFeatures *>(&features_.features);
+    const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_.features);
     for (int i = 0; i < featureCount; i++)
     {
         if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
@@ -206,7 +203,7 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 {
     assert(requiredFeatures);
     const VkBool32 *requiredFeatureArray = requiredFeatures + 2;
-    switch (*std::bit_cast<const VkStructureType *, const VkBool32 *>(requiredFeatures))
+    switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
     {
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
         {
@@ -261,15 +258,14 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
             break;
         }
         default:
-            [[maybe_unused]] const VkStructureType
-                    structureType = *std::bit_cast<const VkStructureType *, const VkBool32 *>(requiredFeatures);
+            [[maybe_unused]] const VkStructureType &structureType = static_cast<VkStructureType>(*requiredFeatures);
             assert(structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES ||
                    structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES ||
                    structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES ||
                    structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
     }
 
-    const void *pNext = *std::bit_cast<const void **, const VkBool32 *>(requiredFeatures + 1);
+    const void *pNext = reinterpret_cast<const void *>(*(requiredFeatures + 1));
     if (pNext != nullptr)
     {
         return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));

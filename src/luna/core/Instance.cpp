@@ -3,7 +3,6 @@
 //
 
 #include <cstring>
-#include <luna/core/Image.hpp>
 #include <luna/core/Instance.hpp>
 #include <luna/lunaInstance.h>
 #include <stdexcept>

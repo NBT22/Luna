@@ -25,7 +25,7 @@ class GraphicsPipeline
 
         void destroy();
 
-        VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
+        [[nodiscard]] VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
 
         [[nodiscard]] VkPipelineLayout layout() const;
 
