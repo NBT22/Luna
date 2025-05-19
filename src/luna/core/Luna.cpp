@@ -38,14 +38,14 @@ VkResult lunaPresentSwapChain()
         .commandBufferCount = 1,
         .pCommandBuffers = &commandBuffer,
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &device.renderFinishedSemaphore(),
+        .pSignalSemaphores = &device.renderFinishedSemaphore(swapChain.imageIndex),
     };
     CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(device.familyQueues().graphics, queueSubmitInfo));
 
     const VkPresentInfoKHR presentInfo = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &device.renderFinishedSemaphore(),
+        .pWaitSemaphores = &device.renderFinishedSemaphore(swapChain.imageIndex),
         .swapchainCount = 1,
         .pSwapchains = &swapChain.swapChain,
         .pImageIndices = &swapChain.imageIndex,

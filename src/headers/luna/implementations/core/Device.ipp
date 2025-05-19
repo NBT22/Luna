@@ -32,7 +32,10 @@ inline void Device::destroy()
     commandPools_.transfer.destroy(logicalDevice_);
     commandPools_.presentation.destroy(logicalDevice_);
     vkDestroySemaphore(logicalDevice_, imageAvailableSemaphore_, nullptr);
-    vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore_, nullptr);
+    for (const VkSemaphore &renderFinishedSemaphore: renderFinishedSemaphores_)
+    {
+        vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore, nullptr);
+    }
     vmaDestroyAllocator(allocator_);
     vkDestroyDevice(logicalDevice_, nullptr);
 
@@ -50,6 +53,22 @@ inline VkResult Device::addShaderModule(const VkShaderModuleCreateInfo *creation
     if (shaderModule != nullptr)
     {
         *shaderModule = shaderModules_.back();
+    }
+    return VK_SUCCESS;
+}
+inline VkResult Device::createSemaphores(const uint32_t imageCount)
+{
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore_));
+    renderFinishedSemaphores_.resize(imageCount);
+    for (uint32_t i = 0; i < imageCount; i++)
+    {
+        CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_,
+                                              &semaphoreCreateInfo,
+                                              nullptr,
+                                              &renderFinishedSemaphores_.at(i)));
     }
     return VK_SUCCESS;
 }
@@ -86,9 +105,9 @@ inline const VkSemaphore &Device::imageAvailableSemaphore() const
 {
     return imageAvailableSemaphore_;
 }
-inline const VkSemaphore &Device::renderFinishedSemaphore() const
+inline const VkSemaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex) const
 {
-    return renderFinishedSemaphore_;
+    return renderFinishedSemaphores_.at(imageIndex);
 }
 
 // TODO: Better family finding logic to allow for
@@ -353,15 +372,6 @@ inline VkResult Device::createCommandPools()
     //                                                                          VK_COMMAND_BUFFER_LEVEL_PRIMARY,
     //                                                                          nullptr));
     // }
-    return VK_SUCCESS;
-}
-inline VkResult Device::createSemaphores()
-{
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-    CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore_));
-    CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &renderFinishedSemaphore_));
     return VK_SUCCESS;
 }
 } // namespace luna::core

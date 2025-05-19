@@ -32,6 +32,7 @@ class Device
         void destroy();
 
         VkResult addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule);
+        VkResult createSemaphores(uint32_t imageCount);
 
         [[nodiscard]] VkSharingMode sharingMode() const;
         /// A getter for the @c familyCount_ value
@@ -43,7 +44,7 @@ class Device
         [[nodiscard]] FamilyValues<CommandPool> &commandPools();
         [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
         [[nodiscard]] const VkSemaphore &imageAvailableSemaphore() const;
-        [[nodiscard]] const VkSemaphore &renderFinishedSemaphore() const;
+        [[nodiscard]] const VkSemaphore &renderFinishedSemaphore(uint32_t imageIndex) const;
 
     private:
         VkResult findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -52,7 +53,6 @@ class Device
         [[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
         [[nodiscard]] bool checkUsability(VkPhysicalDevice device, VkSurfaceKHR surface);
         VkResult createCommandPools();
-        VkResult createSemaphores();
 
         bool isDestroyed_{true};
         VkPhysicalDevice physicalDevice_{};
@@ -72,7 +72,7 @@ class Device
         FamilyValues<uint32_t> familyIndices_{};
         FamilyValues<CommandPool> commandPools_{};
         VkSemaphore imageAvailableSemaphore_{};
-        VkSemaphore renderFinishedSemaphore_{};
+        std::vector<VkSemaphore> renderFinishedSemaphores_{};
 
         // TODO: Fix pipelines so that shader modules can be created and destroyed in a cleaner fashion
         std::vector<VkShaderModule> shaderModules_{};

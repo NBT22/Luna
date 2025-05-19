@@ -150,6 +150,7 @@ VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
     core::swapChain.imageCount = creationInfo.minImageCount;
     assert(capabilities.minImageCount <= core::swapChain.imageCount &&
            core::swapChain.imageCount <= capabilities.maxImageCount);
+    CHECK_RESULT_RETURN(core::device.createSemaphores(core::swapChain.imageCount));
 
     const VkCompositeAlphaFlagBitsKHR compositeAlpha = creationInfo.compositeAlpha == 0
                                                                ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
