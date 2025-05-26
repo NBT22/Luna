@@ -5,17 +5,24 @@
 #pragma once
 
 #include <luna/core/CommandBuffer.hpp>
+#include <luna/lunaTypes.h>
 
 namespace luna::core
 {
 class CommandPool
 {
     public:
-        CommandPool();
+        static bool isDestroyed(const CommandPool &commandPool);
 
-        void destroy(VkDevice logicalDevice);
+        operator const VkCommandPool &() const;
+
+        CommandPool() = default;
+        CommandPool(VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo);
+
+        void destroy();
 
         VkResult allocate(VkDevice logicalDevice, const VkCommandPoolCreateInfo &poolCreateInfo);
+        VkResult allocate(VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo);
         VkResult allocateCommandBuffer(VkDevice logicalDevice,
                                        VkCommandBufferLevel commandBufferLevel,
                                        const void *allocateInfoPNext);
@@ -23,6 +30,7 @@ class CommandPool
                                        VkCommandBufferLevel commandBufferLevel,
                                        const void *allocateInfoPNext,
                                        const VkSemaphoreCreateInfo *semaphoreCreateInfo);
+        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlagBits flags, uint64_t timeout);
 
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
         [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index = 0);

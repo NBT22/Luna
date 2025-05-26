@@ -5,15 +5,14 @@
 #include <algorithm>
 #include <array>
 #include <luna/core/Image.hpp>
+#include <luna/core/Instance.hpp>
 #include <luna/core/RenderPass.hpp>
 #include <luna/lunaRenderPass.h>
 #include <vk_mem_alloc.h>
 
 namespace luna::helpers
 {
-// It's just wrong -_-
-// ReSharper disable CppDFAConstantConditions
-// ReSharper disable CppDFAUnreachableCode
+// NOTE: ReSharper is completely wrong about these warnings, so they have been silenced accordingly
 static void createDepthAttachment(const VkSampleCountFlagBits samples,
                                   const LunaAttachmentLoadMode depthAttachmentLoadMode,
                                   const std::array<VkAttachmentReference *, 3> *attachmentReferences = nullptr,
@@ -34,7 +33,9 @@ static void createDepthAttachment(const VkSampleCountFlagBits samples,
             loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             break;
     }
+    // ReSharper disable CppDFAConstantConditions
     if (attachmentReferences2 != nullptr && attachmentDescriptions2 != nullptr)
+    // ReSharper restore CppDFAConstantConditions
     {
         *(*attachmentReferences2)[0] = {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
@@ -54,6 +55,7 @@ static void createDepthAttachment(const VkSampleCountFlagBits samples,
         };
     } else
     {
+        // ReSharper disable CppDFAUnreachableCode
         *(*attachmentReferences)[0] = {
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
@@ -68,6 +70,7 @@ static void createDepthAttachment(const VkSampleCountFlagBits samples,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
+        // ReSharper restore CppDFAUnreachableCode
     }
 }
 static void createColorAttachment(const uint32_t colorAttachmentIndex,
@@ -91,7 +94,9 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
             loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             break;
     }
+    // ReSharper disable CppDFAConstantConditions
     if (attachmentReferences2 != nullptr && attachmentDescriptions2 != nullptr)
+    // ReSharper restore CppDFAConstantConditions
     {
         *(*attachmentReferences2)[1] = {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
@@ -144,6 +149,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
         }
     } else
     {
+        // ReSharper disable CppDFAUnreachableCode
         *(*attachmentReferences)[1] = {
             .attachment = colorAttachmentIndex,
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -188,10 +194,9 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
                 .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
             };
         }
+        // ReSharper restore CppDFAUnreachableCode
     }
 }
-// ReSharper restore CppDFAUnreachableCode
-// ReSharper restore CppDFAConstantConditions
 
 // TODO: Has issues with not clearing attachments
 static void createAttachments(const VkSampleCountFlagBits samples,
@@ -310,7 +315,7 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
         assert((!subpassCreationInfo.useColorAttachment || creationInfo.createColorAttachment) &&
                (!subpassCreationInfo.useDepthAttachment || creationInfo.createDepthAttachment));
         subpasses.emplace_back(VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-                               subpassCreationInfo.pNext,
+                               nullptr,
                                subpassCreationInfo.flags,
                                subpassCreationInfo.pipelineBindPoint,
                                subpassCreationInfo.viewMask,
@@ -563,31 +568,35 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
                                                   VK_NULL_HANDLE,
                                                   &swapChain.imageIndex));
         CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
-
-        uint32_t clearValueCount = 1;
-        std::vector<VkClearValue> clearValues;
-        clearValues.reserve(3);
-        if (renderPassObject.depthImage_ != VK_NULL_HANDLE)
-        {
-            clearValueCount++;
-            clearValues.emplace_back(beginInfo->depthAttachmentClearValue);
-        }
-        if (renderPassObject.samples_ != VK_SAMPLE_COUNT_1_BIT)
-        {
-            clearValueCount++;
-            clearValues.emplace_back(beginInfo->colorAttachmentClearValue);
-        }
-        clearValues.emplace_back(beginInfo->colorAttachmentClearValue);
-        const VkRenderPassBeginInfo renderPassBeginInfo = {
-            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            .renderPass = renderPassObject.renderPass_,
-            .framebuffer = swapChain.framebuffers[swapChain.imageIndex],
-            .renderArea = beginInfo->renderArea,
-            .clearValueCount = clearValueCount,
-            .pClearValues = clearValues.data(),
-        };
-        vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    } else if (!commandBuffer.isRecording())
+    {
+        CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
     }
+
+    uint32_t clearValueCount = 1;
+    std::vector<VkClearValue> clearValues;
+    clearValues.reserve(3);
+    if (renderPassObject.depthImage_ != VK_NULL_HANDLE)
+    {
+        clearValueCount++;
+        clearValues.emplace_back(beginInfo->depthAttachmentClearValue);
+    }
+    if (renderPassObject.samples_ != VK_SAMPLE_COUNT_1_BIT)
+    {
+        clearValueCount++;
+        clearValues.emplace_back(beginInfo->colorAttachmentClearValue);
+    }
+    clearValues.emplace_back(beginInfo->colorAttachmentClearValue);
+    const VkRenderPassBeginInfo renderPassBeginInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = renderPassObject.renderPass_,
+        .framebuffer = swapChain.framebuffers[swapChain.imageIndex],
+        .renderArea = beginInfo->renderArea,
+        .clearValueCount = clearValueCount,
+        .pClearValues = clearValues.data(),
+    };
+    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
     return VK_SUCCESS;
 }
 void lunaNextSubpass()

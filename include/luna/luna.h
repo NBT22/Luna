@@ -33,6 +33,8 @@ VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer
 VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer *buffers);
 void lunaDestroyBuffer(LunaBuffer buffer);
 void lunaWriteDataToBuffer(LunaBuffer buffer, const void *data, size_t bytes);
+VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool);
+VkResult lunaResetCommandPool(LunaCommandPool commandPool, VkCommandPoolResetFlagBits flags);
 
 #ifdef __cplusplus
 }

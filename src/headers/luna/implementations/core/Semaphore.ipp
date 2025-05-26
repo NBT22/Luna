@@ -3,7 +3,8 @@
 //
 
 #pragma once
-#include "luna/core/Luna.hpp"
+
+#include <luna/core/Luna.hpp>
 
 namespace luna::core
 {

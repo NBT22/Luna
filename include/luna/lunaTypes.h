@@ -27,6 +27,7 @@ LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
 LUNA_DEFINE_HANDLE(LunaBuffer);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
+LUNA_DEFINE_HANDLE(LunaCommandPool);
 
 typedef enum
 {
@@ -34,6 +35,11 @@ typedef enum
     LUNA_ATTACHMENT_LOAD_CLEAR = 1 << 1,
     LUNA_ATTACHMENT_LOAD_PRESERVE = 1 << 2,
 } LunaAttachmentLoadMode;
+
+typedef enum
+{
+    LUNA_INTERNAL_GRAPHICS_COMMAND_POOL,
+} LunaInternalCommandPools;
 
 typedef struct
 {
@@ -119,7 +125,6 @@ typedef struct
 typedef struct
 {
         const char *name;
-        const void *pNext;
         VkSubpassDescriptionFlags flags;
         VkPipelineBindPoint pipelineBindPoint;
         uint32_t viewMask;
@@ -317,6 +322,13 @@ typedef struct
         VkClearValue depthAttachmentClearValue;
         VkClearValue colorAttachmentClearValue;
 } LunaRenderPassBeginInfo;
+
+typedef struct
+{
+        VkCommandPoolCreateFlags flags;
+        VkQueueFlags requiredQueueFlags;
+        bool requireQueuePresentationSupport;
+} LunaCommandPoolCreationInfo;
 
 #ifdef __cplusplus
 }

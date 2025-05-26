@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <list>
 #include <luna/core/CommandPool.hpp>
 #include <luna/luna.h>
 #include <vector>
@@ -33,6 +34,8 @@ class Device
 
         VkResult addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule);
         VkResult createSemaphores(uint32_t imageCount);
+        VkResult addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
+                                           LunaCommandPool *commandPool);
 
         [[nodiscard]] VkSharingMode sharingMode() const;
         /// A getter for the @c familyCount_ value
@@ -70,7 +73,9 @@ class Device
         FamilyValues<bool> hasFamily_{};
         FamilyValues<VkQueue> familyQueues_{};
         FamilyValues<uint32_t> familyIndices_{};
-        FamilyValues<CommandPool> commandPools_{};
+        FamilyValues<CommandPool> internalCommandPools_{};
+        std::vector<CommandPool> applicationCommandPools_{};
+        std::list<uint32_t> applicationCommandPoolIndices_{};
         VkSemaphore imageAvailableSemaphore_{};
         std::vector<VkSemaphore> renderFinishedSemaphores_{};
 

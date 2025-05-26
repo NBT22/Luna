@@ -13,7 +13,7 @@ namespace luna::helpers
 class VkResultException final: public std::exception
 {
     public:
-        explicit VkResultException(const VkResult result): result(result) {};
+        explicit VkResultException(const VkResult result): result(result) {}
         VkResult result;
 };
 } // namespace luna::helpers

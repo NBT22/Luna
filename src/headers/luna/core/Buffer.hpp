@@ -6,7 +6,6 @@
 
 #include <list>
 #include <luna/luna.h>
-#include <memory>
 #include <vector>
 #include <vk_mem_alloc.h>
 

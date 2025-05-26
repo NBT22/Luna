@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <algorithm>
 
 namespace luna::core
 {
@@ -28,9 +29,9 @@ inline void Device::destroy()
     {
         vkDestroyShaderModule(logicalDevice_, shaderModule, nullptr);
     }
-    commandPools_.graphics.destroy(logicalDevice_);
-    commandPools_.transfer.destroy(logicalDevice_);
-    commandPools_.presentation.destroy(logicalDevice_);
+    internalCommandPools_.graphics.destroy();
+    internalCommandPools_.transfer.destroy();
+    internalCommandPools_.presentation.destroy();
     vkDestroySemaphore(logicalDevice_, imageAvailableSemaphore_, nullptr);
     for (const VkSemaphore &renderFinishedSemaphore: renderFinishedSemaphores_)
     {
@@ -72,6 +73,28 @@ inline VkResult Device::createSemaphores(const uint32_t imageCount)
     }
     return VK_SUCCESS;
 }
+inline VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
+                                                  LunaCommandPool *commandPool)
+{
+    const std::vector<CommandPool>::iterator &commandPoolIterator = std::find_if(applicationCommandPools_.begin(),
+                                                                                 applicationCommandPools_.end(),
+                                                                                 CommandPool::isDestroyed);
+    if (commandPoolIterator == applicationCommandPools_.end())
+    {
+        applicationCommandPoolIndices_.emplace_back(applicationCommandPools_.size());
+        TRY_CATCH_RESULT(applicationCommandPools_.emplace_back(logicalDevice_, creationInfo));
+    } else
+    {
+        const uint32_t index = commandPoolIterator - applicationCommandPools_.begin();
+        applicationCommandPoolIndices_.emplace_back(index);
+        CHECK_RESULT_RETURN(applicationCommandPools_.at(index).allocate(logicalDevice_, creationInfo));
+    }
+    if (commandPool != nullptr)
+    {
+        *commandPool = &applicationCommandPoolIndices_.back();
+    }
+    return VK_SUCCESS;
+}
 
 inline VkSharingMode Device::sharingMode() const
 {
@@ -95,11 +118,11 @@ inline const FamilyValues<VkQueue> &Device::familyQueues() const
 }
 inline FamilyValues<CommandPool> &Device::commandPools()
 {
-    return commandPools_;
+    return internalCommandPools_;
 }
 inline const FamilyValues<CommandPool> &Device::commandPools() const
 {
-    return commandPools_;
+    return internalCommandPools_;
 }
 inline const VkSemaphore &Device::imageAvailableSemaphore() const
 {
@@ -337,17 +360,17 @@ inline VkResult Device::createCommandPools()
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = familyIndices_.graphics,
     };
-    CHECK_RESULT_RETURN(commandPools_.graphics.allocate(logicalDevice_, graphicsCommandPoolCreateInfo));
-    CHECK_RESULT_RETURN(commandPools_.graphics.allocateCommandBuffer(logicalDevice_,
-                                                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                     nullptr));
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocate(logicalDevice_, graphicsCommandPoolCreateInfo));
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer(logicalDevice_,
+                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                             nullptr));
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    CHECK_RESULT_RETURN(commandPools_.graphics.allocateCommandBuffer(logicalDevice_,
-                                                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                     nullptr,
-                                                                     &semaphoreCreateInfo));
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer(logicalDevice_,
+                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                             nullptr,
+                                                                             &semaphoreCreateInfo));
 
     // TODO: Both the transfer and presentation families are currently unused
     // const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {

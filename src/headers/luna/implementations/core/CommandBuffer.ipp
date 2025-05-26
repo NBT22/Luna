@@ -5,7 +5,6 @@
 #pragma once
 
 #include <cassert>
-#include "luna/core/Luna.hpp"
 
 namespace luna::helpers
 {

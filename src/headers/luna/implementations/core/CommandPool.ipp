@@ -6,37 +6,42 @@
 
 namespace luna::core
 {
-inline CommandPool::CommandPool()
+inline bool CommandPool::isDestroyed(const CommandPool &commandPool)
 {
-    assert(isDestroyed_);
-    isDestroyed_ = false;
+    return commandPool.isDestroyed_;
 }
 
-inline void CommandPool::destroy(const VkDevice logicalDevice)
+inline CommandPool::CommandPool(const VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo)
 {
-    if (isDestroyed_)
-    {
-        return;
-    }
-    for (const CommandBuffer &commandBuffer: commandBuffers_)
-    {
-        assert(!commandBuffer.isRecording_);
-        vkDestroyFence(logicalDevice, commandBuffer.fence_, nullptr);
-        commandBuffer.semaphore_.destroy(logicalDevice);
-    }
-    vkDestroyCommandPool(logicalDevice, commandPool_, nullptr);
-    isDestroyed_ = true;
+    CHECK_RESULT_THROW(allocate(logicalDevice, creationInfo));
+}
+
+inline CommandPool::operator const VkCommandPool &() const
+{
+    return commandPool_;
 }
 
 inline VkResult CommandPool::allocate(const VkDevice logicalDevice, const VkCommandPoolCreateInfo &poolCreateInfo)
 {
+    isDestroyed_ = false;
     CHECK_RESULT_RETURN(vkCreateCommandPool(logicalDevice, &poolCreateInfo, nullptr, &commandPool_));
+    return VK_SUCCESS;
+}
+inline VkResult CommandPool::allocate(const VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo)
+{
+    const VkCommandPoolCreateInfo poolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = creationInfo.flags,
+        // TODO: queueFamilyIndex
+    };
+    CHECK_RESULT_RETURN(allocate(logicalDevice, poolCreateInfo));
     return VK_SUCCESS;
 }
 inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
                                                    VkCommandBufferLevel commandBufferLevel,
                                                    const void *allocateInfoPNext)
 {
+    assert(!isDestroyed_);
     TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice, commandPool_, commandBufferLevel, allocateInfoPNext));
     return VK_SUCCESS;
 }
@@ -45,11 +50,36 @@ inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
                                                    const void *allocateInfoPNext,
                                                    const VkSemaphoreCreateInfo *semaphoreCreateInfo)
 {
+    assert(!isDestroyed_);
     TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice,
                                                   commandPool_,
                                                   commandBufferLevel,
                                                   allocateInfoPNext,
                                                   semaphoreCreateInfo));
+    return VK_SUCCESS;
+}
+inline VkResult CommandPool::reset(const VkDevice logicalDevice,
+                                   const VkCommandPoolResetFlagBits flags,
+                                   const uint64_t timeout = UINT64_MAX)
+{
+    std::vector<VkFence> fences;
+    fences.reserve(commandBuffers_.size());
+    for (CommandBuffer &commandBuffer: commandBuffers_)
+    {
+        // TODO: This is cursed and could cause bugs.
+        //  Fences should be reworked so that I can check if the fence needs to be waited upon.
+        if (commandBuffer.semaphore_.isSignaled())
+        {
+            fences.emplace_back(commandBuffer.fence_);
+        }
+        commandBuffer.isRecording_ = false;
+    }
+    // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
+    //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
+    //  all usages of this method currently use the default timeout.
+    CHECK_RESULT_RETURN(vkWaitForFences(logicalDevice, fences.size(), fences.data(), VK_TRUE, timeout));
+    CHECK_RESULT_RETURN(vkResetCommandPool(logicalDevice, commandPool_, flags));
+
     return VK_SUCCESS;
 }
 
