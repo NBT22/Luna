@@ -6,23 +6,18 @@
 #include <luna/core/Instance.hpp>
 #include <luna/lunaPipeline.h>
 
-namespace luna::core
+namespace luna::helpers
 {
-// TODO: Base pipeline
-GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo)
+VkResult createPipelineLayout(const LunaPipelineLayoutCreationInfo &layoutCreationInfo,
+                              std::vector<LunaPushConstantsRange> &pushConstantsRanges,
+                              VkPipelineLayout *layout)
 {
-    assert(isDestroyed_);
-
-    const LunaPipelineLayoutCreationInfo &layoutCreationInfo = creationInfo.layoutCreationInfo == nullptr
-                                                                       ? LunaPipelineLayoutCreationInfo{}
-                                                                       : *creationInfo.layoutCreationInfo;
     const uint32_t descriptorSetLayoutCount = layoutCreationInfo.descriptorSetLayoutCount;
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
     descriptorSetLayouts.reserve(descriptorSetLayoutCount);
     for (uint32_t i = 0; i < descriptorSetLayoutCount; i++)
     {
-        const DescriptorSetLayout &layout = descriptorSetLayout(layoutCreationInfo.descriptorSetLayouts[i]);
-        descriptorSetLayouts.emplace_back(layout);
+        descriptorSetLayouts.emplace_back(core::descriptorSetLayout(layoutCreationInfo.descriptorSetLayouts[i]));
     }
     uint32_t pushConstantsOffset = 0;
     std::vector<VkPushConstantRange> pushConstantRanges;
@@ -30,7 +25,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
     for (uint32_t i = 0; i < layoutCreationInfo.pushConstantRangeCount; i++)
     {
         const LunaPushConstantsRange &pushConstantsRange = layoutCreationInfo.pushConstantsRanges[i];
-        pushConstantsRanges_.push_back(pushConstantsRange);
+        pushConstantsRanges.push_back(pushConstantsRange);
         pushConstantRanges.emplace_back(pushConstantsRange.stageFlags, pushConstantsOffset, pushConstantsRange.size);
         pushConstantsOffset += pushConstantsRange.size;
     }
@@ -42,15 +37,43 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
         .pushConstantRangeCount = layoutCreationInfo.pushConstantRangeCount,
         .pPushConstantRanges = pushConstantRanges.data(),
     };
-    CHECK_RESULT_THROW(vkCreatePipelineLayout(device, &layoutCreateInfo, nullptr, &layout_));
+    return vkCreatePipelineLayout(core::device, &layoutCreateInfo, nullptr, layout);
+}
+} // namespace luna::helpers
+
+namespace luna::core
+{
+// TODO: Base pipeline
+GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo)
+{
+    assert(isDestroyed_);
+    assert(!(creationInfo.shaderStageCount > 0 && // NOLINT(*-simplify-boolean-expr) In order to preserve clarity
+             creationInfo.shaderStages == nullptr));
+
+    CHECK_RESULT_THROW(helpers::createPipelineLayout(creationInfo.layoutCreationInfo, pushConstantsRanges_, &layout_));
+
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+    shaderStages.reserve(creationInfo.shaderStageCount);
+    for (uint32_t i = 0; i < creationInfo.shaderStageCount; i++)
+    {
+        // I literally have an assert to ensure it isn't
+        // ReSharper disable once CppDFANullDereference
+        const LunaPipelineShaderStageCreationInfo shaderStage = creationInfo.shaderStages[i];
+        shaderStages.emplace_back(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                                  nullptr,
+                                  shaderStage.flags,
+                                  shaderStage.stage,
+                                  device.shaderModule(shaderStage.module),
+                                  shaderStage.entrypoint == nullptr ? "main" : shaderStage.entrypoint,
+                                  shaderStage.specializationInfo);
+    }
 
     const RenderPassSubpassIndex *subpassIndex = static_cast<const RenderPassSubpassIndex *>(creationInfo.subpass);
-    const RenderPass &renderPass = core::renderPass(subpassIndex->renderPassIndex);
     const VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .flags = creationInfo.flags,
         .stageCount = creationInfo.shaderStageCount,
-        .pStages = creationInfo.shaderStages,
+        .pStages = shaderStages.data(),
         .pVertexInputState = creationInfo.vertexInputState,
         .pInputAssemblyState = creationInfo.inputAssemblyState,
         .pTessellationState = creationInfo.tessellationState,
@@ -61,7 +84,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
         .pColorBlendState = creationInfo.colorBlendState,
         .pDynamicState = creationInfo.dynamicState,
         .layout = layout_,
-        .renderPass = renderPass,
+        .renderPass = renderPass(subpassIndex->renderPassIndex),
         .subpass = subpassIndex->index,
     };
     CHECK_RESULT_THROW(vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline_));

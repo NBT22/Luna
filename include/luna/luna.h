@@ -26,7 +26,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
                                     LunaDescriptorSet *descriptorSets);
 void lunaWriteDescriptorSets(uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites);
 
-VkResult lunaCreateShaderModule(const uint32_t *spirv, size_t bytes, VkShaderModule *shaderModule);
+VkResult lunaCreateShaderModule(const uint32_t *spirv, size_t bytes, LunaShaderModule *shaderModule);
 
 VkResult lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo);
 VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);

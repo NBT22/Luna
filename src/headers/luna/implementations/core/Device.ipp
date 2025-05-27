@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cstring>
-#include <algorithm>
 
 namespace luna::core
 {
@@ -47,13 +47,25 @@ inline void Device::destroy()
     isDestroyed_ = true;
 }
 
-inline VkResult Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule)
+inline VkResult Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo, LunaShaderModule *shaderModule)
 {
-    shaderModules_.emplace_back();
-    CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back()));
+    const std::vector<VkShaderModule>::iterator shaderModuleIterator = std::find(shaderModules_.begin(),
+                                                                                 shaderModules_.end(),
+                                                                                 VK_NULL_HANDLE);
+    if (shaderModuleIterator == shaderModules_.end())
+    {
+        shaderModuleIndices_.emplace_back(shaderModules_.size());
+        shaderModules_.emplace_back();
+        CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back()));
+    } else
+    {
+        const uint32_t index = shaderModuleIterator - shaderModules_.begin();
+        shaderModuleIndices_.emplace_back(index);
+        CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.at(index)));
+    }
     if (shaderModule != nullptr)
     {
-        *shaderModule = shaderModules_.back();
+        *shaderModule = &shaderModuleIndices_.back();
     }
     return VK_SUCCESS;
 }
@@ -131,6 +143,10 @@ inline const VkSemaphore &Device::imageAvailableSemaphore() const
 inline const VkSemaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex) const
 {
     return renderFinishedSemaphores_.at(imageIndex);
+}
+inline VkShaderModule Device::shaderModule(const LunaShaderModule shaderModule) const
+{
+    return shaderModules_.at(*static_cast<const uint32_t *>(shaderModule));
 }
 
 // TODO: Better family finding logic to allow for

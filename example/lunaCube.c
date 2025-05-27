@@ -186,8 +186,8 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
                                        mat4 *const pushConstantData,
                                        LunaGraphicsPipeline *pipeline)
 {
-    VkShaderModule vertexShaderModule;
-    VkShaderModule fragmentShaderModule;
+    LunaShaderModule vertexShaderModule;
+    LunaShaderModule fragmentShaderModule;
     if (lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule) != VK_SUCCESS)
     {
         return false;
@@ -197,18 +197,14 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
     {
         return false;
     }
-    const VkPipelineShaderStageCreateInfo shaderStages[2] = {
+    const LunaPipelineShaderStageCreationInfo shaderStages[2] = {
         {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
             .module = vertexShaderModule,
-            .pName = "main",
         },
         {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
             .module = fragmentShaderModule,
-            .pName = "main",
         },
     };
 
@@ -231,11 +227,11 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
             .offset = offsetof(Vertex, u),
         },
     };
-    const VkPipelineVertexInputStateCreateInfo vertexInputInfo = {
+    const VkPipelineVertexInputStateCreateInfo vertexInput = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,
         .pVertexBindingDescriptions = &inputBindingDescription,
-        .vertexAttributeDescriptionCount = 2,
+        .vertexAttributeDescriptionCount = sizeof(vertexAttributeDescriptions) / sizeof(*vertexAttributeDescriptions),
         .pVertexAttributeDescriptions = vertexAttributeDescriptions,
     };
 
@@ -314,16 +310,16 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
     };
 
     const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
-        .shaderStageCount = 2,
+        .shaderStageCount = sizeof(shaderStages) / sizeof(*shaderStages),
         .shaderStages = shaderStages,
-        .vertexInputState = &vertexInputInfo,
+        .vertexInputState = &vertexInput,
         .inputAssemblyState = &inputAssembly,
         .viewportState = &viewportState,
         .rasterizationState = &rasterizer,
         .multisampleState = &multisampling,
         .depthStencilState = &depthStencil,
         .colorBlendState = &colorBlending,
-        .layoutCreationInfo = &layoutCreationInfo,
+        .layoutCreationInfo = layoutCreationInfo,
         .subpass = subpass,
     };
     CHECK_RESULT(lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline));

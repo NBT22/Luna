@@ -23,6 +23,7 @@ LUNA_DEFINE_HANDLE(LunaRenderPassSubpass);
 LUNA_DEFINE_HANDLE(LunaDescriptorPool);
 LUNA_DEFINE_HANDLE(LunaDescriptorSetLayout);
 LUNA_DEFINE_HANDLE(LunaDescriptorSet);
+LUNA_DEFINE_HANDLE(LunaShaderModule);
 LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
 LUNA_DEFINE_HANDLE(LunaBuffer);
 LUNA_DEFINE_HANDLE(LunaSampler);
@@ -229,6 +230,97 @@ typedef struct
 
 typedef struct
 {
+        VkPipelineShaderStageCreateFlags flags;
+        VkShaderStageFlagBits stage;
+        LunaShaderModule module;
+        const char *entrypoint;
+        const VkSpecializationInfo *specializationInfo;
+} LunaPipelineShaderStageCreationInfo;
+
+typedef struct
+{
+        uint32_t vertexBindingDescriptionCount;
+        const VkVertexInputBindingDescription *vertexBindingDescriptions;
+        uint32_t vertexAttributeDescriptionCount;
+        const VkVertexInputAttributeDescription *vertexAttributeDescriptions;
+} LunaPipelineVertexInputStateCreationInfo;
+
+typedef struct
+{
+        VkPrimitiveTopology topology;
+        bool primitiveRestartEnable;
+} LunaPipelineInputAssemblyStateCreationInfo;
+
+typedef struct
+{
+        // This has been left as a struct for future versions of Luna where pNext will be implemented.
+        uint32_t patchControlPoints;
+} LunaPipelineTessellationStateCreationInfo;
+
+typedef struct
+{
+        uint32_t viewportCount;
+        const VkViewport *viewports;
+        uint32_t scissorCount;
+        const VkRect2D *scissors;
+} LunaPipelineViewportStateCreationInfo;
+
+typedef struct
+{
+        bool depthClampEnable;
+        bool rasterizerDiscardEnable;
+        VkPolygonMode polygonMode;
+        VkCullModeFlags cullMode;
+        VkFrontFace frontFace;
+        bool depthBiasEnable;
+        float depthBiasConstantFactor;
+        float depthBiasClamp;
+        float depthBiasSlopeFactor;
+        float lineWidth;
+} LunaPipelineRasterizationStateCreationInfo;
+
+typedef struct
+{
+        VkSampleCountFlagBits rasterizationSamples;
+        bool sampleShadingEnable;
+        float minSampleShading;
+        const VkSampleMask *sampleMask;
+        bool alphaToCoverageEnable;
+        bool alphaToOneEnable;
+} LunaPipelineMultisampleStateCreationInfo;
+
+typedef struct
+{
+        VkPipelineDepthStencilStateCreateFlags flags;
+        bool depthTestEnable;
+        bool depthWriteEnable;
+        VkCompareOp depthCompareOp;
+        bool depthBoundsTestEnable;
+        bool stencilTestEnable;
+        VkStencilOpState front;
+        VkStencilOpState back;
+        float minDepthBounds;
+        float maxDepthBounds;
+} LunaPipelineDepthStencilStateCreationInfo;
+
+typedef struct
+{
+        VkPipelineColorBlendStateCreateFlags flags;
+        bool logicOpEnable;
+        VkLogicOp logicOp;
+        uint32_t attachmentCount;
+        const VkPipelineColorBlendAttachmentState *attachments;
+        float blendConstants[4];
+} LunaPipelineColorBlendStateCreationInfo;
+
+typedef struct
+{
+        uint32_t dynamicStateCount;
+        const VkDynamicState *dynamicStates;
+} LunaPipelineDynamicStateCreationInfo;
+
+typedef struct
+{
         VkPipelineLayoutCreateFlags flags;
         uint32_t descriptorSetLayoutCount;
         const LunaDescriptorSetLayout *descriptorSetLayouts;
@@ -240,7 +332,7 @@ typedef struct
 {
         VkPipelineCreateFlags flags;
         uint32_t shaderStageCount;
-        const VkPipelineShaderStageCreateInfo *shaderStages;
+        const LunaPipelineShaderStageCreationInfo *shaderStages;
         const VkPipelineVertexInputStateCreateInfo *vertexInputState;
         const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
         const VkPipelineTessellationStateCreateInfo *tessellationState;
@@ -250,7 +342,7 @@ typedef struct
         const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
         const VkPipelineColorBlendStateCreateInfo *colorBlendState;
         const VkPipelineDynamicStateCreateInfo *dynamicState;
-        const LunaPipelineLayoutCreationInfo *layoutCreationInfo;
+        const LunaPipelineLayoutCreationInfo layoutCreationInfo;
         LunaRenderPassSubpass subpass;
 } LunaGraphicsPipelineCreationInfo;
 
@@ -280,14 +372,14 @@ typedef struct
         VkSamplerAddressMode addressModeV;
         VkSamplerAddressMode addressModeW;
         float mipLodBias;
-        VkBool32 anisotropyEnable;
+        bool anisotropyEnable;
         float maxAnisotropy;
-        VkBool32 compareEnable;
+        bool compareEnable;
         VkCompareOp compareOp;
         float minLod;
         float maxLod;
         VkBorderColor borderColor;
-        VkBool32 unnormalizedCoordinates;
+        bool unnormalizedCoordinates;
 } LunaSamplerCreationInfo;
 
 // TODO: There should also be a `LunaSampledImageCreationInfo2`

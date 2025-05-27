@@ -140,8 +140,8 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 {
     const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
 
-    VkShaderModule vertexShaderModule;
-    VkShaderModule fragmentShaderModule;
+    LunaShaderModule vertexShaderModule;
+    LunaShaderModule fragmentShaderModule;
     VkResult vertexShaderCreationResult = lunaCreateShaderModule(VERTEX_SHADER_SPIRV,
                                                                  sizeof(VERTEX_SHADER_SPIRV),
                                                                  &vertexShaderModule);
@@ -156,18 +156,14 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
     {
         return fragmentShaderCreationResult;
     }
-    const VkPipelineShaderStageCreateInfo shaderStages[2] = {
+    const LunaPipelineShaderStageCreationInfo shaderStages[2] = {
         {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
             .module = vertexShaderModule,
-            .pName = "main",
         },
         {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
             .module = fragmentShaderModule,
-            .pName = "main",
         },
     };
 
@@ -194,7 +190,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,
         .pVertexBindingDescriptions = &inputBindingDescription,
-        .vertexAttributeDescriptionCount = 2,
+        .vertexAttributeDescriptionCount = sizeof(vertexAttributeDescriptions) / sizeof(*vertexAttributeDescriptions),
         .pVertexAttributeDescriptions = vertexAttributeDescriptions,
     };
 
@@ -240,7 +236,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
     };
 
     const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
-        .shaderStageCount = 2,
+        .shaderStageCount = sizeof(shaderStages) / sizeof(*shaderStages),
         .shaderStages = shaderStages,
         .vertexInputState = &vertexInputInfo,
         .inputAssemblyState = &inputAssembly,

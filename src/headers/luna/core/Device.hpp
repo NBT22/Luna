@@ -32,7 +32,7 @@ class Device
 
         void destroy();
 
-        VkResult addShaderModule(const VkShaderModuleCreateInfo *creationInfo, VkShaderModule *shaderModule);
+        VkResult addShaderModule(const VkShaderModuleCreateInfo *creationInfo, LunaShaderModule *shaderModule);
         VkResult createSemaphores(uint32_t imageCount);
         VkResult addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
                                            LunaCommandPool *commandPool);
@@ -48,6 +48,7 @@ class Device
         [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
         [[nodiscard]] const VkSemaphore &imageAvailableSemaphore() const;
         [[nodiscard]] const VkSemaphore &renderFinishedSemaphore(uint32_t imageIndex) const;
+        [[nodiscard]] VkShaderModule shaderModule(LunaShaderModule shaderModule) const;
 
     private:
         VkResult findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -79,8 +80,8 @@ class Device
         VkSemaphore imageAvailableSemaphore_{};
         std::vector<VkSemaphore> renderFinishedSemaphores_{};
 
-        // TODO: Fix pipelines so that shader modules can be created and destroyed in a cleaner fashion
         std::vector<VkShaderModule> shaderModules_{};
+        std::list<uint32_t> shaderModuleIndices_{};
 };
 } // namespace luna::core
 

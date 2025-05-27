@@ -2,24 +2,14 @@
 // Created by NBT22 on 3/1/25.
 //
 
+#include <array>
 #include <luna/core/Instance.hpp>
 #include <luna/core/Luna.hpp>
 #include <luna/luna.h>
 
 #define VMA_IMPLEMENTATION
-#include <array>
 #include <vk_mem_alloc.h>
 
-VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, VkShaderModule *shaderModule)
-{
-    const VkShaderModuleCreateInfo creationInfo = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = bytes,
-        .pCode = spirv,
-    };
-    CHECK_RESULT_RETURN(luna::core::device.addShaderModule(&creationInfo, shaderModule));
-    return VK_SUCCESS;
-}
 VkResult lunaPresentSwapChain()
 {
     using namespace luna::core;
