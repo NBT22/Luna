@@ -358,15 +358,35 @@ static void generateMipmaps(const core::CommandBuffer &commandBuffer,
     };
     if (VK_API_VERSION_MINOR(core::apiVersion) >= 3)
     {
-        // transitionImageLayout2(commandBuffer,
-        //                        image,
-        //                        VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-        //                        VK_ACCESS_2_TRANSFER_READ_BIT,
-        //                        creationInfo.destinationStageMask,
-        //                        creationInfo.destinationAccessMask,
-        //                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        //                        creationInfo.layout,
-        //                        subresourceRange);
+        const VkImageMemoryBarrier2 blittedRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+            .dstAccessMask = creationInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .newLayout = creationInfo.layout,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image,
+            .subresourceRange = blittedSubresourceRange,
+        };
+        const VkImageMemoryBarrier2 lastRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            .dstAccessMask = creationInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = creationInfo.layout,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image,
+            .subresourceRange = lastSubresourceRange,
+        };
+        const std::array<VkImageMemoryBarrier2, 2> memoryBarriers = {lastRegionBarrier, blittedRegionBarrier};
+        const VkDependencyInfo dependencyInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .imageMemoryBarrierCount = 2,
+            .pImageMemoryBarriers = memoryBarriers.data(),
+        };
+        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
     } else
     {
         const VkImageMemoryBarrier blittedRegionBarrier = {
