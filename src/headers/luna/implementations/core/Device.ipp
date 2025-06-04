@@ -29,10 +29,9 @@ inline void Device::destroy()
     {
         vkDestroyShaderModule(logicalDevice_, shaderModule, nullptr);
     }
-    internalCommandPools_.graphics.destroy();
-    internalCommandPools_.transfer.destroy();
-    internalCommandPools_.presentation.destroy();
-    vkDestroySemaphore(logicalDevice_, imageAvailableSemaphore_, nullptr);
+    internalCommandPools_.graphics.destroy(logicalDevice_);
+    internalCommandPools_.transfer.destroy(logicalDevice_);
+    internalCommandPools_.presentation.destroy(logicalDevice_);
     for (const VkSemaphore &renderFinishedSemaphore: renderFinishedSemaphores_)
     {
         vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore, nullptr);
@@ -74,7 +73,6 @@ inline VkResult Device::createSemaphores(const uint32_t imageCount)
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore_));
     renderFinishedSemaphores_.resize(imageCount);
     for (uint32_t i = 0; i < imageCount; i++)
     {
@@ -135,10 +133,6 @@ inline FamilyValues<CommandPool> &Device::commandPools()
 inline const FamilyValues<CommandPool> &Device::commandPools() const
 {
     return internalCommandPools_;
-}
-inline const VkSemaphore &Device::imageAvailableSemaphore() const
-{
-    return imageAvailableSemaphore_;
 }
 inline const VkSemaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex) const
 {
@@ -377,12 +371,15 @@ inline VkResult Device::createCommandPools()
         .queueFamilyIndex = familyIndices_.graphics,
     };
     CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocate(logicalDevice_, graphicsCommandPoolCreateInfo));
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer(logicalDevice_,
-                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                             nullptr));
+
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
+    // TODO: The count should be dynamic, which means this shouldn't use templates but instead just function args
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer<4>(logicalDevice_,
+                                                                                VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                                nullptr,
+                                                                                &semaphoreCreateInfo));
     CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer(logicalDevice_,
                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                                                              nullptr,

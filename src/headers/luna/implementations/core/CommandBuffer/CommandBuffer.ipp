@@ -6,14 +6,20 @@
 
 #include <cassert>
 
-namespace luna::helpers
+namespace luna::core::commandBuffer
 {
-static VkResult createCommandBuffer(const VkDevice logicalDevice,
+inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
+                                    const VkCommandPool commandPool,
+                                    const VkCommandBufferLevel commandBufferLevel,
+                                    const void *allocateInfoPNext):
+    CommandBuffer(logicalDevice, commandPool, commandBufferLevel, allocateInfoPNext, nullptr)
+{}
+inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
                                     const VkCommandPool commandPool,
                                     const VkCommandBufferLevel commandBufferLevel,
                                     const void *allocateInfoPNext,
-                                    VkCommandBuffer *commandBuffer,
-                                    VkFence *fence)
+                                    const VkSemaphoreCreateInfo *semaphoreCreateInfo):
+    semaphore_(logicalDevice, semaphoreCreateInfo)
 {
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -22,45 +28,13 @@ static VkResult createCommandBuffer(const VkDevice logicalDevice,
         .level = commandBufferLevel,
         .commandBufferCount = 1,
     };
-    CHECK_RESULT_RETURN(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, commandBuffer));
+    CHECK_RESULT_THROW(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, &commandBuffer_));
 
     constexpr VkFenceCreateInfo fenceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    CHECK_RESULT_RETURN(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, fence));
-
-    return VK_SUCCESS;
-}
-} // namespace luna::helpers
-
-namespace luna::core
-{
-inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
-                                    const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel,
-                                    const void *allocateInfoPNext)
-{
-    CHECK_RESULT_THROW(helpers::createCommandBuffer(logicalDevice,
-                                                    commandPool,
-                                                    commandBufferLevel,
-                                                    allocateInfoPNext,
-                                                    &commandBuffer_,
-                                                    &fence_));
-}
-inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
-                                    const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel,
-                                    const void *allocateInfoPNext,
-                                    const VkSemaphoreCreateInfo *semaphoreCreateInfo):
-    semaphore_(logicalDevice, semaphoreCreateInfo)
-{
-    CHECK_RESULT_THROW(helpers::createCommandBuffer(logicalDevice,
-                                                    commandPool,
-                                                    commandBufferLevel,
-                                                    allocateInfoPNext,
-                                                    &commandBuffer_,
-                                                    &fence_));
+    CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence_));
 }
 
 inline CommandBuffer::operator const VkCommandBuffer &() const
@@ -70,6 +44,13 @@ inline CommandBuffer::operator const VkCommandBuffer &() const
 inline const VkCommandBuffer *CommandBuffer::operator&() const
 {
     return &commandBuffer_;
+}
+
+inline void CommandBuffer::destroy(const VkDevice logicalDevice) const
+{
+    assert(!isRecording_);
+    vkDestroyFence(logicalDevice, fence_, nullptr);
+    semaphore_.destroy(logicalDevice);
 }
 
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
@@ -132,4 +113,4 @@ inline const Semaphore &CommandBuffer::semaphore() const
 {
     return semaphore_;
 }
-} // namespace luna::core
+} // namespace luna::core::commandBuffer

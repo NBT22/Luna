@@ -564,7 +564,7 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
         CHECK_RESULT_RETURN(vkAcquireNextImageKHR(device,
                                                   swapChain.swapChain,
                                                   UINT64_MAX,
-                                                  device.imageAvailableSemaphore_,
+                                                  commandBuffer.semaphore(),
                                                   VK_NULL_HANDLE,
                                                   &swapChain.imageIndex));
         CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());

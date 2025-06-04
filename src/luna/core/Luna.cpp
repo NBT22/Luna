@@ -17,7 +17,7 @@ VkResult lunaPresentSwapChain()
     assert(commandBuffer.isRecording());
 
     const Semaphore &secondaryGraphicsSemaphore = device.commandPools().graphics.commandBuffer(1).semaphore();
-    const std::array<VkSemaphore, 2> waitSemaphores = {device.imageAvailableSemaphore(), secondaryGraphicsSemaphore};
+    const std::array<VkSemaphore, 2> waitSemaphores = {commandBuffer.semaphore(), secondaryGraphicsSemaphore};
     const std::array<VkPipelineStageFlags, 2> waitStageMasks = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                                                 secondaryGraphicsSemaphore.stageMask()};
     const VkSubmitInfo queueSubmitInfo = {

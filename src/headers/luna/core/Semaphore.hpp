@@ -26,7 +26,7 @@ class Semaphore
         [[nodiscard]] const VkPipelineStageFlags &stageMask() const;
 
     private:
-        bool isDestroyed_{true};
+        // bool isDestroyed_{true};
         bool isSignaled_{};
         VkPipelineStageFlags stageMask_{};
         VkSemaphore semaphore_{};

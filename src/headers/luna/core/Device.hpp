@@ -46,7 +46,6 @@ class Device
         [[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const;
         [[nodiscard]] FamilyValues<CommandPool> &commandPools();
         [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
-        [[nodiscard]] const VkSemaphore &imageAvailableSemaphore() const;
         [[nodiscard]] const VkSemaphore &renderFinishedSemaphore(uint32_t imageIndex) const;
         [[nodiscard]] VkShaderModule shaderModule(LunaShaderModule shaderModule) const;
 
@@ -77,7 +76,6 @@ class Device
         FamilyValues<CommandPool> internalCommandPools_{};
         std::vector<CommandPool> applicationCommandPools_{};
         std::list<uint32_t> applicationCommandPoolIndices_{};
-        VkSemaphore imageAvailableSemaphore_{};
         std::vector<VkSemaphore> renderFinishedSemaphores_{};
 
         std::vector<VkShaderModule> shaderModules_{};

@@ -122,6 +122,13 @@ static bool shouldQuit(void)
 
 static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
 {
+    VkSubpassDependency dependency = {
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    };
     const LunaRenderPassCreationInfo renderPassCreationInfo = {
         .samples = VK_SAMPLE_COUNT_4_BIT,
         .createColorAttachment = true,
@@ -131,6 +138,8 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .useColorAttachment = true,
         }},
+        .dependencyCount = 1,
+        .dependencies = &dependency,
         .extent = extent,
     };
     return lunaCreateRenderPass(&renderPassCreationInfo, renderPass);

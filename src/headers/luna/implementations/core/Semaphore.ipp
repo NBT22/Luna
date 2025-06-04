@@ -10,6 +10,10 @@ namespace luna::core
 {
 inline Semaphore::Semaphore(const VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo)
 {
+    if (semaphoreCreateInfo == nullptr)
+    {
+        return;
+    }
     CHECK_RESULT_THROW(vkCreateSemaphore(logicalDevice, semaphoreCreateInfo, nullptr, &semaphore_));
 }
 

@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include <luna/core/CommandBuffer.hpp>
+#include <luna/core/CommandBuffer/CommandBuffer.hpp>
+#include <luna/core/CommandBuffer/CommandBufferArray.hpp>
 #include <luna/lunaTypes.h>
+#include <memory>
 
 namespace luna::core
 {
@@ -19,18 +21,18 @@ class CommandPool
         CommandPool() = default;
         CommandPool(VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo);
 
-        void destroy();
+        void destroy(VkDevice logicalDevice);
 
         VkResult allocate(VkDevice logicalDevice, const VkCommandPoolCreateInfo &poolCreateInfo);
         VkResult allocate(VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo);
-        VkResult allocateCommandBuffer(VkDevice logicalDevice,
+        template<uint32_t arraySize = 1> VkResult allocateCommandBuffer(VkDevice logicalDevice,
                                        VkCommandBufferLevel commandBufferLevel,
                                        const void *allocateInfoPNext);
-        VkResult allocateCommandBuffer(VkDevice logicalDevice,
+        template<uint32_t arraySize = 1> VkResult allocateCommandBuffer(VkDevice logicalDevice,
                                        VkCommandBufferLevel commandBufferLevel,
                                        const void *allocateInfoPNext,
                                        const VkSemaphoreCreateInfo *semaphoreCreateInfo);
-        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlagBits flags, uint64_t timeout);
+        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlagBits flags, uint64_t timeout = UINT64_MAX);
 
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
         [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index = 0);
@@ -38,7 +40,7 @@ class CommandPool
     private:
         bool isDestroyed_{true};
         VkCommandPool commandPool_{};
-        std::vector<CommandBuffer> commandBuffers_{};
+        std::vector<std::unique_ptr<CommandBuffer>> commandBuffers_{};
 };
 } // namespace luna::core
 

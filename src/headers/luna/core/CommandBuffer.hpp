@@ -1,48 +1,28 @@
 //
-// Created by NBT22 on 3/20/25.
+// Created by NBT22 on 6/2/25.
 //
 
 #pragma once
-
-#include <luna/core/Semaphore.hpp>
 
 namespace luna::core
 {
 class CommandBuffer
 {
     public:
-        friend class CommandPool;
+        virtual operator const VkCommandBuffer &() const = 0;
+        virtual const VkCommandBuffer *operator&() const = 0;
 
-        CommandBuffer(VkDevice logicalDevice,
-                      VkCommandPool commandPool,
-                      VkCommandBufferLevel commandBufferLevel,
-                      const void *allocateInfoPNext);
-        CommandBuffer(VkDevice logicalDevice,
-                      VkCommandPool commandPool,
-                      VkCommandBufferLevel commandBufferLevel,
-                      const void *allocateInfoPNext,
-                      const VkSemaphoreCreateInfo *semaphoreCreateInfo);
+        virtual void destroy(VkDevice logicalDevice) const = 0;
 
-        operator const VkCommandBuffer &() const;
-        const VkCommandBuffer *operator&() const;
+        virtual VkResult beginSingleUseCommandBuffer() = 0;
+        virtual VkResult submitCommandBuffer(VkQueue queue,
+                                             const VkSubmitInfo &submitInfo,
+                                             VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) = 0;
+        virtual bool getAndSetIsSignaled(bool value) = 0;
+        virtual VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const = 0;
+        virtual VkResult resetFence(VkDevice logicalDevice) const = 0;
 
-        VkResult beginSingleUseCommandBuffer();
-        VkResult submitCommandBuffer(VkQueue queue,
-                                     const VkSubmitInfo &submitInfo,
-                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-        bool getAndSetIsSignaled(bool value);
-        VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
-        VkResult resetFence(VkDevice logicalDevice) const;
-
-        [[nodiscard]] bool isRecording() const;
-        [[nodiscard]] const Semaphore &semaphore() const;
-
-    private:
-        bool isRecording_{};
-        VkCommandBuffer commandBuffer_{};
-        VkFence fence_{};
-        Semaphore semaphore_{};
+        [[nodiscard]] virtual bool isRecording() const = 0;
+        [[nodiscard]] virtual const Semaphore &semaphore() const = 0;
 };
 } // namespace luna::core
-
-#include <luna/implementations/core/CommandBuffer.ipp>
