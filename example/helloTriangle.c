@@ -349,7 +349,7 @@ int main(void)
                                     0,
                                     0));
         lunaEndRenderPass();
-        CHECK_RESULT(lunaPresentSwapChain());
+        CHECK_RESULT(lunaPresentSwapchain());
     }
     CHECK_RESULT(lunaDestroyInstance());
     return 0;

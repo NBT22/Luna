@@ -23,7 +23,6 @@ class VkResultException final: public std::exception
 #define CHECK_RESULT_RETURN(value) \
     if (const VkResult result = value; result != VK_SUCCESS) \
     { \
-        assert(result == VK_SUCCESS); \
         return result; \
     }
 #define CHECK_RESULT_THROW(value) \
@@ -44,15 +43,17 @@ namespace luna::core
 {
 struct SwapChain
 {
+        VkSurfaceKHR surface;
+        uint32_t imageCount;
         VkSurfaceFormatKHR format;
         VkExtent2D extent;
+        VkImageUsageFlags imageUsage;
         VkPresentModeKHR presentMode;
-        uint32_t imageCount;
-        uint32_t imageIndex;
+        VkCompositeAlphaFlagBitsKHR compositeAlpha;
         VkSwapchainKHR swapChain;
+        uint32_t imageIndex;
         std::vector<VkImage> images;
         std::vector<VkImageView> imageViews;
-        std::vector<VkFramebuffer> framebuffers;
 };
 struct SamplerIndex
 {

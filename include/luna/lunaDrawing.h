@@ -79,7 +79,10 @@ VkResult lunaDrawBufferIndexedIndirectCount(LunaBuffer vertexBuffer,
 // TODO: This should take a pipeline layout, but those don't exist yet
 void lunaBindDescriptorSets(LunaGraphicsPipeline pipeline, const LunaGraphicsPipelineBindInfo *bindInfo);
 VkResult lunaPushConstants(LunaGraphicsPipeline pipeline);
-VkResult lunaPresentSwapChain(void);
+VkResult lunaResizeSwapchain(uint32_t renderPassResizeInfoCount,
+                             const LunaRenderPassResizeInfo *renderPassResizeInfos,
+                             VkExtent2D *newSwapchainExtent);
+VkResult lunaPresentSwapchain();
 
 #ifdef __cplusplus
 }

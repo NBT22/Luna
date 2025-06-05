@@ -16,7 +16,7 @@
 
 namespace luna::core
 {
-[[nodiscard]] const RenderPass &renderPass(LunaRenderPass renderPass);
+[[nodiscard]] RenderPass &renderPass(LunaRenderPass renderPass);
 [[nodiscard]] VkDescriptorPool descriptorPool(LunaDescriptorPool descriptorPool);
 [[nodiscard]] const DescriptorSetLayout &descriptorSetLayout(LunaDescriptorSetLayout layout);
 [[nodiscard]] VkDescriptorSet descriptorSet(LunaDescriptorSet descriptorSet);
@@ -36,7 +36,6 @@ extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
-extern VkSurfaceKHR surface;
 
 extern VkPipeline boundPipeline;
 extern VkBuffer boundVertexBuffer;

@@ -284,6 +284,11 @@ static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
         .pDependencies = creationInfo.dependencies,
     };
     CHECK_RESULT_RETURN(vkCreateRenderPass(core::device, &createInfo, nullptr, &renderPass));
+
+    delete attachmentReferences[0];
+    delete attachmentReferences[1];
+    delete attachmentReferences[2];
+
     return VK_SUCCESS;
 }
 static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
@@ -344,6 +349,11 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
         .pCorrelatedViewMasks = creationInfo.correlatedViewMasks,
     };
     CHECK_RESULT_RETURN(vkCreateRenderPass2(core::device, &createInfo, nullptr, &renderPass));
+
+    delete attachmentReferences[0];
+    delete attachmentReferences[1];
+    delete attachmentReferences[2];
+
     return VK_SUCCESS;
 }
 } // namespace luna::helpers
@@ -356,10 +366,9 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo, const Ren
     init_(creationInfo, renderPassIndex);
     CHECK_RESULT_THROW(helpers::createRenderPass(creationInfo, samples_, renderPass_));
     CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
-    CHECK_RESULT_THROW(createSwapChainFramebuffers(renderPass_,
-                                                   creationInfo.createDepthAttachment,
-                                                   creationInfo.framebufferAttachmentCount,
-                                                   creationInfo.framebufferAttachments));
+    CHECK_RESULT_THROW(createFramebuffers(creationInfo.createDepthAttachment,
+                                          creationInfo.framebufferAttachmentCount,
+                                          creationInfo.framebufferAttachments));
     isDestroyed_ = false;
 }
 RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex)
@@ -368,10 +377,9 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const Re
     init_(creationInfo, renderPassIndex);
     CHECK_RESULT_THROW(helpers::createRenderPass2(creationInfo, samples_, renderPass_));
     CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
-    CHECK_RESULT_THROW(createSwapChainFramebuffers(renderPass_,
-                                                   creationInfo.createDepthAttachment,
-                                                   creationInfo.framebufferAttachmentCount,
-                                                   creationInfo.framebufferAttachments));
+    CHECK_RESULT_THROW(createFramebuffers(creationInfo.createDepthAttachment,
+                                          creationInfo.framebufferAttachmentCount,
+                                          creationInfo.framebufferAttachments));
     isDestroyed_ = false;
 }
 
@@ -386,11 +394,17 @@ void RenderPass::destroy()
     vmaDestroyImage(device.allocator(), colorImage_, colorImageAllocation_);
     vmaDestroyImage(device.allocator(), depthImage_, depthImageAllocation_);
     vkDestroyRenderPass(device, renderPass_, nullptr);
+    for (const VkFramebuffer &framebuffer: framebuffers_)
+    {
+        vkDestroyFramebuffer(device, framebuffer, nullptr);
+    }
     name_.clear();
     name_.shrink_to_fit();
     subpassIndices_.clear();
     subpassIndices_.shrink_to_fit();
     subpassMap_.clear();
+    framebuffers_.clear();
+    framebuffers_.shrink_to_fit();
 
     isDestroyed_ = true;
 }
@@ -408,7 +422,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
             .format = swapChain.format.format,
-            .extent = extent_,
+            .extent = maxExtent_,
             .mipLevels = 1,
             .arrayLayers = 1,
             .samples = samples_,
@@ -440,7 +454,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
             .format = depthImageFormat,
-            .extent = extent_,
+            .extent = maxExtent_,
             .mipLevels = 1,
             .arrayLayers = 1,
             .samples = samples_,
@@ -467,42 +481,54 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
     return VK_SUCCESS;
 }
 
-inline VkResult RenderPass::createSwapChainFramebuffers(const VkRenderPass renderPass,
-                                                        const bool createDepthAttachment,
-                                                        const uint32_t framebufferAttachmentCount,
-                                                        const VkImageView *framebufferAttachments) const
+inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
+                                               const uint32_t framebufferAttachmentCount,
+                                               const VkImageView *framebufferAttachments)
 {
     const uint32_t attachmentCount = framebufferAttachmentCount +
                                      static_cast<uint32_t>(createDepthAttachment) +
                                      static_cast<uint32_t>(samples_ != VK_SAMPLE_COUNT_1_BIT) +
                                      1;
-    std::vector<VkImageView> attachments(framebufferAttachments, framebufferAttachments + framebufferAttachmentCount);
-    attachments.reserve(attachmentCount);
+    attachments_.reserve(attachmentCount);
+    for (uint32_t i = 0; i < framebufferAttachmentCount; i++)
+    {
+        attachments_.emplace_back(framebufferAttachments[i]);
+    }
 
     if (createDepthAttachment)
     {
-        attachments.emplace_back(depthImageView_);
+        attachments_.emplace_back(depthImageView_);
     }
     if (samples_ != VK_SAMPLE_COUNT_1_BIT)
     {
-        attachments.emplace_back(colorImageView_);
+        attachments_.emplace_back(colorImageView_);
     }
-    attachments.emplace_back(swapChain.imageViews.at(0));
-    swapChain.framebuffers.resize(swapChain.imageCount);
-    for (uint32_t i = 0; i < swapChain.imageCount; i++)
+    attachments_.emplace_back(swapChain.imageViews.at(0));
+    framebuffers_.resize(swapChain.imageCount);
+    for (uint32_t i = 0; i < swapChain.imageCount - 1; i++)
     {
-        attachments.back() = swapChain.imageViews.at(i);
         const VkFramebufferCreateInfo framebufferCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = renderPass,
+            .renderPass = renderPass_,
             .attachmentCount = attachmentCount,
-            .pAttachments = attachments.data(),
+            .pAttachments = attachments_.data(),
             .width = extent_.width,
             .height = extent_.height,
             .layers = 1,
         };
-        CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &swapChain.framebuffers[i]));
+        CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffers_[i]));
+        attachments_.back() = swapChain.imageViews.at(i + 1);
     }
+    const VkFramebufferCreateInfo framebufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .renderPass = renderPass_,
+        .attachmentCount = attachmentCount,
+        .pAttachments = attachments_.data(),
+        .width = extent_.width,
+        .height = extent_.height,
+        .layers = 1,
+    };
+    CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffers_.back()));
     return VK_SUCCESS;
 }
 } // namespace luna::core
@@ -553,6 +579,7 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
 {
     using namespace luna::core;
     assert(renderPass);
+    VkResult acquireImageResult = VK_SUCCESS;
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
     const RenderPass &renderPassObject = luna::core::renderPass(renderPass);
 
@@ -561,12 +588,23 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
         // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
         CHECK_RESULT_RETURN(commandBuffer.waitForFence(device));
         CHECK_RESULT_RETURN(commandBuffer.resetFence(device));
-        CHECK_RESULT_RETURN(vkAcquireNextImageKHR(device,
-                                                  swapChain.swapChain,
-                                                  UINT64_MAX,
-                                                  commandBuffer.semaphore(),
-                                                  VK_NULL_HANDLE,
-                                                  &swapChain.imageIndex));
+        acquireImageResult = vkAcquireNextImageKHR(device,
+                                                   swapChain.swapChain,
+                                                   UINT64_MAX,
+                                                   commandBuffer.semaphore(),
+                                                   VK_NULL_HANDLE,
+                                                   &swapChain.imageIndex);
+        switch (acquireImageResult)
+        {
+            case VK_SUBOPTIMAL_KHR:
+            case VK_SUCCESS:
+                break;
+            case VK_ERROR_OUT_OF_DATE_KHR:
+                return acquireImageResult;
+            default:
+                assert(acquireImageResult != VK_SUCCESS);
+                return acquireImageResult;
+        }
         CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
     } else if (!commandBuffer.isRecording())
     {
@@ -590,14 +628,14 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
     const VkRenderPassBeginInfo renderPassBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPassObject.renderPass_,
-        .framebuffer = swapChain.framebuffers[swapChain.imageIndex],
+        .framebuffer = renderPassObject.framebuffers_[swapChain.imageIndex],
         .renderArea = beginInfo->renderArea,
         .clearValueCount = clearValueCount,
         .pClearValues = clearValues.data(),
     };
     vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    return VK_SUCCESS;
+    return acquireImageResult;
 }
 void lunaNextSubpass()
 {

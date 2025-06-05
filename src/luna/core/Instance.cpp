@@ -116,16 +116,18 @@ static VkResult createSwapChainImages(const VkDevice logicalDevice, core::SwapCh
     return VK_SUCCESS;
 }
 
-VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
+static VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
 {
-    core::surface = creationInfo.surface;
+    core::swapChain.surface = creationInfo.surface;
 
     VkSurfaceCapabilitiesKHR capabilities;
-    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(core::device, core::surface, &capabilities));
+    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(core::device,
+                                                                  core::swapChain.surface,
+                                                                  &capabilities));
     capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 
     CHECK_RESULT_RETURN(helpers::findSwapChainFormat(core::device,
-                                                     core::surface,
+                                                     core::swapChain.surface,
                                                      creationInfo.formatCount,
                                                      creationInfo.formatPriorityList,
                                                      core::swapChain.format));
@@ -142,7 +144,7 @@ VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
            core::swapChain.extent.height <= capabilities.maxImageExtent.height);
 
     CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(core::device,
-                                                         core::surface,
+                                                         core::swapChain.surface,
                                                          creationInfo.presentModeCount,
                                                          creationInfo.presentModePriorityList,
                                                          core::swapChain.presentMode));
@@ -152,23 +154,24 @@ VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
            core::swapChain.imageCount <= capabilities.maxImageCount);
     CHECK_RESULT_RETURN(core::device.createSemaphores(core::swapChain.imageCount));
 
-    const VkCompositeAlphaFlagBitsKHR compositeAlpha = creationInfo.compositeAlpha == 0
-                                                               ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
-                                                               : creationInfo.compositeAlpha;
+    core::swapChain.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+                                                              : creationInfo.imageUsage;
+    core::swapChain.compositeAlpha = creationInfo.compositeAlpha == 0 ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
+                                                                      : creationInfo.compositeAlpha;
     const VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = core::surface,
+        .surface = core::swapChain.surface,
         .minImageCount = core::swapChain.imageCount,
         .imageFormat = core::swapChain.format.format,
         .imageColorSpace = core::swapChain.format.colorSpace,
         .imageExtent = core::swapChain.extent,
         .imageArrayLayers = 1,
-        .imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : creationInfo.imageUsage,
+        .imageUsage = core::swapChain.imageUsage,
         .imageSharingMode = core::device.sharingMode(),
         .queueFamilyIndexCount = core::device.familyCount(),
         .pQueueFamilyIndices = core::device.queueFamilyIndices(),
         .preTransform = capabilities.currentTransform,
-        .compositeAlpha = compositeAlpha,
+        .compositeAlpha = core::swapChain.compositeAlpha,
         .presentMode = core::swapChain.presentMode,
         .clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
     };
@@ -187,7 +190,6 @@ VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
-VkSurfaceKHR surface{};
 VkPipeline boundPipeline{};
 VkBuffer boundVertexBuffer{};
 VkBuffer boundIndexBuffer{};
@@ -246,20 +248,18 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 VkResult lunaDestroyInstance()
 {
     using namespace luna::core;
-    const VkDevice logicalDevice = device;
-    CHECK_RESULT_RETURN(vkDeviceWaitIdle(logicalDevice));
+    CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
 
 
     for (uint32_t i = 0; i < swapChain.imageCount; i++)
     {
-        vkDestroyFramebuffer(logicalDevice, swapChain.framebuffers.at(i), nullptr);
-        vkDestroyImageView(logicalDevice, swapChain.imageViews.at(i), nullptr);
+        vkDestroyImageView(device, swapChain.imageViews.at(i), nullptr);
     }
-    vkDestroySwapchainKHR(logicalDevice, swapChain.swapChain, nullptr);
+    vkDestroySwapchainKHR(device, swapChain.swapChain, nullptr);
 
     for (const VkSampler sampler: samplers)
     {
-        vkDestroySampler(logicalDevice, sampler, nullptr);
+        vkDestroySampler(device, sampler, nullptr);
     }
     for (Image image: images)
     {
@@ -277,7 +277,7 @@ VkResult lunaDestroyInstance()
 
     for (const VkDescriptorPool descriptorPool: descriptorPools)
     {
-        vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
     }
     for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts)
     {
@@ -290,7 +290,7 @@ VkResult lunaDestroyInstance()
     }
 
     device.destroy();
-    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroySurfaceKHR(instance, swapChain.surface, nullptr);
     vkDestroyInstance(instance, nullptr);
 
 
@@ -298,8 +298,6 @@ VkResult lunaDestroyInstance()
     swapChain.images.shrink_to_fit();
     swapChain.imageViews.clear();
     swapChain.imageViews.shrink_to_fit();
-    swapChain.framebuffers.clear();
-    swapChain.framebuffers.shrink_to_fit();
 
     samplerIndices.clear();
     samplers.clear();

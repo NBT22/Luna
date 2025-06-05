@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <luna/core/Semaphore.hpp>
+
 namespace luna::core
 {
 class CommandBuffer
@@ -20,7 +22,7 @@ class CommandBuffer
                                              VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) = 0;
         virtual bool getAndSetIsSignaled(bool value) = 0;
         virtual VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const = 0;
-        virtual VkResult resetFence(VkDevice logicalDevice) const = 0;
+        virtual VkResult resetFence(VkDevice logicalDevice) = 0;
 
         [[nodiscard]] virtual bool isRecording() const = 0;
         [[nodiscard]] virtual const Semaphore &semaphore() const = 0;

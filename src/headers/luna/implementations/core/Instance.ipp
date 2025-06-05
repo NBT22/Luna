@@ -6,7 +6,7 @@
 
 namespace luna::core
 {
-inline const RenderPass &renderPass(const LunaRenderPass renderPass)
+inline RenderPass &renderPass(const LunaRenderPass renderPass)
 {
     return renderPasses.at(static_cast<const RenderPassIndex *>(renderPass)->index);
 }

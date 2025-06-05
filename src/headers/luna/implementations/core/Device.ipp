@@ -76,10 +76,11 @@ inline VkResult Device::createSemaphores(const uint32_t imageCount)
     renderFinishedSemaphores_.resize(imageCount);
     for (uint32_t i = 0; i < imageCount; i++)
     {
+        Semaphore &semaphore = renderFinishedSemaphores_.at(i);
         CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_,
                                               &semaphoreCreateInfo,
                                               nullptr,
-                                              &renderFinishedSemaphores_.at(i)));
+                                              &semaphore));
     }
     return VK_SUCCESS;
 }
@@ -134,7 +135,7 @@ inline const FamilyValues<CommandPool> &Device::commandPools() const
 {
     return internalCommandPools_;
 }
-inline const VkSemaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex) const
+inline Semaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex)
 {
     return renderFinishedSemaphores_.at(imageIndex);
 }

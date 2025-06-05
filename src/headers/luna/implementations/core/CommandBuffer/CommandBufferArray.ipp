@@ -26,9 +26,9 @@ template<uint32_t count> CommandBufferArray<count>::CommandBufferArray(const VkD
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    for (VkFence &fence: fences_)
+    for (uint32_t i = 0; i < count; i++)
     {
-        CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence));
+        CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fences_.at(i)));
     }
 }
 template<uint32_t count>
@@ -83,6 +83,7 @@ template<uint32_t count> VkResult CommandBufferArray<count>::submitCommandBuffer
 {
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffers_.at(index_)));
     CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fences_.at(index_)));
+    fences_.at(index_).setWillBeSignaled(true);
     isRecordings_.at(index_) = false;
     if (submitInfo.signalSemaphoreCount > 0)
     {
@@ -105,16 +106,41 @@ template<uint32_t count> bool CommandBufferArray<count>::getAndSetIsSignaled(con
     semaphores_.at(index_).setIsSignaled(value);
     return oldValue;
 }
+template<uint32_t count> VkResult CommandBufferArray<count>::waitForAllFences(const VkDevice logicalDevice,
+                                                                              const uint64_t timeout) const
+{
+    std::vector<VkFence> fences;
+    fences.reserve(count);
+    uint32_t waitCount = 0;
+    for (const Fence &fence: fences_)
+    {
+        if (fence.willBeSignaled())
+        {
+            fences.emplace_back(fence);
+            waitCount++;
+        }
+    }
+    if (waitCount == 0)
+    {
+        return VK_SUCCESS;
+    }
+    return vkWaitForFences(logicalDevice, waitCount, fences.data(), VK_TRUE, timeout);
+}
 template<uint32_t count> VkResult CommandBufferArray<count>::waitForFence(const VkDevice logicalDevice,
                                                                           const uint64_t timeout) const
 {
+    if (!fences_.at(index_).willBeSignaled())
+    {
+        return VK_SUCCESS;
+    }
     // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
     //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
     //  all usages of this method currently use the default timeout.
     return vkWaitForFences(logicalDevice, 1, &fences_.at(index_), VK_TRUE, timeout);
 }
-template<uint32_t count> VkResult CommandBufferArray<count>::resetFence(const VkDevice logicalDevice) const
+template<uint32_t count> VkResult CommandBufferArray<count>::resetFence(const VkDevice logicalDevice)
 {
+    fences_.at(index_).setWillBeSignaled(false);
     return vkResetFences(logicalDevice, 1, &fences_.at(index_));
 }
 

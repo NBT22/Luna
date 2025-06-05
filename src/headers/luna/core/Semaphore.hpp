@@ -12,10 +12,11 @@ class Semaphore
 {
     public:
         Semaphore() = default;
-        explicit Semaphore(VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo);
+        Semaphore(VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo);
 
         operator const VkSemaphore &() const;
         const VkSemaphore *operator&() const;
+        VkSemaphore *operator&();
 
         void destroy(VkDevice logicalDevice) const;
 

@@ -41,10 +41,10 @@ class RenderPass
         const RenderPassSubpassIndex *getFirstSubpass() const;
         const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
         VkResult createAttachmentImages(bool createDepthImage);
-        VkResult createSwapChainFramebuffers(VkRenderPass renderPass,
-                                             bool createDepthAttachment,
+        VkResult createFramebuffers(bool createDepthAttachment,
                                              uint32_t framebufferAttachmentCount,
-                                             const VkImageView *framebufferAttachments) const;
+                                             const VkImageView *framebufferAttachments);
+        VkResult recreateFramebuffer(const Device &device, const SwapChain &swapchain, uint32_t width, uint32_t height);
 
     private:
         void init_(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
@@ -57,12 +57,15 @@ class RenderPass
         std::unordered_map<std::string, uint32_t> subpassMap_{};
         VkSampleCountFlagBits samples_{};
         VkExtent3D extent_{};
+        VkExtent3D maxExtent_{};
         VmaAllocation colorImageAllocation_{};
         VmaAllocation depthImageAllocation_{};
         VkImage colorImage_{};
         VkImage depthImage_{};
         VkImageView colorImageView_{};
         VkImageView depthImageView_{};
+        std::vector<VkImageView> attachments_{};
+        std::vector<VkFramebuffer> framebuffers_{};
 };
 } // namespace luna::core
 

@@ -119,6 +119,7 @@ typedef struct
         const VkSubpassDependency *dependencies;
 
         VkExtent3D extent;
+        VkExtent3D maxExtent;
         uint32_t framebufferAttachmentCount;
         const VkImageView *framebufferAttachments;
 } LunaRenderPassCreationInfo;
@@ -158,6 +159,7 @@ typedef struct
         const uint32_t *correlatedViewMasks;
 
         VkExtent3D extent;
+        VkExtent3D maxExtent;
         uint32_t framebufferAttachmentCount;
         const VkImageView *framebufferAttachments;
 } LunaRenderPassCreationInfo2;
@@ -221,15 +223,6 @@ typedef struct
 
 typedef struct
 {
-        VkShaderStageFlags stageFlags;
-        uint32_t size;
-
-        void *const dataPointer;
-        uint32_t dataPointerOffset;
-} LunaPushConstantsRange;
-
-typedef struct
-{
         VkPipelineShaderStageCreateFlags flags;
         VkShaderStageFlagBits stage;
         LunaShaderModule module;
@@ -239,85 +232,12 @@ typedef struct
 
 typedef struct
 {
-        uint32_t vertexBindingDescriptionCount;
-        const VkVertexInputBindingDescription *vertexBindingDescriptions;
-        uint32_t vertexAttributeDescriptionCount;
-        const VkVertexInputAttributeDescription *vertexAttributeDescriptions;
-} LunaPipelineVertexInputStateCreationInfo;
+        VkShaderStageFlags stageFlags;
+        uint32_t size;
 
-typedef struct
-{
-        VkPrimitiveTopology topology;
-        bool primitiveRestartEnable;
-} LunaPipelineInputAssemblyStateCreationInfo;
-
-typedef struct
-{
-        // This has been left as a struct for future versions of Luna where pNext will be implemented.
-        uint32_t patchControlPoints;
-} LunaPipelineTessellationStateCreationInfo;
-
-typedef struct
-{
-        uint32_t viewportCount;
-        const VkViewport *viewports;
-        uint32_t scissorCount;
-        const VkRect2D *scissors;
-} LunaPipelineViewportStateCreationInfo;
-
-typedef struct
-{
-        bool depthClampEnable;
-        bool rasterizerDiscardEnable;
-        VkPolygonMode polygonMode;
-        VkCullModeFlags cullMode;
-        VkFrontFace frontFace;
-        bool depthBiasEnable;
-        float depthBiasConstantFactor;
-        float depthBiasClamp;
-        float depthBiasSlopeFactor;
-        float lineWidth;
-} LunaPipelineRasterizationStateCreationInfo;
-
-typedef struct
-{
-        VkSampleCountFlagBits rasterizationSamples;
-        bool sampleShadingEnable;
-        float minSampleShading;
-        const VkSampleMask *sampleMask;
-        bool alphaToCoverageEnable;
-        bool alphaToOneEnable;
-} LunaPipelineMultisampleStateCreationInfo;
-
-typedef struct
-{
-        VkPipelineDepthStencilStateCreateFlags flags;
-        bool depthTestEnable;
-        bool depthWriteEnable;
-        VkCompareOp depthCompareOp;
-        bool depthBoundsTestEnable;
-        bool stencilTestEnable;
-        VkStencilOpState front;
-        VkStencilOpState back;
-        float minDepthBounds;
-        float maxDepthBounds;
-} LunaPipelineDepthStencilStateCreationInfo;
-
-typedef struct
-{
-        VkPipelineColorBlendStateCreateFlags flags;
-        bool logicOpEnable;
-        VkLogicOp logicOp;
-        uint32_t attachmentCount;
-        const VkPipelineColorBlendAttachmentState *attachments;
-        float blendConstants[4];
-} LunaPipelineColorBlendStateCreationInfo;
-
-typedef struct
-{
-        uint32_t dynamicStateCount;
-        const VkDynamicState *dynamicStates;
-} LunaPipelineDynamicStateCreationInfo;
+        void *const dataPointer;
+        uint32_t dataPointerOffset;
+} LunaPushConstantsRange;
 
 typedef struct
 {
@@ -348,11 +268,37 @@ typedef struct
 
 typedef struct
 {
+    uint32_t firstViewport;
+    uint32_t viewportCount;
+    const VkViewport *viewports;
+} LunaViewportBindInfo;
+
+typedef struct
+{
+    uint32_t firstScissor;
+    uint32_t scissorCount;
+    const VkRect2D *scissors;
+} LunaScissorBindInfo;
+
+typedef struct
+{
+    VkDynamicState dynamicStateType;
+    union
+    {
+        const LunaViewportBindInfo *viewportBindInfo;
+        const LunaScissorBindInfo *scissorBindInfo;
+    };
+} LunaDynamicStateBindInfo;
+
+typedef struct
+{
         uint32_t firstSet;
         uint32_t descriptorSetCount;
         const LunaDescriptorSet *descriptorSets;
         uint32_t dynamicOffsetCount;
         const uint32_t *dynamicOffsets;
+        uint32_t dynamicStateCount;
+        const LunaDynamicStateBindInfo *dynamicStates;
 } LunaGraphicsPipelineBindInfo;
 
 typedef struct
@@ -421,6 +367,15 @@ typedef struct
         VkQueueFlags requiredQueueFlags;
         bool requireQueuePresentationSupport;
 } LunaCommandPoolCreationInfo;
+
+#define LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH (-1u)
+#define LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT (-1u)
+typedef struct
+{
+        LunaRenderPass renderPass;
+        uint32_t width;
+        uint32_t height;
+} LunaRenderPassResizeInfo;
 
 #ifdef __cplusplus
 }

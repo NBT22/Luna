@@ -10,7 +10,101 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
-VkResult lunaPresentSwapChain()
+namespace luna::helpers
+{
+static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
+{
+    core::swapChain.extent = capabilities.currentExtent;
+    assert(capabilities.minImageExtent.width <= core::swapChain.extent.width &&
+           core::swapChain.extent.width <= capabilities.maxImageExtent.width);
+    assert(capabilities.minImageExtent.height <= core::swapChain.extent.height &&
+           core::swapChain.extent.height <= capabilities.maxImageExtent.height);
+
+    const VkSwapchainCreateInfoKHR createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = core::swapChain.surface,
+        .minImageCount = core::swapChain.imageCount,
+        .imageFormat = core::swapChain.format.format,
+        .imageColorSpace = core::swapChain.format.colorSpace,
+        .imageExtent = core::swapChain.extent,
+        .imageArrayLayers = 1,
+        .imageUsage = core::swapChain.imageUsage,
+        .imageSharingMode = core::device.sharingMode(),
+        .queueFamilyIndexCount = core::device.familyCount(),
+        .pQueueFamilyIndices = core::device.queueFamilyIndices(),
+        .preTransform = capabilities.currentTransform,
+        .compositeAlpha = core::swapChain.compositeAlpha,
+        .presentMode = core::swapChain.presentMode,
+        .clipped = VK_TRUE,
+    };
+    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(core::device, &createInfo, nullptr, &core::swapChain.swapChain));
+
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(core::device,
+                                                core::swapChain.swapChain,
+                                                &core::swapChain.imageCount,
+                                                nullptr));
+
+    core::swapChain.images.resize(core::swapChain.imageCount);
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(core::device,
+                                                core::swapChain.swapChain,
+                                                &core::swapChain.imageCount,
+                                                core::swapChain.images.data()));
+
+    core::swapChain.imageViews.resize(core::swapChain.imageCount);
+    for (uint32_t i = 0; i < core::swapChain.imageCount; i++)
+    {
+        CHECK_RESULT_RETURN(createImageView(core::device,
+                                            core::swapChain.images[i],
+                                            core::swapChain.format.format,
+                                            VK_IMAGE_ASPECT_COLOR_BIT,
+                                            1,
+                                            &core::swapChain.imageViews[i]));
+    }
+    core::swapChain.imageIndex = -1u;
+    return VK_SUCCESS;
+}
+} // namespace luna::helpers
+
+VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
+                             const LunaRenderPassResizeInfo *renderPassResizeInfos,
+                             VkExtent2D *newSwapchainExtent)
+{
+    using namespace luna::core;
+
+    VkSurfaceCapabilitiesKHR capabilities;
+    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, swapChain.surface, &capabilities));
+    if (capabilities.currentExtent.width == UINT32_MAX || capabilities.currentExtent.height == UINT32_MAX)
+    {
+        return VK_SUCCESS;
+    }
+
+    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    const auto &commandBufferArray = dynamic_cast<const commandBuffer::CommandBufferArray<4> &>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferArray.waitForAllFences(device));
+    // vkDestroySemaphore(device, device.renderFinishedSemaphore(swapChain.lastImageIndex), nullptr);
+    for (uint32_t i = 0; i < swapChain.imageCount; i++)
+    {
+        vkDestroyImageView(device, swapChain.imageViews.at(i), nullptr);
+    }
+    vkDestroySwapchainKHR(device, swapChain.swapChain, nullptr);
+
+
+    CHECK_RESULT_RETURN(luna::helpers::recreateSwapchain(capabilities));
+    for (uint32_t i = 0; i < renderPassResizeInfoCount; i++)
+    {
+        const LunaRenderPassResizeInfo &renderPassResizeInfo = renderPassResizeInfos[i];
+        const uint32_t width = renderPassResizeInfo.width == -1u ? swapChain.extent.width : renderPassResizeInfo.width;
+        const uint32_t height = renderPassResizeInfo.height == -1u ? swapChain.extent.height
+                                                                   : renderPassResizeInfo.height;
+        CHECK_RESULT_RETURN(renderPass(renderPassResizeInfo.renderPass)
+                                    .recreateFramebuffer(device, swapChain, width, height));
+    }
+
+    *newSwapchainExtent = swapChain.extent;
+
+    return VK_SUCCESS;
+}
+VkResult lunaPresentSwapchain()
 {
     using namespace luna::core;
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
@@ -41,13 +135,22 @@ VkResult lunaPresentSwapChain()
         .pImageIndices = &swapChain.imageIndex,
     };
     // TODO: This...
-    vkQueuePresentKHR(device.familyQueues().presentation, &presentInfo);
+    const VkResult presentationResult = vkQueuePresentKHR(device.familyQueues().presentation, &presentInfo);
+    switch (presentationResult)
+    {
+        case VK_SUCCESS:
+        case VK_SUBOPTIMAL_KHR:
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            break;
+        default:
+            return presentationResult;
+    }
 
     swapChain.imageIndex = -1u;
     boundPipeline = VK_NULL_HANDLE;
     boundVertexBuffer = VK_NULL_HANDLE;
     boundIndexBuffer = VK_NULL_HANDLE;
-    return VK_SUCCESS;
+    return presentationResult;
 }
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
                                   LunaDescriptorPool *descriptorPool)

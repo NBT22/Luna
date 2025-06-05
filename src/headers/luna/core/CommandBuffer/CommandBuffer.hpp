@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <luna/core/Semaphore.hpp>
 #include <luna/core/CommandBuffer.hpp>
+#include <luna/core/Fence.hpp>
 
 namespace luna::core::commandBuffer
 {
@@ -35,7 +35,7 @@ class CommandBuffer: public core::CommandBuffer
                                      VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) override;
         bool getAndSetIsSignaled(bool value) override;
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const override;
-        VkResult resetFence(VkDevice logicalDevice) const override;
+        VkResult resetFence(VkDevice logicalDevice) override;
 
         [[nodiscard]] bool isRecording() const override;
         [[nodiscard]] const Semaphore &semaphore() const override;
@@ -43,9 +43,9 @@ class CommandBuffer: public core::CommandBuffer
     private:
         bool isRecording_{};
         VkCommandBuffer commandBuffer_{};
-        VkFence fence_{};
+        Fence fence_{};
         Semaphore semaphore_{};
 };
-} // namespace luna::core
+} // namespace luna::core::commandBuffer
 
 #include <luna/implementations/core/CommandBuffer/CommandBuffer.ipp>

@@ -116,6 +116,27 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
         CHECK_RESULT_RETURN(commandBuffer.waitForFence(device));
         CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
     }
+    for (uint32_t i = 0; i < bindInfo.dynamicStateCount; i++)
+    {
+        const LunaDynamicStateBindInfo dynamicState = bindInfo.dynamicStates[i];
+        switch (dynamicState.dynamicStateType)
+        {
+            case VK_DYNAMIC_STATE_VIEWPORT:
+                vkCmdSetViewport(commandBuffer,
+                                 dynamicState.viewportBindInfo->firstViewport,
+                                 dynamicState.viewportBindInfo->viewportCount,
+                                 dynamicState.viewportBindInfo->viewports);
+                break;
+            case VK_DYNAMIC_STATE_SCISSOR:
+                vkCmdSetScissor(commandBuffer,
+                                dynamicState.scissorBindInfo->firstScissor,
+                                dynamicState.scissorBindInfo->scissorCount,
+                                dynamicState.scissorBindInfo->scissors);
+                break;
+            default:
+                throw std::runtime_error("Unhandled dynamic state type!");
+        }
+    }
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
     if (bindInfo.descriptorSetCount > 0)
     {

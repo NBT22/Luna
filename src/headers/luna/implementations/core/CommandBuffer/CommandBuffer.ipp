@@ -72,6 +72,7 @@ inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
 {
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
     CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fence_));
+    fence_.setWillBeSignaled(true);
     isRecording_ = false;
     if (submitInfo.signalSemaphoreCount > 0)
     {
@@ -95,13 +96,18 @@ inline bool CommandBuffer::getAndSetIsSignaled(const bool value)
 }
 inline VkResult CommandBuffer::waitForFence(const VkDevice logicalDevice, const uint64_t timeout = UINT64_MAX) const
 {
+    if (!fence_.willBeSignaled())
+    {
+        return VK_SUCCESS;
+    }
     // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
     //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
     //  all usages of this method currently use the default timeout.
     return vkWaitForFences(logicalDevice, 1, &fence_, VK_TRUE, timeout);
 }
-inline VkResult CommandBuffer::resetFence(const VkDevice logicalDevice) const
+inline VkResult CommandBuffer::resetFence(const VkDevice logicalDevice)
 {
+    fence_.setWillBeSignaled(false);
     return vkResetFences(logicalDevice, 1, &fence_);
 }
 

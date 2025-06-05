@@ -25,6 +25,10 @@ inline const VkSemaphore *Semaphore::operator&() const
 {
     return &semaphore_;
 }
+inline VkSemaphore *Semaphore::operator&()
+{
+    return &semaphore_;
+}
 
 inline void Semaphore::destroy(const VkDevice logicalDevice) const
 {
