@@ -57,8 +57,7 @@ class BufferRegion
         void copyToBuffer(const uint8_t *data, size_t bytes) const;
 
         [[nodiscard]] size_t size() const;
-        [[nodiscard]] const size_t &offset() const;
-        [[nodiscard]] size_t offset(const SubRegion *subRegion) const;
+        [[nodiscard]] size_t offset(const SubRegion *subRegion = nullptr) const;
 
     private:
         bool isDestroyed_{true};
