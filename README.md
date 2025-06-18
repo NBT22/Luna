@@ -1,0 +1,4 @@
+The project is a statically linked library and can be compiled using the `CMakeLists.txt` file found in the root directory. Compiling the library requires an up-to-date version of the Vulkan SDK to be installed.
+
+Additionally, there are two example projects included. In order to compile the example projects the `EXAMPLE_PROJECT` cmake variable must be set. Valid values are `HelloTriangle`, `LunaCube`, and `ALL`, which enables all example build targets.
+Both example projects require SDL3, and the `LunaCube` project additionally requires lodepng. If all targets are enabled, both SDL3 and lodepng must be present.
