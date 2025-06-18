@@ -30,7 +30,7 @@ VkResult lunaCreateShaderModule(const uint32_t *spirv, size_t bytes, LunaShaderM
 
 VkResult lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo);
 VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);
-VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer *buffers);
+VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer **buffers);
 void lunaDestroyBuffer(LunaBuffer buffer);
 void lunaWriteDataToBuffer(LunaBuffer buffer, const void *data, size_t bytes);
 VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool);

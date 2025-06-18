@@ -11,9 +11,8 @@
 
 namespace luna::core::buffer
 {
-class SubRegion
+struct SubRegion
 {
-    public:
         size_t size{};
         size_t offset{};
 };
@@ -30,11 +29,12 @@ class BufferRegion
         static VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *index);
         static VkResult createBufferRegions(uint32_t count,
                                             const LunaBufferCreationInfo *creationInfos,
-                                            LunaBuffer *buffers);
+                                            LunaBuffer **buffers);
         static bool isDestroyed(const BufferRegion &region);
 
         friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t);
 
+        BufferRegion(size_t size, uint8_t *data, uint32_t bufferIndex);
         BufferRegion(size_t size,
                      uint8_t *data,
                      size_t offset,
@@ -48,7 +48,7 @@ class BufferRegion
                      uint32_t regionIndex,
                      uint32_t count,
                      const LunaBufferCreationInfo *creationInfos,
-                     LunaBuffer *buffers);
+                     LunaBuffer **buffers);
 
         void destroy();
         void destroyAtEnd();
@@ -58,6 +58,7 @@ class BufferRegion
 
         [[nodiscard]] size_t size() const;
         [[nodiscard]] const size_t &offset() const;
+        [[nodiscard]] size_t offset(const SubRegion *subRegion) const;
 
     private:
         bool isDestroyed_{true};
@@ -79,7 +80,7 @@ class Buffer
         static bool isDestroyed(const Buffer &buffer);
         static VkResult findSpaceForRegion(const LunaBufferCreationInfo &creationInfo,
                                            std::vector<Buffer>::iterator &bufferIterator,
-                                           buffer::BufferRegion *&bufferRegion,
+                                           const buffer::BufferRegion *&bufferRegion,
                                            uint32_t &regionIndex);
 
         friend class buffer::BufferRegion;
@@ -91,7 +92,7 @@ class Buffer
 
         void destroy();
         void destroyBufferRegion(uint32_t index);
-        void destroyBufferRegionSubRegion(uint32_t regionIndex, const buffer::SubRegion *subRegion);
+        void destroyBufferRegionSubRegion(const buffer::BufferRegionIndex &regionIndex);
 
         [[nodiscard]] const buffer::BufferRegion &region(uint32_t index) const;
 

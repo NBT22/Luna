@@ -26,6 +26,14 @@ inline const size_t &BufferRegion::offset() const
 {
     return offset_;
 }
+inline size_t BufferRegion::offset(const SubRegion *subRegion) const
+{
+    if (subRegion)
+    {
+        return offset_ + subRegion->offset;
+    }
+    return offset_;
+}
 } // namespace luna::core::buffer
 
 namespace luna::core
@@ -44,9 +52,15 @@ inline void Buffer::destroyBufferRegion(const uint32_t index)
 {
     regions_.at(index).destroy();
 }
-inline void Buffer::destroyBufferRegionSubRegion(const uint32_t regionIndex, const buffer::SubRegion *subRegion)
+inline void Buffer::destroyBufferRegionSubRegion(const buffer::BufferRegionIndex &regionIndex)
 {
-    regions_.at(regionIndex).destroySubRegion(subRegion);
+    if (regionIndex.subRegion->offset == 0)
+    {
+        regions_.emplace_back(regionIndex.subRegion->size,
+                              static_cast<uint8_t *>(data_) + regions_.at(regionIndex.bufferRegionIndex).offset(),
+                              regionIndex.bufferIndex);
+    }
+    regions_.at(regionIndex.bufferRegionIndex).destroySubRegion(regionIndex.subRegion);
 }
 
 inline const buffer::BufferRegion &Buffer::region(const uint32_t index) const

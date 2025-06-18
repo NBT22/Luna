@@ -461,20 +461,22 @@ int main(void)
                                         &transformMatrix,
                                         &graphicsPipeline));
 
-    const LunaBufferCreationInfo vertexBufferCreationInfo = {
-        .size = sizeof(vertices),
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    const LunaBufferCreationInfo bufferCreationInfos[] = {
+        {
+            .size = sizeof(vertices),
+            .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        },
+        {
+            .size = sizeof(indices),
+            .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        },
     };
     LunaBuffer vertexBuffer;
-    CHECK_RESULT(lunaCreateBuffer(&vertexBufferCreationInfo, &vertexBuffer));
-    lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
-
-    const LunaBufferCreationInfo indexBufferCreationInfo = {
-        .size = sizeof(indices),
-        .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-    };
     LunaBuffer indexBuffer;
-    CHECK_RESULT(lunaCreateBuffer(&indexBufferCreationInfo, &indexBuffer));
+    CHECK_RESULT(lunaCreateBuffers(sizeof(bufferCreationInfos) / sizeof(*bufferCreationInfos),
+                                   bufferCreationInfos,
+                                   (LunaBuffer *[]){&vertexBuffer, &indexBuffer}));
+    lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
     lunaWriteDataToBuffer(indexBuffer, indices, sizeof(indices));
 
     const LunaRenderPassBeginInfo beginInfo = {

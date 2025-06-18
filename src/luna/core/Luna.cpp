@@ -280,7 +280,7 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
             const auto *bufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(bufferInfo->buffer);
             const VkDescriptorBufferInfo descriptorBufferInfo = {
                 .buffer = buffers.at(bufferRegionIndex->bufferIndex),
-                .offset = bufferInfo->offset + bufferRegion.offset(),
+                .offset = bufferInfo->offset + bufferRegion.offset(bufferRegionIndex->subRegion),
                 .range = bufferInfo->range == 0 ? bufferRegion.size() : bufferInfo->range,
             };
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
