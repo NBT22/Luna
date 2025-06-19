@@ -69,6 +69,7 @@ VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creation
                                               bufferIndex,
                                               regionIndex,
                                               index);
+        bufferIterator->freeBytes_ -= creationInfo.size;
     } else
     {
         assert(bufferRegion->isDestroyed_);
@@ -83,9 +84,9 @@ VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creation
         {
             *index = &bufferRegionIndices.back();
         }
+        bufferIterator->unusedBytes_ -= creationInfo.size;
     }
     bufferIterator->usedBytes_ += creationInfo.size;
-    bufferIterator->freeBytes_ -= creationInfo.size;
 
     return VK_SUCCESS;
 }
@@ -122,6 +123,7 @@ VkResult BufferRegion::createBufferRegions(const uint32_t count,
                                               count,
                                               creationInfos,
                                               buffers);
+        bufferIterator->freeBytes_ -= combinedCreationInfo.size;
     } else
     {
         assert(bufferRegion->isDestroyed_);
@@ -143,9 +145,10 @@ VkResult BufferRegion::createBufferRegions(const uint32_t count,
             }
         }
         bufferRegion->isDestroyed_ = false;
+        bufferIterator->unusedBytes_ -= combinedCreationInfo.size;
     }
     bufferIterator->usedBytes_ += combinedCreationInfo.size;
-    bufferIterator->freeBytes_ -= combinedCreationInfo.size;
+
     return VK_SUCCESS;
 }
 
