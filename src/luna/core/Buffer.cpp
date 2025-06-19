@@ -416,8 +416,9 @@ void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size
     assert(buffer && data);
     const luna::core::buffer::BufferRegion &bufferRegion = luna::core::bufferRegion(buffer);
     const auto *bufferRegionIndex = static_cast<const luna::core::buffer::BufferRegionIndex *>(buffer);
-    const size_t bufferSize = bufferRegionIndex->subRegion != nullptr ? bufferRegionIndex->subRegion->size
-                                                                      : bufferRegion.size_;
+    [[maybe_unused]] const size_t bufferSize = bufferRegionIndex->subRegion != nullptr
+                                                       ? bufferRegionIndex->subRegion->size
+                                                       : bufferRegion.size_;
     assert(bytes <= bufferSize - offset);
     uint8_t *bufferData = bufferRegionIndex->subRegion != nullptr
                                   ? bufferRegion.data_ + bufferRegionIndex->subRegion->offset

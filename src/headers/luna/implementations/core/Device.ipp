@@ -32,7 +32,7 @@ inline void Device::destroy()
     internalCommandPools_.graphics.destroy(logicalDevice_);
     internalCommandPools_.transfer.destroy(logicalDevice_);
     internalCommandPools_.presentation.destroy(logicalDevice_);
-    for (const VkSemaphore &renderFinishedSemaphore: renderFinishedSemaphores_)
+    for (const Semaphore &renderFinishedSemaphore: renderFinishedSemaphores_)
     {
         vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore, nullptr);
     }

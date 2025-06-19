@@ -704,14 +704,14 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
         .addressModeV = creationInfo->addressModeV,
         .addressModeW = creationInfo->addressModeW,
         .mipLodBias = creationInfo->mipLodBias,
-        .anisotropyEnable = creationInfo->anisotropyEnable,
+        .anisotropyEnable = static_cast<VkBool32>(creationInfo->anisotropyEnable),
         .maxAnisotropy = creationInfo->maxAnisotropy,
-        .compareEnable = creationInfo->compareEnable,
+        .compareEnable = static_cast<VkBool32>(creationInfo->compareEnable),
         .compareOp = creationInfo->compareOp,
         .minLod = creationInfo->minLod,
         .maxLod = creationInfo->maxLod,
         .borderColor = creationInfo->borderColor,
-        .unnormalizedCoordinates = creationInfo->unnormalizedCoordinates,
+        .unnormalizedCoordinates = static_cast<VkBool32>(creationInfo->unnormalizedCoordinates),
     };
     CHECK_RESULT_RETURN(vkCreateSampler(luna::core::device, &createInfo, nullptr, samplerIterator.base()));
     if (sampler != nullptr)

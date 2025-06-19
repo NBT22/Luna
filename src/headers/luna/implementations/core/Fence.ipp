@@ -10,7 +10,7 @@ namespace luna::core
 {
 inline Fence::Fence(const VkDevice logicalDevice, const VkFenceCreateInfo *fenceCreateInfo)
 {
-    vkCreateFence(logicalDevice, fenceCreateInfo, nullptr, &fence_);
+    CHECK_RESULT_THROW(vkCreateFence(logicalDevice, fenceCreateInfo, nullptr, &fence_));
 }
 
 inline Fence::operator const VkFence &() const

@@ -24,7 +24,7 @@ inline size_t BufferRegion::size() const
 }
 inline size_t BufferRegion::offset(const SubRegion *subRegion) const
 {
-    if (subRegion)
+    if (subRegion != nullptr)
     {
         return offset_ + subRegion->offset;
     }

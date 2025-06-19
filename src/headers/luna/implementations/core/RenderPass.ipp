@@ -49,7 +49,7 @@ inline VkResult RenderPass::recreateFramebuffer(const Device &device,
         vkDestroyImageView(device, depthImageView_, nullptr);
         vmaDestroyImage(device.allocator(), colorImage_, colorImageAllocation_);
         vmaDestroyImage(device.allocator(), depthImage_, depthImageAllocation_);
-        createAttachmentImages(depthImage_ != VK_NULL_HANDLE);
+        CHECK_RESULT_RETURN(createAttachmentImages(depthImage_ != VK_NULL_HANDLE));
         attachments_.at(attachments_.size() - 3) = depthImageView_;
         attachments_.at(attachments_.size() - 2) = colorImageView_;
     }
