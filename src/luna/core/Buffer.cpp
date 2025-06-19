@@ -404,7 +404,7 @@ void lunaDestroyBuffer(const LunaBuffer buffer)
     }
 }
 
-void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes)
+void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes, const size_t offset)
 {
     if (bytes == 0)
     {
@@ -415,11 +415,11 @@ void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size
     const auto *bufferRegionIndex = static_cast<const luna::core::buffer::BufferRegionIndex *>(buffer);
     const size_t bufferSize = bufferRegionIndex->subRegion != nullptr ? bufferRegionIndex->subRegion->size
                                                                       : bufferRegion.size_;
-    assert(bytes <= bufferSize);
+    assert(bytes <= bufferSize - offset);
     uint8_t *bufferData = bufferRegionIndex->subRegion != nullptr
                                   ? bufferRegion.data_ + bufferRegionIndex->subRegion->offset
                                   : bufferRegion.data_;
-    std::copy_n(static_cast<const uint8_t *>(data), bytes, bufferData);
+    std::copy_n(static_cast<const uint8_t *>(data), bytes, bufferData + offset);
 }
 
 void lunaBindVertexBuffers(const uint32_t firstBinding,

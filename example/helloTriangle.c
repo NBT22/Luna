@@ -330,7 +330,7 @@ int main(void)
     };
     LunaBuffer vertexBuffer;
     CHECK_RESULT(lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer));
-    lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices));
+    lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices), 0);
 
     const LunaRenderPassBeginInfo beginInfo = {
         .renderArea.extent.width = extent.width,

@@ -32,7 +32,7 @@ class BufferRegion
                                             LunaBuffer **buffers);
         static bool isDestroyed(const BufferRegion &region);
 
-        friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t);
+        friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t, size_t offset);
 
         BufferRegion(size_t size, uint8_t *data, uint32_t bufferIndex);
         BufferRegion(size_t size,
