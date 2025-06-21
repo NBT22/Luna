@@ -242,6 +242,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
 void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites)
 {
     using namespace luna::core;
+    VkDescriptorImageInfo descriptorImageInfo;
     std::vector<VkWriteDescriptorSet> writes;
     writes.reserve(writeCount);
     for (uint32_t i = 0; i < writeCount; i++)
@@ -259,7 +260,7 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
         if (imageInfo != nullptr)
         {
             Image &image = images.at(static_cast<const ImageIndex *>(imageInfo->image)->index);
-            const VkDescriptorImageInfo descriptorImageInfo = {
+            descriptorImageInfo = {
                 .sampler = image.sampler(imageInfo->sampler),
                 .imageView = image.imageView(),
                 .imageLayout = imageInfo->imageLayout,
