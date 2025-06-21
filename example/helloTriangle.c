@@ -7,7 +7,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #define CHECK_RESULT(value) \
-    if ((value) != VK_SUCCESS) \
+    if ((value) < 0) \
     { \
         return 5; \
     }

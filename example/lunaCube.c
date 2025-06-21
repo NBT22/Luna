@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #define CHECK_RESULT(value) \
-    if ((value) != VK_SUCCESS) \
+    if ((value) < 0) \
     { \
         return 5; \
     }
@@ -190,10 +190,10 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
     return lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
 }
 
-static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
-                                       LunaDescriptorSet *descriptorSet,
-                                       mat4 *const pushConstantData,
-                                       LunaGraphicsPipeline *pipeline)
+static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
+                                   LunaDescriptorSet *descriptorSet,
+                                   mat4 *const pushConstantData,
+                                   LunaGraphicsPipeline *pipeline)
 {
     LunaShaderModule vertexShaderModule;
     LunaShaderModule fragmentShaderModule;
@@ -341,7 +341,7 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
             .descriptorCount = 1,
         }},
     };
-    LunaDescriptorPool descriptorPool;
+    LunaDescriptorPool descriptorPool = VK_NULL_HANDLE;
     CHECK_RESULT(lunaCreateDescriptorPool(&descriptorPoolCreationInfo, &descriptorPool));
     const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
         .descriptorPool = descriptorPool,
@@ -358,7 +358,7 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
     {
         printf("\x1b[31mGot error %d (%s) when loading image!\n", result, lodepng_error_text(result));
         fflush(stdout);
-        return result;
+        return false;
     }
 
     const LunaSamplerCreationInfo samplerCreationInfo = {
@@ -381,7 +381,7 @@ static uint32_t createGraphicsPipeline(LunaRenderPassSubpass subpass,
     CHECK_RESULT(lunaCreateImage(&imageCreationInfo, NULL));
     free(pixels);
 
-    return 0;
+    return true;
 }
 
 int main(void)
@@ -454,12 +454,15 @@ int main(void)
     mat4 transformMatrix = GLM_MAT4_IDENTITY_INIT;
     glm_mul(projectionMatrix, viewMatrix, transformMatrix);
 
-    LunaGraphicsPipeline graphicsPipeline;
-    LunaDescriptorSet descriptorSet;
-    CHECK_RESULT(createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
-                                        &descriptorSet,
-                                        &transformMatrix,
-                                        &graphicsPipeline));
+    LunaGraphicsPipeline graphicsPipeline = VK_NULL_HANDLE;
+    LunaDescriptorSet descriptorSet = VK_NULL_HANDLE;
+    if (!createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
+                                &descriptorSet,
+                                &transformMatrix,
+                                &graphicsPipeline))
+    {
+        return 5;
+    }
 
     const LunaBufferCreationInfo bufferCreationInfos[] = {
         {
