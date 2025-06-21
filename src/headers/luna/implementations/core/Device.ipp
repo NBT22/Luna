@@ -77,10 +77,7 @@ inline VkResult Device::createSemaphores(const uint32_t imageCount)
     for (uint32_t i = 0; i < imageCount; i++)
     {
         Semaphore &semaphore = renderFinishedSemaphores_.at(i);
-        CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_,
-                                              &semaphoreCreateInfo,
-                                              nullptr,
-                                              &semaphore));
+        CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &semaphore));
     }
     return VK_SUCCESS;
 }
@@ -234,7 +231,7 @@ inline void Device::initQueueFamilyIndices()
 }
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
-    const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures);
+    const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures.features);
     constexpr int featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
     const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_.features);
     for (int i = 0; i < featureCount; i++)
@@ -255,7 +252,12 @@ inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &require
 inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 {
     assert(requiredFeatures);
-    const VkBool32 *requiredFeatureArray = requiredFeatures + 2;
+    static_assert(alignof(void *) == alignof(VkPhysicalDeviceVulkan11Features) &&
+                  alignof(void *) == alignof(VkPhysicalDeviceVulkan12Features) &&
+                  alignof(void *) == alignof(VkPhysicalDeviceVulkan13Features) &&
+                  alignof(void *) == alignof(VkPhysicalDeviceVulkan14Features));
+    constexpr size_t offset = 2 * alignof(void *) / sizeof(VkBool32);
+    const VkBool32 *requiredFeatureArray = requiredFeatures + offset;
     switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
     {
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
