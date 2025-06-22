@@ -477,6 +477,7 @@ static VkResult writeImage(const VkImage image,
                                subresourceRange);
     } else
     {
+        constexpr VkPipelineStageFlags transferStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
         transitionImageLayout(commandBuffer,
                               image,
                               VK_ACCESS_NONE,
@@ -484,7 +485,7 @@ static VkResult writeImage(const VkImage image,
                               VK_IMAGE_LAYOUT_UNDEFINED,
                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                               subresourceRange,
-                              creationInfo.sourceStageMask == VK_PIPELINE_STAGE_NONE ? VK_PIPELINE_STAGE_TRANSFER_BIT
+                              creationInfo.sourceStageMask == VK_PIPELINE_STAGE_NONE ? transferStageMask
                                                                                      : creationInfo.sourceStageMask,
                               VK_PIPELINE_STAGE_TRANSFER_BIT);
     }

@@ -154,8 +154,8 @@ static VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
            core::swapChain.imageCount <= capabilities.maxImageCount);
     CHECK_RESULT_RETURN(core::device.createSemaphores(core::swapChain.imageCount));
 
-    core::swapChain.imageUsage = creationInfo.imageUsage == 0 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-                                                              : creationInfo.imageUsage;
+    constexpr VkImageUsageFlags colorAttachmentUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    core::swapChain.imageUsage = creationInfo.imageUsage == 0 ? colorAttachmentUsage : creationInfo.imageUsage;
     core::swapChain.compositeAlpha = creationInfo.compositeAlpha == 0 ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
                                                                       : creationInfo.compositeAlpha;
     const VkSwapchainCreateInfoKHR createInfo = {

@@ -117,6 +117,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
                 .queueCount = 1,
                 .pQueuePriorities = &queuePriority,
             };
+            [[fallthrough]];
         case 2:
             queuesCreateInfo[1] = VkDeviceQueueCreateInfo{
                 .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -124,6 +125,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
                 .queueCount = 1,
                 .pQueuePriorities = &queuePriority,
             };
+            [[fallthrough]];
         case 1:
             queuesCreateInfo[0] = VkDeviceQueueCreateInfo{
                 .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -131,6 +133,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
                 .queueCount = 1,
                 .pQueuePriorities = &queuePriority,
             };
+            break;
         default:
             assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
     }
