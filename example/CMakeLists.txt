@@ -1,32 +1,26 @@
 cmake_minimum_required(VERSION 3.30)
 project(examples C)
 
-set(CMAKE_C_STANDARD 11)
+include(${CMAKE_SOURCE_DIR}/cmake/findPackages.cmake)
 
-set(CMAKE_C_FLAGS "-Wpedantic -Wall -fvisibility=hidden")
+findVulkan()
+findSDL3()
 
-set(CMAKE_C_FLAGS_DEBUG "-g -O0")
-set(CMAKE_C_FLAGS_RELEASE "-g0 -O3 -s -DNDEBUG -Wl,--gc-sections -fdata-sections -ffunction-sections")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-g -O3 -Wl,--gc-sections -fdata-sections -ffunction-sections")
-
-find_package(Vulkan REQUIRED)
-find_package(SDL3 CONFIG REQUIRED)
-
-if (EXAMPLE_PROJECT STREQUAL ALL OR EXAMPLE_PROJECT STREQUAL HelloTriangle)
+if (ALL OR HelloTriangle)
     add_executable(HelloTriangle helloTriangle.c)
-    target_link_libraries(HelloTriangle ${Vulkan_LIBRARIES} ${SDL3_LIBRARY} SDL3 ${CMAKE_BINARY_DIR}/libLuna.a)
     set_target_properties(HelloTriangle PROPERTIES LINKER_LANGUAGE CXX)
-    target_include_directories(HelloTriangle PUBLIC ${Vulkan_INCLUDE_DIRS} ${SDL3_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(HelloTriangle PRIVATE Vulkan::Vulkan SDL3::SDL3 ${CMAKE_BINARY_DIR}/libLuna.a)
+    target_include_directories(HelloTriangle PRIVATE ${CMAKE_SOURCE_DIR}/include)
     add_dependencies(HelloTriangle Luna)
 endif ()
 
-if (EXAMPLE_PROJECT STREQUAL ALL OR EXAMPLE_PROJECT STREQUAL LunaCube)
-    find_package(lodepng-c CONFIG REQUIRED)
+if (ALL OR LunaCube)
+    fetchLodepng()
     configure_file(${CMAKE_SOURCE_DIR}/logo.png ${CMAKE_CURRENT_BINARY_DIR}/logo.png COPYONLY)
 
-    add_executable(LunaCube lunaCube.c)
-    target_link_libraries(LunaCube ${Vulkan_LIBRARIES} ${SDL3_LIBRARY} SDL3 lodepng-c ${CMAKE_BINARY_DIR}/libLuna.a)
+    add_executable(LunaCube lunaCube.c ${LODEPNG_DIR}/lodepng.c)
     set_target_properties(LunaCube PROPERTIES LINKER_LANGUAGE CXX)
-    target_include_directories(LunaCube PUBLIC ${Vulkan_INCLUDE_DIRS} ${SDL3_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/include)
+    target_link_libraries(LunaCube PRIVATE Vulkan::Vulkan SDL3::SDL3 ${CMAKE_BINARY_DIR}/libLuna.a)
+    target_include_directories(LunaCube PRIVATE ${CMAKE_SOURCE_DIR}/include ${LODEPNG_DIR})
     add_dependencies(LunaCube Luna)
 endif ()
