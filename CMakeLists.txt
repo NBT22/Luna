@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 project(Luna CXX)
 
 include(cmake/options.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/findPackages.cmake)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
@@ -31,6 +32,8 @@ set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} ${CMAKE_C_FLAGS_RELEASE} -g -O3 -DNDE
 set(CMAKE_CXX_FLAGS "${COMMON_FLAGS} ${CMAKE_CXX_FLAGS} -isystem ${CMAKE_SOURCE_DIR}/vma/include")
 set(CMAKE_CXX_FLAGS_DEBUG "${COMMON_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
 set(CMAKE_CXX_FLAGS_RELEASE "${COMMON_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+
+findVulkanHeaders()
 
 add_subdirectory(vma)
 add_library(Luna STATIC
@@ -78,7 +81,7 @@ add_library(Luna STATIC
         include/luna/lunaRenderPass.h
         include/luna/lunaTypes.h
 )
-target_include_directories(Luna PRIVATE ${CMAKE_SOURCE_DIR}/src/headers ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(Luna PRIVATE ${CMAKE_SOURCE_DIR}/src/headers ${CMAKE_SOURCE_DIR}/include ${VULKAN_HEADERS_SOURCE_DIR}/include)
 
 if (EXAMPLES)
     add_subdirectory(example)
