@@ -81,7 +81,7 @@ add_library(Luna STATIC
         include/luna/lunaRenderPass.h
         include/luna/lunaTypes.h
 )
-target_include_directories(Luna PRIVATE ${CMAKE_SOURCE_DIR}/src/headers ${CMAKE_SOURCE_DIR}/include ${VULKAN_HEADERS_SOURCE_DIR}/include)
+target_include_directories(Luna PRIVATE ${CMAKE_SOURCE_DIR}/src/headers ${CMAKE_SOURCE_DIR}/include ${Vulkan_INCLUDE_DIRS})
 
 if (EXAMPLES)
     add_subdirectory(example)
