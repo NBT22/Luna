@@ -19,7 +19,7 @@ inline DescriptorSetLayout::operator const VkDescriptorSetLayout &() const
 
 inline const DescriptorSetLayout::Binding &DescriptorSetLayout::binding(const std::string &bindingName) const
 {
-    return bindingIndexMap_.at(bindingName);
+    return bindingMap_.at(bindingName);
 }
 
 } // namespace luna::core

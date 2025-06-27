@@ -54,8 +54,4 @@ struct SwapChain
         std::vector<VkImage> images;
         std::vector<VkImageView> imageViews;
 };
-struct SamplerIndex
-{
-        uint32_t index;
-};
 } // namespace luna::core

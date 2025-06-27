@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <list>
 #include <luna/lunaTypes.h>
 #include <vk_mem_alloc.h>
 
@@ -20,25 +21,20 @@ VkResult createImageView(VkDevice logicalDevice,
 
 namespace luna::core
 {
-struct ImageIndex
-{
-        uint32_t index;
-};
-
 // TODO: Support for 1D images
 class Image
 {
     public:
         Image(const LunaSampledImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
 
-        void destroy();
+        void destroy() const;
+        void erase(std::list<Image>::const_iterator iterator) const;
 
         [[nodiscard]] VkImageView imageView() const;
         [[nodiscard]] VkSampler sampler() const;
         [[nodiscard]] VkSampler sampler(LunaSampler sampler);
 
     private:
-        bool isDestroyed_{true};
         VkImage image_{};
         VkImageView imageView_{};
         VmaAllocation allocation_{};

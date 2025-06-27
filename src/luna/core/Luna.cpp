@@ -81,7 +81,6 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
     const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
     const auto &commandBufferArray = dynamic_cast<const commandBuffer::CommandBufferArray<4> &>(commandBuffer);
     CHECK_RESULT_RETURN(commandBufferArray.waitForAllFences(device));
-    // vkDestroySemaphore(device, device.renderFinishedSemaphore(swapChain.lastImageIndex), nullptr);
     for (uint32_t i = 0; i < swapChain.imageCount; i++)
     {
         vkDestroyImageView(device, swapChain.imageViews.at(i), nullptr);
@@ -97,7 +96,7 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
         const uint32_t height = renderPassResizeInfo.height == -1u ? swapChain.extent.height
                                                                    : renderPassResizeInfo.height;
         CHECK_RESULT_RETURN(renderPass(renderPassResizeInfo.renderPass)
-                                    .recreateFramebuffer(device, swapChain, width, height));
+                                    ->recreateFramebuffer(device, swapChain, width, height));
     }
 
     *newSwapchainExtent = swapChain.extent;
@@ -157,11 +156,7 @@ VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creation
 {
     using namespace luna::core;
     assert(creationInfo);
-    descriptorPools.reserve(descriptorPools.size() + 1);
-    const std::vector<VkDescriptorPool>::iterator poolIterator = std::find(descriptorPools.begin(),
-                                                                           descriptorPools.end(),
-                                                                           VK_NULL_HANDLE);
-    descriptorPools.emplace(poolIterator);
+    descriptorPools.emplace_back();
     const VkDescriptorPoolCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .flags = creationInfo->flags,
@@ -169,11 +164,10 @@ VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creation
         .poolSizeCount = creationInfo->poolSizeCount,
         .pPoolSizes = creationInfo->poolSizes,
     };
-    CHECK_RESULT_RETURN(vkCreateDescriptorPool(device, &createInfo, nullptr, poolIterator.base()));
-    descriptorPoolIndices.emplace_back(poolIterator - descriptorPools.begin());
+    CHECK_RESULT_RETURN(vkCreateDescriptorPool(device, &createInfo, nullptr, &descriptorPools.back()));
     if (descriptorPool != nullptr)
     {
-        *descriptorPool = &descriptorPoolIndices.back();
+        *descriptorPool = &descriptorPools.back();
     }
     return VK_SUCCESS;
 }
@@ -185,57 +179,24 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
     if (allocationInfo->descriptorSetCount != 0)
     {
         assert(allocationInfo->setLayouts);
-        uint32_t slotsFound = 0;
-        std::vector<VkDescriptorSetLayout> layouts;
-        layouts.reserve(allocationInfo->descriptorSetCount);
-        const auto *poolIndex = static_cast<const DescriptorPoolIndex *>(allocationInfo->descriptorPool);
+        const VkDescriptorPool *pool = descriptorPool(allocationInfo->descriptorPool);
         for (uint32_t i = 0; i < allocationInfo->descriptorSetCount; i++)
         {
-            const VkDescriptorSetLayout layout = descriptorSetLayout(allocationInfo->setLayouts[i]);
-            const auto *layoutIndex = static_cast<const DescriptorSetLayoutIndex *>(allocationInfo->setLayouts[i]);
-            layouts.emplace_back(layout);
+            const DescriptorSetLayout *layout = descriptorSetLayout(allocationInfo->setLayouts[i]);
+            const VkDescriptorSetLayout vkLayout = *layout;
 
-            if (slotsFound == i)
-            {
-                const std::vector<VkDescriptorSet>::iterator descriptorSetBegin = luna::core::descriptorSets.begin();
-                const std::vector<VkDescriptorSet>::iterator descriptorSetEnd = luna::core::descriptorSets.end();
-                const std::vector<VkDescriptorSet>::iterator descriptorSetIterator = std::find(descriptorSetBegin,
-                                                                                               descriptorSetEnd,
-                                                                                               VK_NULL_HANDLE);
-                if (descriptorSetIterator != descriptorSetEnd)
-                {
-                    descriptorSetIndices.emplace_back(descriptorSetIterator - descriptorSetBegin,
-                                                      layoutIndex,
-                                                      poolIndex);
-                    descriptorSets[i] = &descriptorSetIndices.back();
-
-                    const VkDescriptorSetAllocateInfo allocateInfo = {
-                        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                        .descriptorPool = descriptorPool(allocationInfo->descriptorPool),
-                        .descriptorSetCount = 1,
-                        .pSetLayouts = &layout,
-                    };
-                    CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device, &allocateInfo, descriptorSetIterator.base()));
-                    slotsFound++;
-                    continue;
-                }
-            }
-            descriptorSetIndices.emplace_back(luna::core::descriptorSets.size() + i - slotsFound,
-                                              layoutIndex,
-                                              poolIndex);
+            luna::core::descriptorSets.emplace_back();
+            VkDescriptorSet *descriptorSet = &luna::core::descriptorSets.back();
+            const VkDescriptorSetAllocateInfo allocateInfo = {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .descriptorPool = *pool,
+                .descriptorSetCount = 1,
+                .pSetLayouts = &vkLayout,
+            };
+            CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device, &allocateInfo, descriptorSet));
+            descriptorSetIndices.emplace_back(pool, layout, descriptorSet);
             descriptorSets[i] = &descriptorSetIndices.back();
         }
-        const VkDescriptorSetAllocateInfo allocateInfo = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .descriptorPool = descriptorPool(allocationInfo->descriptorPool),
-            .descriptorSetCount = allocationInfo->descriptorSetCount - slotsFound,
-            .pSetLayouts = layouts.data() + slotsFound,
-        };
-        const size_t oldSize = luna::core::descriptorSets.size();
-        luna::core::descriptorSets.resize(oldSize + allocationInfo->descriptorSetCount - slotsFound);
-        CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device,
-                                                     &allocateInfo,
-                                                     luna::core::descriptorSets.data() + oldSize));
     }
     return VK_SUCCESS;
 }
@@ -247,27 +208,25 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
     writes.reserve(writeCount);
     for (uint32_t i = 0; i < writeCount; i++)
     {
-        const auto &[descriptorSetIndex,
+        const auto &[descriptorSet,
                      bindingName,
                      descriptorArrayElement,
                      descriptorCount,
                      imageInfo,
                      bufferInfo] = descriptorWrites[i];
-        DescriptorSetLayout descriptorSetLayout;
-        VkDescriptorSet descriptorSet;
-        luna::core::descriptorSet(descriptorSetIndex, nullptr, &descriptorSetLayout, &descriptorSet);
-        const DescriptorSetLayout::Binding &binding = descriptorSetLayout.binding(bindingName);
+        const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(descriptorSet);
+        const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
         if (imageInfo != nullptr)
         {
-            Image &image = images.at(static_cast<const ImageIndex *>(imageInfo->image)->index);
+            Image *image = const_cast<Image *>(static_cast<const Image *>(imageInfo->image));
             descriptorImageInfo = {
-                .sampler = image.sampler(imageInfo->sampler),
-                .imageView = image.imageView(),
+                .sampler = image->sampler(imageInfo->sampler),
+                .imageView = image->imageView(),
                 .imageLayout = imageInfo->imageLayout,
             };
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
-                                descriptorSet,
+                                *descriptorSetIndex->set,
                                 binding.index,
                                 descriptorArrayElement,
                                 descriptorCount,
@@ -277,16 +236,15 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
                                 nullptr);
         } else if (bufferInfo != nullptr)
         {
-            const buffer::BufferRegion &bufferRegion = luna::core::bufferRegion(bufferInfo->buffer);
             const auto *bufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(bufferInfo->buffer);
             const VkDescriptorBufferInfo descriptorBufferInfo = {
-                .buffer = buffers.at(bufferRegionIndex->bufferIndex),
-                .offset = bufferInfo->offset + bufferRegion.offset(bufferRegionIndex->subRegion),
-                .range = bufferInfo->range == 0 ? bufferRegion.size() : bufferInfo->range,
+                .buffer = *bufferRegionIndex->buffer,
+                .offset = bufferInfo->offset + bufferRegionIndex->bufferRegion->offset(bufferRegionIndex->subRegion),
+                .range = bufferInfo->range == 0 ? bufferRegionIndex->bufferRegion->size() : bufferInfo->range,
             };
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
-                                descriptorSet,
+                                *descriptorSetIndex->set,
                                 binding.index,
                                 descriptorArrayElement,
                                 descriptorCount,

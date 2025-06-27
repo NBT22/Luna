@@ -360,10 +360,10 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
 
 namespace luna::core
 {
-RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex)
+RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
-    init_(creationInfo, renderPassIndex);
+    init_(creationInfo);
     CHECK_RESULT_THROW(helpers::createRenderPass(creationInfo, samples_, renderPass_));
     CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
     CHECK_RESULT_THROW(createFramebuffers(creationInfo.createDepthAttachment,
@@ -371,10 +371,10 @@ RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo, const Ren
                                           creationInfo.framebufferAttachments));
     isDestroyed_ = false;
 }
-RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex)
+RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo)
 {
     assert(isDestroyed_);
-    init_(creationInfo, renderPassIndex);
+    init_(creationInfo);
     CHECK_RESULT_THROW(helpers::createRenderPass2(creationInfo, samples_, renderPass_));
     CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
     CHECK_RESULT_THROW(createFramebuffers(creationInfo.createDepthAttachment,
@@ -400,8 +400,6 @@ void RenderPass::destroy()
     }
     name_.clear();
     name_.shrink_to_fit();
-    subpassIndices_.clear();
-    subpassIndices_.shrink_to_fit();
     subpassMap_.clear();
     framebuffers_.clear();
     framebuffers_.shrink_to_fit();
@@ -537,15 +535,11 @@ VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, Lu
 {
     using namespace luna::core;
     assert(creationInfo);
-    const std::vector<RenderPass>::iterator &renderPassIterator = std::find_if(renderPasses.begin(),
-                                                                               renderPasses.end(),
-                                                                               RenderPass::isDestroyed);
 
-    renderPassIndices.emplace_back(renderPassIterator - renderPasses.begin());
-    TRY_CATCH_RESULT(renderPasses.emplace(renderPassIterator, *creationInfo, &renderPassIndices.back()));
+    TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
     if (renderPass != nullptr)
     {
-        *renderPass = &renderPassIndices.back();
+        *renderPass = &renderPasses.back();
     }
     return VK_SUCCESS;
 }
@@ -554,14 +548,11 @@ VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, 
 {
     using namespace luna::core;
     assert(creationInfo);
-    const std::vector<RenderPass>::iterator &renderPassIterator = std::find_if(renderPasses.begin(),
-                                                                               renderPasses.end(),
-                                                                               RenderPass::isDestroyed);
-    renderPassIndices.emplace_back(renderPassIterator - renderPasses.begin());
-    TRY_CATCH_RESULT(renderPasses.emplace(renderPassIterator, *creationInfo, &renderPassIndices.back()));
+
+    TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
     if (renderPass != nullptr)
     {
-        *renderPass = &renderPassIndices.back();
+        *renderPass = &renderPasses.back();
     }
     return VK_SUCCESS;
 }
@@ -570,9 +561,9 @@ LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass render
 {
     if (name == nullptr)
     {
-        return luna::core::renderPass(renderPass).getFirstSubpass();
+        return luna::core::renderPass(renderPass)->getUnnamedSubpass();
     }
-    return luna::core::renderPass(renderPass).getSubpassIndexByName(name);
+    return luna::core::renderPass(renderPass)->getSubpassIndexByName(name);
 }
 
 VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo)
@@ -581,7 +572,7 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
     assert(renderPass);
     VkResult acquireImageResult = VK_SUCCESS;
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
-    const RenderPass &renderPassObject = luna::core::renderPass(renderPass);
+    const RenderPass *renderPassObject = luna::core::renderPass(renderPass);
 
     if (swapChain.imageIndex == -1u)
     {
@@ -614,12 +605,12 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
     uint32_t clearValueCount = 1;
     std::vector<VkClearValue> clearValues;
     clearValues.reserve(3);
-    if (renderPassObject.depthImage_ != VK_NULL_HANDLE)
+    if (renderPassObject->depthImage_ != VK_NULL_HANDLE)
     {
         clearValueCount++;
         clearValues.emplace_back(beginInfo->depthAttachmentClearValue);
     }
-    if (renderPassObject.samples_ != VK_SAMPLE_COUNT_1_BIT)
+    if (renderPassObject->samples_ != VK_SAMPLE_COUNT_1_BIT)
     {
         clearValueCount++;
         clearValues.emplace_back(beginInfo->colorAttachmentClearValue);
@@ -627,8 +618,8 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
     clearValues.emplace_back(beginInfo->colorAttachmentClearValue);
     const VkRenderPassBeginInfo renderPassBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = renderPassObject.renderPass_,
-        .framebuffer = renderPassObject.framebuffers_[swapChain.imageIndex],
+        .renderPass = renderPassObject->renderPass_,
+        .framebuffer = renderPassObject->framebuffers_[swapChain.imageIndex],
         .renderArea = beginInfo->renderArea,
         .clearValueCount = clearValueCount,
         .pClearValues = clearValues.data(),

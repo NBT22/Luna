@@ -10,15 +10,10 @@
 
 namespace luna::core
 {
-struct RenderPassIndex
-{
-        uint32_t index;
-};
-
 struct RenderPassSubpassIndex
 {
         uint32_t index;
-        const RenderPassIndex *renderPassIndex;
+        const class RenderPass *renderPass;
 };
 
 // TODO: Check if attachment is requested to be used without being created
@@ -31,30 +26,30 @@ class RenderPass
         friend VkResult(::lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo));
 
         RenderPass() = default;
-        RenderPass(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
-        RenderPass(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
+        explicit RenderPass(const LunaRenderPassCreationInfo &creationInfo);
+        explicit RenderPass(const LunaRenderPassCreationInfo2 &creationInfo);
 
         operator const VkRenderPass &() const;
 
         void destroy();
 
-        const RenderPassSubpassIndex *getFirstSubpass() const;
+        const RenderPassSubpassIndex *getUnnamedSubpass() const;
         const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
         VkResult createAttachmentImages(bool createDepthImage);
         VkResult createFramebuffers(bool createDepthAttachment,
-                                             uint32_t framebufferAttachmentCount,
-                                             const VkImageView *framebufferAttachments);
+                                    uint32_t framebufferAttachmentCount,
+                                    const VkImageView *framebufferAttachments);
         VkResult recreateFramebuffer(const Device &device, const SwapChain &swapchain, uint32_t width, uint32_t height);
 
     private:
-        void init_(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex);
-        void init_(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex);
+        void init_(const LunaRenderPassCreationInfo &creationInfo);
+        void init_(const LunaRenderPassCreationInfo2 &creationInfo);
 
         bool isDestroyed_{true};
         VkRenderPass renderPass_{};
         std::string name_{};
-        std::vector<RenderPassSubpassIndex> subpassIndices_{};
-        std::unordered_map<std::string, uint32_t> subpassMap_{};
+        RenderPassSubpassIndex unnamedSubpass_{};
+        std::unordered_map<std::string, RenderPassSubpassIndex> subpassMap_{};
         VkSampleCountFlagBits samples_{};
         VkExtent3D extent_{};
         VkExtent3D maxExtent_{};

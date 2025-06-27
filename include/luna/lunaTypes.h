@@ -268,26 +268,26 @@ typedef struct
 
 typedef struct
 {
-    uint32_t firstViewport;
-    uint32_t viewportCount;
-    const VkViewport *viewports;
+        uint32_t firstViewport;
+        uint32_t viewportCount;
+        const VkViewport *viewports;
 } LunaViewportBindInfo;
 
 typedef struct
 {
-    uint32_t firstScissor;
-    uint32_t scissorCount;
-    const VkRect2D *scissors;
+        uint32_t firstScissor;
+        uint32_t scissorCount;
+        const VkRect2D *scissors;
 } LunaScissorBindInfo;
 
 typedef struct
 {
-    VkDynamicState dynamicStateType;
-    union
-    {
-        const LunaViewportBindInfo *viewportBindInfo;
-        const LunaScissorBindInfo *scissorBindInfo;
-    };
+        VkDynamicState dynamicStateType;
+        union
+        {
+                const LunaViewportBindInfo *viewportBindInfo;
+                const LunaScissorBindInfo *scissorBindInfo;
+        };
 } LunaDynamicStateBindInfo;
 
 typedef struct

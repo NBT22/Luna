@@ -11,7 +11,7 @@ namespace luna::core::commandBuffer
 {
 template<uint32_t arraySize> class CommandPool;
 
-class CommandBuffer: public core::CommandBuffer
+class CommandBuffer final: public virtual core::CommandBuffer
 {
     public:
         CommandBuffer(VkDevice logicalDevice,

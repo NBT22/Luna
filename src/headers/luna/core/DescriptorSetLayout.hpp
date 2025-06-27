@@ -10,19 +10,11 @@
 
 namespace luna::core
 {
-struct DescriptorSetLayoutIndex
-{
-        uint32_t index;
-};
-struct DescriptorPoolIndex
-{
-        uint32_t index;
-};
 struct DescriptorSetIndex
 {
-        uint32_t index;
-        const DescriptorSetLayoutIndex *layoutIndex;
-        const DescriptorPoolIndex *poolIndex;
+        const VkDescriptorPool *pool;
+        const class DescriptorSetLayout *layout;
+        const VkDescriptorSet *set;
 };
 
 class DescriptorSetLayout
@@ -48,7 +40,7 @@ class DescriptorSetLayout
     private:
         bool isDestroyed_{true};
         VkDescriptorSetLayout layout_{};
-        std::unordered_map<std::string, Binding> bindingIndexMap_{};
+        std::unordered_map<std::string, Binding> bindingMap_{};
 };
 } // namespace luna::core
 

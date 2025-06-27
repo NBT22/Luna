@@ -18,9 +18,9 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
     for (uint32_t i = 0; i < creationInfo.bindingCount; i++)
     {
         const LunaDescriptorSetLayoutBinding &binding = creationInfo.bindings[i];
-        assert(!bindingIndexMap_.contains(binding.bindingName));
-        const uint32_t bindingIndex = bindingIndexMap_.size();
-        bindingIndexMap_.emplace(binding.bindingName, Binding{.index = bindingIndex, .type = binding.descriptorType});
+        assert(!bindingMap_.contains(binding.bindingName));
+        const uint32_t bindingIndex = bindingMap_.size();
+        bindingMap_.emplace(binding.bindingName, Binding{.index = bindingIndex, .type = binding.descriptorType});
         bindings.emplace_back(bindingIndex,
                               binding.descriptorType,
                               binding.descriptorCount,
@@ -51,7 +51,7 @@ void DescriptorSetLayout::destroy()
         return;
     }
     vkDestroyDescriptorSetLayout(device, layout_, nullptr);
-    bindingIndexMap_.clear();
+    bindingMap_.clear();
     isDestroyed_ = true;
 }
 } // namespace luna::core
@@ -61,14 +61,10 @@ VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo
 {
     using namespace luna::core;
     assert(creationInfo);
-    const std::vector<DescriptorSetLayout>::iterator &layoutIterator = std::find_if(descriptorSetLayouts.begin(),
-                                                                                    descriptorSetLayouts.end(),
-                                                                                    DescriptorSetLayout::isDestroyed);
-    descriptorSetLayoutIndices.emplace_back(layoutIterator - descriptorSetLayouts.begin());
-    TRY_CATCH_RESULT(descriptorSetLayouts.emplace(layoutIterator, *creationInfo));
+    TRY_CATCH_RESULT(descriptorSetLayouts.emplace_back(*creationInfo));
     if (descriptorSetLayout != nullptr)
     {
-        *descriptorSetLayout = &descriptorSetLayoutIndices.back();
+        *descriptorSetLayout = &descriptorSetLayouts.back();
     }
     return VK_SUCCESS;
 }

@@ -38,29 +38,4 @@ inline Buffer::operator const VkBuffer &() const
 {
     return buffer_;
 }
-
-inline bool Buffer::isDestroyed(const Buffer &buffer)
-{
-    return buffer.isDestroyed_;
-}
-
-inline void Buffer::destroyBufferRegion(const uint32_t index)
-{
-    regions_.at(index).destroy();
-}
-inline void Buffer::destroyBufferRegionSubRegion(const buffer::BufferRegionIndex &regionIndex)
-{
-    if (regionIndex.subRegion->offset == 0)
-    {
-        regions_.emplace_back(regionIndex.subRegion->size,
-                              static_cast<uint8_t *>(data_) + regions_.at(regionIndex.bufferRegionIndex).offset(),
-                              regionIndex.bufferIndex);
-    }
-    regions_.at(regionIndex.bufferRegionIndex).destroySubRegion(regionIndex.subRegion);
-}
-
-inline const buffer::BufferRegion &Buffer::region(const uint32_t index) const
-{
-    return regions_.at(index);
-}
 } // namespace luna::core

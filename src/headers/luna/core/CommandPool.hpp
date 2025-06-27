@@ -26,9 +26,10 @@ class CommandPool
         VkResult allocate(VkDevice logicalDevice, const VkCommandPoolCreateInfo &poolCreateInfo);
         VkResult allocate(VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo);
         template<uint32_t arraySize = 1> VkResult allocateCommandBuffer(VkDevice logicalDevice,
-                                       VkCommandBufferLevel commandBufferLevel,
-                                       const void *allocateInfoPNext);
-        template<uint32_t arraySize = 1> VkResult allocateCommandBuffer(VkDevice logicalDevice,
+                                                                        VkCommandBufferLevel commandBufferLevel,
+                                                                        const void *allocateInfoPNext);
+        template<uint32_t arraySize = 1>
+        VkResult allocateCommandBuffer(VkDevice logicalDevice,
                                        VkCommandBufferLevel commandBufferLevel,
                                        const void *allocateInfoPNext,
                                        const VkSemaphoreCreateInfo *semaphoreCreateInfo);

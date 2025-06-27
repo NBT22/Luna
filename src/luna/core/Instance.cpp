@@ -193,23 +193,18 @@ Device device{};
 VkPipeline boundPipeline{};
 VkBuffer boundVertexBuffer{};
 VkBuffer boundIndexBuffer{};
-std::list<RenderPassIndex> renderPassIndices{};
-std::vector<RenderPass> renderPasses{};
-std::list<DescriptorPoolIndex> descriptorPoolIndices{};
-std::list<DescriptorSetLayoutIndex> descriptorSetLayoutIndices{};
+LunaBuffer stagingBuffer{};
+
+std::list<RenderPass> renderPasses{};
+std::list<DescriptorSetLayout> descriptorSetLayouts{};
+std::list<VkDescriptorPool> descriptorPools{};
+std::list<VkDescriptorSet> descriptorSets{};
 std::list<DescriptorSetIndex> descriptorSetIndices{};
-std::vector<VkDescriptorPool> descriptorPools{};
-std::vector<DescriptorSetLayout> descriptorSetLayouts{};
-std::vector<VkDescriptorSet> descriptorSets{};
-std::list<GraphicsPipelineIndex> graphicsPipelineIndices{};
-std::vector<GraphicsPipeline> graphicsPipelines{};
+std::list<GraphicsPipeline> graphicsPipelines{};
+std::list<Buffer> buffers{};
 std::list<buffer::BufferRegionIndex> bufferRegionIndices{};
-std::vector<Buffer> buffers{};
-LunaBuffer stagingBufferIndex{};
-std::list<SamplerIndex> samplerIndices{};
-std::vector<VkSampler> samplers{};
-std::list<ImageIndex> imageIndices{};
-std::vector<Image> images{};
+std::list<VkSampler> samplers{};
+std::list<Image> images{};
 } // namespace luna::core
 
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
@@ -261,7 +256,7 @@ VkResult lunaDestroyInstance()
     {
         vkDestroySampler(device, sampler, nullptr);
     }
-    for (Image image: images)
+    for (const Image image: images)
     {
         image.destroy();
     }
@@ -299,34 +294,20 @@ VkResult lunaDestroyInstance()
     swapChain.imageViews.clear();
     swapChain.imageViews.shrink_to_fit();
 
-    samplerIndices.clear();
     samplers.clear();
-    samplers.shrink_to_fit();
-    imageIndices.clear();
     images.clear();
-    images.shrink_to_fit();
 
-    graphicsPipelineIndices.clear();
     graphicsPipelines.clear();
-    graphicsPipelines.shrink_to_fit();
-    renderPassIndices.clear();
     renderPasses.clear();
-    renderPasses.shrink_to_fit();
 
-    descriptorPoolIndices.clear();
-    descriptorSetLayoutIndices.clear();
     descriptorSetIndices.clear();
     descriptorPools.clear();
-    descriptorPools.shrink_to_fit();
     descriptorSetLayouts.clear();
-    descriptorSetLayouts.shrink_to_fit();
     descriptorSets.clear();
-    descriptorSets.shrink_to_fit();
 
     bufferRegionIndices.clear();
     buffers.clear();
-    buffers.shrink_to_fit();
-    stagingBufferIndex = nullptr;
+    stagingBuffer = nullptr;
 
     return VK_SUCCESS;
 }

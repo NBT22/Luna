@@ -10,7 +10,7 @@
 
 namespace luna::core::commandBuffer
 {
-template<uint32_t count> class CommandBufferArray final: public core::CommandBuffer
+template<uint32_t count> class CommandBufferArray final: public virtual core::CommandBuffer
 {
     public:
         CommandBufferArray(VkDevice logicalDevice,

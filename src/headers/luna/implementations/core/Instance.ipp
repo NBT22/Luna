@@ -6,21 +6,21 @@
 
 namespace luna::core
 {
-inline RenderPass &renderPass(const LunaRenderPass renderPass)
+inline RenderPass *renderPass(const LunaRenderPass renderPass)
 {
-    return renderPasses.at(static_cast<const RenderPassIndex *>(renderPass)->index);
+    return const_cast<RenderPass *>(static_cast<const RenderPass *>(renderPass));
 }
-inline VkDescriptorPool descriptorPool(const LunaDescriptorPool descriptorPool)
+inline const VkDescriptorPool *descriptorPool(const LunaDescriptorPool descriptorPool)
 {
-    return descriptorPools.at(static_cast<const DescriptorPoolIndex *>(descriptorPool)->index);
+    return static_cast<const VkDescriptorPool *>(descriptorPool);
 }
-inline const DescriptorSetLayout &descriptorSetLayout(const LunaDescriptorSetLayout layout)
+inline const DescriptorSetLayout *descriptorSetLayout(const LunaDescriptorSetLayout layout)
 {
-    return descriptorSetLayouts.at(static_cast<const DescriptorSetLayoutIndex *>(layout)->index);
+    return static_cast<const DescriptorSetLayout *>(layout);
 }
-inline VkDescriptorSet descriptorSet(const LunaDescriptorSet descriptorSet)
+inline const VkDescriptorSet *descriptorSet(const LunaDescriptorSet descriptorSet)
 {
-    return descriptorSets.at(static_cast<const DescriptorSetIndex *>(descriptorSet)->index);
+    return static_cast<const DescriptorSetIndex *>(descriptorSet)->set;
 }
 inline void descriptorSet(const LunaDescriptorSet index,
                           VkDescriptorPool *pool,
@@ -30,40 +30,28 @@ inline void descriptorSet(const LunaDescriptorSet index,
     const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(index);
     if (pool != nullptr)
     {
-        *pool = descriptorPools.at(descriptorSetIndex->poolIndex->index);
+        *pool = *descriptorSetIndex->pool;
     }
     if (layout != nullptr)
     {
-        *layout = descriptorSetLayout(descriptorSetIndex->layoutIndex);
+        *layout = *descriptorSetIndex->layout;
     }
     if (descriptorSet != nullptr)
     {
-        *descriptorSet = descriptorSets.at(descriptorSetIndex->index);
+        *descriptorSet = *descriptorSetIndex->set;
     }
 }
-inline const buffer::BufferRegion &bufferRegion(const LunaBuffer buffer)
-{
-    const buffer::BufferRegionIndex *index = static_cast<const buffer::BufferRegionIndex *>(buffer);
-    return buffers.at(index->bufferIndex).region(index->bufferRegionIndex);
-}
-inline const buffer::BufferRegion &bufferRegion(const buffer::BufferRegionIndex index)
-{
-    return buffers.at(index.bufferIndex).region(index.bufferRegionIndex);
-}
-inline Buffer stagingBuffer()
-{
-    return buffers.at(static_cast<const buffer::BufferRegionIndex *>(stagingBufferIndex)->bufferIndex);
-}
+
 inline size_t stagingBufferOffset()
 {
-    if (stagingBufferIndex == nullptr)
+    if (stagingBuffer == nullptr)
     {
         return -1ull;
     }
-    return bufferRegion(stagingBufferIndex).offset();
+    return static_cast<const buffer::BufferRegionIndex *>(stagingBuffer)->bufferRegion->offset();
 }
 inline VkSampler sampler(const LunaSampler sampler)
 {
-    return samplers.at(static_cast<const SamplerIndex *>(sampler)->index);
+    return *static_cast<const VkSampler *>(sampler);
 }
 } // namespace luna::core

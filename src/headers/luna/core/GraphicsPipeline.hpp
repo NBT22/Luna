@@ -9,10 +9,6 @@
 
 namespace luna::core
 {
-struct GraphicsPipelineIndex
-{
-        uint32_t index;
-};
 class GraphicsPipeline
 {
     public:

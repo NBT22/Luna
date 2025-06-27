@@ -16,17 +16,16 @@ inline RenderPass::operator const VkRenderPass &() const
     return renderPass_;
 }
 
-inline const RenderPassSubpassIndex *RenderPass::getFirstSubpass() const
+inline const RenderPassSubpassIndex *RenderPass::getUnnamedSubpass() const
 {
-    assert(!subpassIndices_.empty());
-    return subpassIndices_.data();
+    return &unnamedSubpass_;
 }
 inline const RenderPassSubpassIndex *RenderPass::getSubpassIndexByName(const std::string &name) const
 {
     assert(!subpassMap_.empty());
     try
     {
-        return &subpassIndices_.at(subpassMap_.at(name));
+        return &subpassMap_.at(name);
     } catch (const std::out_of_range &)
     {
         assert(subpassMap_.contains(name));
@@ -72,37 +71,50 @@ inline VkResult RenderPass::recreateFramebuffer(const Device &device,
     return VK_SUCCESS;
 }
 
-inline void RenderPass::init_(const LunaRenderPassCreationInfo &creationInfo, const RenderPassIndex *renderPassIndex)
+inline void RenderPass::init_(const LunaRenderPassCreationInfo &creationInfo)
 {
     extent_ = creationInfo.extent;
     maxExtent_.width = creationInfo.maxExtent.width != 0 ? creationInfo.maxExtent.width : creationInfo.extent.width;
     maxExtent_.height = creationInfo.maxExtent.height != 0 ? creationInfo.maxExtent.height : creationInfo.extent.height;
     maxExtent_.depth = creationInfo.maxExtent.depth != 0 ? creationInfo.maxExtent.depth : creationInfo.extent.depth;
-    subpassIndices_.reserve(creationInfo.subpassCount);
     samples_ = creationInfo.samples != 0 ? creationInfo.samples : VK_SAMPLE_COUNT_1_BIT;
 
     for (uint32_t i = 0; i < creationInfo.subpassCount; i++)
     {
+        const RenderPassSubpassIndex index = {
+            .index = i,
+            .renderPass = this,
+        };
         if (creationInfo.subpasses[i].name != nullptr)
         {
-            subpassMap_[creationInfo.subpasses[i].name] = i;
+            subpassMap_.emplace(creationInfo.subpasses[i].name, index);
+        } else
+        {
+            unnamedSubpass_ = index;
         }
-        subpassIndices_.emplace_back(i, renderPassIndex);
     }
 }
-inline void RenderPass::init_(const LunaRenderPassCreationInfo2 &creationInfo, const RenderPassIndex *renderPassIndex)
+inline void RenderPass::init_(const LunaRenderPassCreationInfo2 &creationInfo)
 {
     extent_ = creationInfo.extent;
-    subpassIndices_.reserve(creationInfo.subpassCount);
+    maxExtent_.width = creationInfo.maxExtent.width != 0 ? creationInfo.maxExtent.width : creationInfo.extent.width;
+    maxExtent_.height = creationInfo.maxExtent.height != 0 ? creationInfo.maxExtent.height : creationInfo.extent.height;
+    maxExtent_.depth = creationInfo.maxExtent.depth != 0 ? creationInfo.maxExtent.depth : creationInfo.extent.depth;
     samples_ = creationInfo.samples != 0 ? creationInfo.samples : VK_SAMPLE_COUNT_1_BIT;
 
     for (uint32_t i = 0; i < creationInfo.subpassCount; i++)
     {
+        const RenderPassSubpassIndex index = {
+            .index = i,
+            .renderPass = this,
+        };
         if (creationInfo.subpasses[i].name != nullptr)
         {
-            subpassMap_[creationInfo.subpasses[i].name] = i;
+            subpassMap_.emplace(creationInfo.subpasses[i].name, index);
+        } else
+        {
+            unnamedSubpass_ = index;
         }
-        subpassIndices_.emplace_back(i, renderPassIndex);
     }
 }
 } // namespace luna::core

@@ -433,29 +433,31 @@ static VkResult writeImage(const VkImage image,
     core::CommandBuffer &commandBuffer = core::device.commandPools().graphics.commandBuffer(1);
     if (!commandBuffer.isRecording())
     {
-        const VkDevice logicalDevice = core::device;
-        CHECK_RESULT_RETURN(commandBuffer.waitForFence(logicalDevice));
-        CHECK_RESULT_RETURN(commandBuffer.resetFence(logicalDevice));
+        CHECK_RESULT_RETURN(commandBuffer.waitForFence(core::device));
+        CHECK_RESULT_RETURN(commandBuffer.resetFence(core::device));
         CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
     }
 
     const size_t bytes = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format);
-    if (core::stagingBufferIndex == nullptr || core::bufferRegion(core::stagingBufferIndex).size() < bytes)
+    const auto *stagingBuffer = static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBuffer);
+    if (stagingBuffer == nullptr || stagingBuffer->bufferRegion->size() < bytes)
     {
-        if (core::stagingBufferIndex != nullptr)
+        if (stagingBuffer != nullptr)
         {
-            const auto *index = static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBufferIndex);
-            core::buffers.at(index->bufferIndex).destroyBufferRegion(index->bufferRegionIndex);
+            stagingBuffer->bufferRegion->destroy();
         }
         const LunaBufferCreationInfo bufferCreationInfo = {
             .size = bytes,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         };
-        CHECK_RESULT_RETURN(core::buffer::BufferRegion::createBufferRegion(bufferCreationInfo,
-                                                                           &core::stagingBufferIndex));
+        const LunaBuffer *stagingBufferHandle = &core::stagingBuffer;
+        CHECK_RESULT_RETURN(core::buffer::BufferRegion::
+                                    createBufferRegion(bufferCreationInfo,
+                                                       const_cast<LunaBuffer **>(&stagingBufferHandle)));
+        stagingBuffer = static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBuffer);
     }
 
-    core::bufferRegion(core::stagingBufferIndex).copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
+    stagingBuffer->bufferRegion->copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
     const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {
         .aspectMask = aspectMask,
@@ -500,7 +502,7 @@ static VkResult writeImage(const VkImage image,
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           core::stagingBuffer(),
+                           *stagingBuffer->buffer,
                            image,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,
@@ -557,7 +559,6 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
                             uint32_t arrayLayers,
                             LunaImage *imageIndex)
 {
-    core::imageIndices.emplace_back(core::images.size());
     TRY_CATCH_RESULT(core::images.emplace_back(creationInfo, depth, arrayLayers));
     const core::Image &image = core::images.back();
     if (creationInfo.descriptorSet != nullptr)
@@ -568,14 +569,12 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
             .imageView = image.imageView(),
             .imageLayout = creationInfo.layout,
         };
-        core::DescriptorSetLayout descriptorSetLayout;
-        VkDescriptorSet descriptorSet;
-        core::descriptorSet(creationInfo.descriptorSet, nullptr, &descriptorSetLayout, &descriptorSet);
+        const auto *descriptorSetIndex = static_cast<const core::DescriptorSetIndex *>(creationInfo.descriptorSet);
         const char *bindingName = creationInfo.descriptorLayoutBindingName;
-        const core::DescriptorSetLayout::Binding &binding = descriptorSetLayout.binding(bindingName);
+        const core::DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
         const VkWriteDescriptorSet writeDescriptor = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptorSet,
+            .dstSet = *descriptorSetIndex->set,
             .dstBinding = binding.index,
             .descriptorCount = 1,
             .descriptorType = binding.type,
@@ -586,7 +585,7 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
 
     if (imageIndex != nullptr)
     {
-        *imageIndex = &core::imageIndices.back();
+        *imageIndex = &core::images.back();
     }
     return VK_SUCCESS;
 }
@@ -596,8 +595,16 @@ namespace luna::core
 {
 Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t depth, const uint32_t arrayLayers)
 {
-    assert(isDestroyed_);
     assert(creationInfo.sampler == nullptr || creationInfo.samplerCreationInfo == nullptr);
+    if (creationInfo.sampler != nullptr)
+    {
+        sampler_ = sampler(creationInfo.sampler);
+    } else if (creationInfo.samplerCreationInfo != nullptr)
+    {
+        LunaSampler sampler;
+        CHECK_RESULT_THROW(lunaCreateSampler(creationInfo.samplerCreationInfo, &sampler));
+        sampler_ = core::sampler(sampler);
+    }
     const VkExtent3D extent = {
         .width = creationInfo.width,
         .height = creationInfo.height,
@@ -644,35 +651,25 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
             aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         }
     }
+    CHECK_RESULT_THROW(helpers::writeImage(image_, extent, arrayLayers, creationInfo, aspectMask));
     CHECK_RESULT_THROW(helpers::createImageView(device,
                                                 image_,
                                                 creationInfo.format,
                                                 aspectMask,
                                                 mipmapLevels,
                                                 &imageView_));
-    if (creationInfo.sampler != nullptr)
-    {
-        sampler_ = sampler(creationInfo.sampler);
-    } else if (creationInfo.samplerCreationInfo != nullptr)
-    {
-        LunaSampler sampler;
-        CHECK_RESULT_THROW(lunaCreateSampler(creationInfo.samplerCreationInfo, &sampler));
-        sampler_ = core::sampler(sampler);
-    }
-
-    CHECK_RESULT_THROW(helpers::writeImage(image_, extent, arrayLayers, creationInfo, aspectMask));
-    isDestroyed_ = false;
 }
 
-void Image::destroy()
+void Image::destroy() const
 {
-    if (isDestroyed_)
-    {
-        return;
-    }
     vkDestroyImageView(device, imageView_, nullptr);
     vmaDestroyImage(device.allocator(), image_, allocation_);
-    isDestroyed_ = true;
+}
+void Image::erase(const std::list<Image>::const_iterator iterator) const
+{
+    vkDestroyImageView(device, imageView_, nullptr);
+    vmaDestroyImage(device.allocator(), image_, allocation_);
+    images.erase(iterator);
 }
 
 VkSampler Image::sampler(const LunaSampler sampler)
@@ -689,12 +686,7 @@ VkSampler Image::sampler(const LunaSampler sampler)
 VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
 {
     assert(creationInfo);
-    luna::core::samplers.reserve(luna::core::samplers.size() + 1);
-    const std::vector<VkSampler>::iterator samplerIterator = std::find(luna::core::samplers.begin(),
-                                                                       luna::core::samplers.end(),
-                                                                       VK_NULL_HANDLE);
-    luna::core::samplerIndices.emplace_back(samplerIterator - luna::core::samplers.begin());
-    luna::core::samplers.emplace(samplerIterator);
+    luna::core::samplers.emplace_back();
     const VkSamplerCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .flags = creationInfo->flags,
@@ -714,10 +706,10 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
         .borderColor = creationInfo->borderColor,
         .unnormalizedCoordinates = static_cast<VkBool32>(creationInfo->unnormalizedCoordinates),
     };
-    CHECK_RESULT_RETURN(vkCreateSampler(luna::core::device, &createInfo, nullptr, samplerIterator.base()));
+    CHECK_RESULT_RETURN(vkCreateSampler(luna::core::device, &createInfo, nullptr, &luna::core::samplers.back()));
     if (sampler != nullptr)
     {
-        *sampler = &luna::core::samplerIndices.back();
+        *sampler = &luna::core::samplers.back();
     }
     return VK_SUCCESS;
 }
