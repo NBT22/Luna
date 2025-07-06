@@ -26,7 +26,7 @@ void descriptorSet(LunaDescriptorSet index,
 [[nodiscard]] size_t stagingBufferOffset();
 [[nodiscard]] VkSampler sampler(LunaSampler sampler);
 
-extern SwapChain swapChain;
+extern Swapchain swapchain;
 extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;

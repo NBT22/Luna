@@ -9,7 +9,7 @@
 
 namespace luna::helpers
 {
-static VkResult findSwapChainFormat(const VkPhysicalDevice physicalDevice,
+static VkResult findSwapchainFormat(const VkPhysicalDevice physicalDevice,
                                     const VkSurfaceKHR surface,
                                     const uint32_t targetFormatCount,
                                     const VkSurfaceFormatKHR *targetFormats,
@@ -48,7 +48,7 @@ static VkResult findSwapChainFormat(const VkPhysicalDevice physicalDevice,
     return VK_SUCCESS;
 }
 
-static VkResult getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
+static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
                                         const VkSurfaceKHR surface,
                                         const uint32_t targetPresentModeCount,
                                         const VkPresentModeKHR *targetPresentModes,
@@ -93,99 +93,100 @@ static VkResult getSwapChainPresentMode(const VkPhysicalDevice physicalDevice,
     return VK_SUCCESS;
 }
 
-static VkResult createSwapChainImages(const VkDevice logicalDevice, core::SwapChain &swapChain)
+static VkResult createSwapchainImages(const VkDevice logicalDevice, core::Swapchain &swapchain)
 {
-    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice, swapChain.swapChain, &swapChain.imageCount, nullptr));
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice, swapchain.swapchain, &swapchain.imageCount, nullptr));
 
-    swapChain.images.resize(swapChain.imageCount);
+    swapchain.images.resize(swapchain.imageCount);
     CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice,
-                                                swapChain.swapChain,
-                                                &swapChain.imageCount,
-                                                swapChain.images.data()));
+                                                swapchain.swapchain,
+                                                &swapchain.imageCount,
+                                                swapchain.images.data()));
 
-    swapChain.imageViews.resize(swapChain.imageCount);
-    for (uint32_t i = 0; i < swapChain.imageCount; i++)
+    swapchain.imageViews.resize(swapchain.imageCount);
+    for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
         CHECK_RESULT_RETURN(createImageView(logicalDevice,
-                                            swapChain.images[i],
-                                            swapChain.format.format,
+                                            swapchain.images[i],
+                                            swapchain.format.format,
                                             VK_IMAGE_ASPECT_COLOR_BIT,
                                             1,
-                                            &swapChain.imageViews[i]));
+                                            &swapchain.imageViews[i]));
     }
     return VK_SUCCESS;
 }
 
-static VkResult createSwapChain(const LunaSwapChainCreationInfo &creationInfo)
+static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
 {
-    core::swapChain.surface = creationInfo.surface;
+    assert(!core::swapchain.safeToUse);
+    core::swapchain.surface = creationInfo.surface;
 
     VkSurfaceCapabilitiesKHR capabilities;
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(core::device,
-                                                                  core::swapChain.surface,
+                                                                  core::swapchain.surface,
                                                                   &capabilities));
     capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 
-    CHECK_RESULT_RETURN(helpers::findSwapChainFormat(core::device,
-                                                     core::swapChain.surface,
+    CHECK_RESULT_RETURN(helpers::findSwapchainFormat(core::device,
+                                                     core::swapchain.surface,
                                                      creationInfo.formatCount,
                                                      creationInfo.formatPriorityList,
-                                                     core::swapChain.format));
+                                                     core::swapchain.format));
 
-    core::swapChain.extent = capabilities.currentExtent;
-    if (core::swapChain.extent.width == UINT32_MAX || core::swapChain.extent.height == UINT32_MAX)
+    core::swapchain.extent = capabilities.currentExtent;
+    if (core::swapchain.extent.width == UINT32_MAX || core::swapchain.extent.height == UINT32_MAX)
     {
-        core::swapChain.extent.width = creationInfo.width;
-        core::swapChain.extent.height = creationInfo.height;
+        core::swapchain.extent.width = creationInfo.width;
+        core::swapchain.extent.height = creationInfo.height;
     }
-    assert(capabilities.minImageExtent.width <= core::swapChain.extent.width &&
-           core::swapChain.extent.width <= capabilities.maxImageExtent.width);
-    assert(capabilities.minImageExtent.height <= core::swapChain.extent.height &&
-           core::swapChain.extent.height <= capabilities.maxImageExtent.height);
+    assert(capabilities.minImageExtent.width <= core::swapchain.extent.width &&
+           core::swapchain.extent.width <= capabilities.maxImageExtent.width);
+    assert(capabilities.minImageExtent.height <= core::swapchain.extent.height &&
+           core::swapchain.extent.height <= capabilities.maxImageExtent.height);
 
-    CHECK_RESULT_RETURN(helpers::getSwapChainPresentMode(core::device,
-                                                         core::swapChain.surface,
+    CHECK_RESULT_RETURN(helpers::getSwapchainPresentMode(core::device,
+                                                         core::swapchain.surface,
                                                          creationInfo.presentModeCount,
                                                          creationInfo.presentModePriorityList,
-                                                         core::swapChain.presentMode));
-
-    core::swapChain.imageCount = creationInfo.minImageCount;
-    assert(capabilities.minImageCount <= core::swapChain.imageCount &&
-           core::swapChain.imageCount <= capabilities.maxImageCount);
-    CHECK_RESULT_RETURN(core::device.createSemaphores(core::swapChain.imageCount));
+                                                         core::swapchain.presentMode));
 
     constexpr VkImageUsageFlags colorAttachmentUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    core::swapChain.imageUsage = creationInfo.imageUsage == 0 ? colorAttachmentUsage : creationInfo.imageUsage;
-    core::swapChain.compositeAlpha = creationInfo.compositeAlpha == 0 ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
+    core::swapchain.imageUsage = creationInfo.imageUsage == 0 ? colorAttachmentUsage : creationInfo.imageUsage;
+    core::swapchain.compositeAlpha = creationInfo.compositeAlpha == 0 ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
                                                                       : creationInfo.compositeAlpha;
     const VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = core::swapChain.surface,
-        .minImageCount = core::swapChain.imageCount,
-        .imageFormat = core::swapChain.format.format,
-        .imageColorSpace = core::swapChain.format.colorSpace,
-        .imageExtent = core::swapChain.extent,
+        .surface = core::swapchain.surface,
+        .minImageCount = capabilities.minImageCount,
+        .imageFormat = core::swapchain.format.format,
+        .imageColorSpace = core::swapchain.format.colorSpace,
+        .imageExtent = core::swapchain.extent,
         .imageArrayLayers = 1,
-        .imageUsage = core::swapChain.imageUsage,
+        .imageUsage = core::swapchain.imageUsage,
         .imageSharingMode = core::device.sharingMode(),
         .queueFamilyIndexCount = core::device.familyCount(),
         .pQueueFamilyIndices = core::device.queueFamilyIndices(),
         .preTransform = capabilities.currentTransform,
-        .compositeAlpha = core::swapChain.compositeAlpha,
-        .presentMode = core::swapChain.presentMode,
+        .compositeAlpha = core::swapchain.compositeAlpha,
+        .presentMode = core::swapchain.presentMode,
         .clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
     };
-    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(core::device, &createInfo, nullptr, &core::swapChain.swapChain));
+    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(core::device, &createInfo, nullptr, &core::swapchain.swapchain));
 
-    CHECK_RESULT_RETURN(helpers::createSwapChainImages(core::device, core::swapChain));
-    core::swapChain.imageIndex = -1u;
+    CHECK_RESULT_RETURN(helpers::createSwapchainImages(core::device, core::swapchain));
+    assert(capabilities.minImageCount <= core::swapchain.imageCount &&
+           core::swapchain.imageCount <= capabilities.maxImageCount);
+    CHECK_RESULT_RETURN(core::device.createSemaphores(core::swapchain.imageCount));
+    core::swapchain.imageIndex = -1u;
+    core::swapchain.safeToUse = true;
+    core::swapchain.safeToUse.notify_all();
     return VK_SUCCESS;
 }
 } // namespace luna::helpers
 
 namespace luna::core
 {
-SwapChain swapChain{};
+Swapchain swapchain{};
 VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
@@ -246,11 +247,11 @@ VkResult lunaDestroyInstance()
     CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
 
 
-    for (uint32_t i = 0; i < swapChain.imageCount; i++)
+    for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
-        vkDestroyImageView(device, swapChain.imageViews.at(i), nullptr);
+        vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
     }
-    vkDestroySwapchainKHR(device, swapChain.swapChain, nullptr);
+    vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
 
     for (const VkSampler sampler: samplers)
     {
@@ -285,14 +286,14 @@ VkResult lunaDestroyInstance()
     }
 
     device.destroy();
-    vkDestroySurfaceKHR(instance, swapChain.surface, nullptr);
+    vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
     vkDestroyInstance(instance, nullptr);
 
 
-    swapChain.images.clear();
-    swapChain.images.shrink_to_fit();
-    swapChain.imageViews.clear();
-    swapChain.imageViews.shrink_to_fit();
+    swapchain.images.clear();
+    swapchain.images.shrink_to_fit();
+    swapchain.imageViews.clear();
+    swapchain.imageViews.shrink_to_fit();
 
     samplers.clear();
     images.clear();
@@ -315,18 +316,18 @@ VkInstance lunaGetInstance()
 {
     return luna::core::instance;
 }
-VkResult lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo)
+VkResult lunaCreateSwapchain(const LunaSwapchainCreationInfo *creationInfo)
 {
     assert(creationInfo);
-    return luna::helpers::createSwapChain(*creationInfo);
+    return luna::helpers::createSwapchain(*creationInfo);
 }
-VkFormat lunaGetSwapChainFormat()
+VkFormat lunaGetSwapchainFormat()
 {
-    return luna::core::swapChain.format.format;
+    return luna::core::swapchain.format.format;
 }
-VkExtent2D lunaGetSwapChainExtent()
+VkExtent2D lunaGetSwapchainExtent()
 {
-    return luna::core::swapChain.extent;
+    return luna::core::swapchain.extent;
 }
 VkResult lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities)
 {

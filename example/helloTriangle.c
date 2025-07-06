@@ -147,7 +147,7 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
 
 static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphicsPipeline *pipeline)
 {
-    const VkExtent2D swapChainExtent = lunaGetSwapChainExtent();
+    const VkExtent2D swapchainExtent = lunaGetSwapchainExtent();
 
     LunaShaderModule vertexShaderModule;
     LunaShaderModule fragmentShaderModule;
@@ -209,12 +209,12 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
     };
 
     const VkViewport viewport = {
-        .width = (float)swapChainExtent.width,
-        .height = (float)swapChainExtent.height,
+        .width = (float)swapchainExtent.width,
+        .height = (float)swapchainExtent.height,
         .maxDepth = 1,
     };
     const VkRect2D scissor = {
-        .extent = swapChainExtent,
+        .extent = swapchainExtent,
     };
     const VkPipelineViewportStateCreateInfo viewportState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -299,24 +299,21 @@ int main(void)
     };
     CHECK_RESULT(lunaAddNewDevice(&deviceCreationInfo));
 
-    VkSurfaceCapabilitiesKHR capabilities;
-    CHECK_RESULT(lunaGetSurfaceCapabilities(surface, &capabilities));
     const VkExtent3D extent = {
         .width = 1080,
         .height = 720,
         .depth = 1,
     };
-    const LunaSwapChainCreationInfo swapChainCreationInfo = {
+    const LunaSwapchainCreationInfo swapchainCreationInfo = {
         .surface = surface,
         .width = extent.width,
         .height = extent.height,
-        .minImageCount = capabilities.minImageCount,
         .formatCount = 1,
         .formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}},
         .presentModeCount = 1,
         .presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_FIFO_KHR},
     };
-    CHECK_RESULT(lunaCreateSwapChain(&swapChainCreationInfo));
+    CHECK_RESULT(lunaCreateSwapchain(&swapchainCreationInfo));
 
     LunaRenderPass renderPass;
     CHECK_RESULT(createRenderPass(extent, &renderPass));

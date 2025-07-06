@@ -18,9 +18,9 @@ VkInstance lunaGetInstance(void);
 
 VkResult lunaGetSurfaceCapabilities(VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 
-VkResult lunaCreateSwapChain(const LunaSwapChainCreationInfo *creationInfo);
-VkFormat lunaGetSwapChainFormat(void);
-VkExtent2D lunaGetSwapChainExtent(void);
+VkResult lunaCreateSwapchain(const LunaSwapchainCreationInfo *creationInfo);
+VkFormat lunaGetSwapchainFormat(void);
+VkExtent2D lunaGetSwapchainExtent(void);
 
 void lunaSetDepthImageFormat(uint32_t formatCount, const VkFormat *formatPriorityList);
 VkFormat lunaGetDepthImageFormat(void);

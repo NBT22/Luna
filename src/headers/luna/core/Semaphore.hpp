@@ -19,6 +19,7 @@ class Semaphore
         VkSemaphore *operator&();
 
         void destroy(VkDevice logicalDevice) const;
+        VkResult recreate(VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo);
 
         void setIsSignaled(bool value);
         void setStageMask(VkPipelineStageFlags value);
@@ -29,6 +30,7 @@ class Semaphore
     private:
         // bool isDestroyed_{true};
         bool isSignaled_{};
+        void *createInfoPNext{};
         VkPipelineStageFlags stageMask_{};
         VkSemaphore semaphore_{};
 };

@@ -33,7 +33,7 @@ inline const RenderPassSubpassIndex *RenderPass::getSubpassIndexByName(const std
     }
 }
 inline VkResult RenderPass::recreateFramebuffer(const Device &device,
-                                                const SwapChain &swapchain,
+                                                const Swapchain &swapchain,
                                                 const uint32_t width,
                                                 const uint32_t height)
 {
@@ -52,6 +52,7 @@ inline VkResult RenderPass::recreateFramebuffer(const Device &device,
         attachments_.at(attachments_.size() - 3) = depthImageView_;
         attachments_.at(attachments_.size() - 2) = colorImageView_;
     }
+    framebuffers_.resize(swapchain.imageCount);
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
         VkFramebuffer &framebuffer = framebuffers_.at(i);

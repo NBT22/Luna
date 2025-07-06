@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -40,18 +41,19 @@ class VkResultException final: public std::exception
 
 namespace luna::core
 {
-struct SwapChain
+struct Swapchain
 {
-        VkSurfaceKHR surface;
-        uint32_t imageCount;
-        VkSurfaceFormatKHR format;
-        VkExtent2D extent;
-        VkImageUsageFlags imageUsage;
-        VkPresentModeKHR presentMode;
-        VkCompositeAlphaFlagBitsKHR compositeAlpha;
-        VkSwapchainKHR swapChain;
-        uint32_t imageIndex;
-        std::vector<VkImage> images;
-        std::vector<VkImageView> imageViews;
+        VkSurfaceKHR surface{};
+        uint32_t imageCount{};
+        VkSurfaceFormatKHR format{};
+        VkExtent2D extent{};
+        VkImageUsageFlags imageUsage{};
+        VkPresentModeKHR presentMode{};
+        VkCompositeAlphaFlagBitsKHR compositeAlpha{};
+        VkSwapchainKHR swapchain{};
+        uint32_t imageIndex{};
+        std::vector<VkImage> images{};
+        std::vector<VkImageView> imageViews{};
+        std::atomic_bool safeToUse{};
 };
 } // namespace luna::core

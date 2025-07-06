@@ -77,7 +77,6 @@ typedef struct
         VkSurfaceKHR surface;
         uint32_t width;
         uint32_t height;
-        uint32_t minImageCount;
 
         uint32_t formatCount;
         const VkSurfaceFormatKHR *formatPriorityList;
@@ -86,7 +85,7 @@ typedef struct
 
         VkImageUsageFlags imageUsage;
         VkCompositeAlphaFlagBitsKHR compositeAlpha;
-} LunaSwapChainCreationInfo;
+} LunaSwapchainCreationInfo;
 
 typedef struct
 {
@@ -359,6 +358,7 @@ typedef struct
         VkRect2D renderArea;
         VkClearValue depthAttachmentClearValue;
         VkClearValue colorAttachmentClearValue;
+        bool allowSuboptimalSwapchain;
 } LunaRenderPassBeginInfo;
 
 typedef struct

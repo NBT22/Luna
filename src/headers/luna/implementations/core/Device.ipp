@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 namespace luna::core
 {
@@ -73,8 +74,9 @@ inline VkResult Device::createSemaphores(const uint32_t imageCount)
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
+    const uint32_t oldSize = renderFinishedSemaphores_.size();
     renderFinishedSemaphores_.resize(imageCount);
-    for (uint32_t i = 0; i < imageCount; i++)
+    for (uint32_t i = oldSize; i < imageCount; i++)
     {
         Semaphore &semaphore = renderFinishedSemaphores_.at(i);
         CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &semaphore));
@@ -379,7 +381,7 @@ inline VkResult Device::createCommandPools()
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     // TODO: The count should be dynamic, which means this shouldn't use templates but instead just function args
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer<4>(logicalDevice_,
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer<5>(logicalDevice_,
                                                                                 VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                                                                 nullptr,
                                                                                 &semaphoreCreateInfo));

@@ -39,7 +39,7 @@ class RenderPass
         VkResult createFramebuffers(bool createDepthAttachment,
                                     uint32_t framebufferAttachmentCount,
                                     const VkImageView *framebufferAttachments);
-        VkResult recreateFramebuffer(const Device &device, const SwapChain &swapchain, uint32_t width, uint32_t height);
+        VkResult recreateFramebuffer(const Device &device, const Swapchain &swapchain, uint32_t width, uint32_t height);
 
     private:
         void init_(const LunaRenderPassCreationInfo &creationInfo);

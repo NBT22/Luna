@@ -34,6 +34,11 @@ inline void Semaphore::destroy(const VkDevice logicalDevice) const
 {
     vkDestroySemaphore(logicalDevice, semaphore_, nullptr);
 }
+inline VkResult Semaphore::recreate(const VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo)
+{
+    CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice, semaphoreCreateInfo, nullptr, &semaphore_));
+    return VK_SUCCESS;
+}
 
 inline void Semaphore::setIsSignaled(const bool value)
 {

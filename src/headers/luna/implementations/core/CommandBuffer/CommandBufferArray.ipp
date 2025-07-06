@@ -143,6 +143,19 @@ template<uint32_t count> VkResult CommandBufferArray<count>::resetFence(const Vk
     fences_.at(index_).setWillBeSignaled(false);
     return vkResetFences(logicalDevice, 1, &fences_.at(index_));
 }
+template<uint32_t count> VkResult CommandBufferArray<count>::recreateSemaphores(const VkDevice logicalDevice)
+{
+    // TODO: Should this function take an take an array of creation infos instead of doing this?
+    constexpr VkSemaphoreCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    for (Semaphore &semaphore : semaphores_)
+    {
+        semaphore.destroy(logicalDevice);
+        CHECK_RESULT_RETURN(semaphore.recreate(logicalDevice, &createInfo));
+    }
+    return VK_SUCCESS;
+}
 
 template<uint32_t count> bool CommandBufferArray<count>::isRecording() const
 {
@@ -150,6 +163,7 @@ template<uint32_t count> bool CommandBufferArray<count>::isRecording() const
 }
 template<uint32_t count> const Semaphore &CommandBufferArray<count>::semaphore() const
 {
+    assert(!semaphores_.at(index_).isSignaled());
     return semaphores_.at(index_);
 }
 } // namespace luna::core::commandBuffer

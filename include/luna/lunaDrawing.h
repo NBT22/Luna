@@ -81,6 +81,7 @@ void lunaBindDescriptorSets(LunaGraphicsPipeline pipeline, const LunaGraphicsPip
 VkResult lunaPushConstants(LunaGraphicsPipeline pipeline);
 VkResult lunaResizeSwapchain(uint32_t renderPassResizeInfoCount,
                              const LunaRenderPassResizeInfo *renderPassResizeInfos,
+                             const VkExtent2D *targetExtent,
                              VkExtent2D *newSwapchainExtent);
 VkResult lunaPresentSwapchain();
 

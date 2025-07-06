@@ -36,6 +36,7 @@ template<uint32_t count> class CommandBufferArray final: public virtual core::Co
         VkResult waitForAllFences(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const override;
         VkResult resetFence(VkDevice logicalDevice) override;
+        VkResult recreateSemaphores(VkDevice logicalDevice);
 
         [[nodiscard]] bool isRecording() const override;
         [[nodiscard]] const Semaphore &semaphore() const override;

@@ -112,7 +112,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
             };
             (*attachmentDescriptions2)[colorAttachmentIndex] = {
                 .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-                .format = core::swapChain.format.format,
+                .format = core::swapchain.format.format,
                 .samples = samples,
                 .loadOp = loadOp,
                 .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -123,7 +123,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
             };
             (*attachmentDescriptions2)[colorAttachmentIndex + 1] = {
                 .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-                .format = core::swapChain.format.format,
+                .format = core::swapchain.format.format,
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = loadOp,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -136,7 +136,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
         {
             (*attachmentDescriptions2)[colorAttachmentIndex] = {
                 .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-                .format = core::swapChain.format.format,
+                .format = core::swapchain.format.format,
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = loadOp,
                 .storeOp = colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED ? VK_ATTACHMENT_STORE_OP_DONT_CARE
@@ -161,7 +161,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
                 .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             };
             (*attachmentDescriptions)[colorAttachmentIndex] = {
-                .format = core::swapChain.format.format,
+                .format = core::swapchain.format.format,
                 .samples = samples,
                 .loadOp = loadOp,
                 .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -171,7 +171,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
                 .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             };
             (*attachmentDescriptions)[colorAttachmentIndex + 1] = {
-                .format = core::swapChain.format.format,
+                .format = core::swapchain.format.format,
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = loadOp,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -183,7 +183,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
         } else
         {
             (*attachmentDescriptions)[colorAttachmentIndex] = {
-                .format = core::swapChain.format.format,
+                .format = core::swapchain.format.format,
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = loadOp,
                 .storeOp = colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED ? VK_ATTACHMENT_STORE_OP_DONT_CARE
@@ -419,7 +419,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
         const VkImageCreateInfo colorImageCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
-            .format = swapChain.format.format,
+            .format = swapchain.format.format,
             .extent = maxExtent_,
             .mipLevels = 1,
             .arrayLayers = 1,
@@ -440,7 +440,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
                                            nullptr));
         CHECK_RESULT_RETURN(helpers::createImageView(device,
                                                      colorImage_,
-                                                     swapChain.format.format,
+                                                     swapchain.format.format,
                                                      VK_IMAGE_ASPECT_COLOR_BIT,
                                                      1,
                                                      &colorImageView_));
@@ -501,9 +501,9 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
     {
         attachments_.emplace_back(colorImageView_);
     }
-    attachments_.emplace_back(swapChain.imageViews.at(0));
-    framebuffers_.resize(swapChain.imageCount);
-    for (uint32_t i = 0; i < swapChain.imageCount - 1; i++)
+    attachments_.emplace_back(swapchain.imageViews.at(0));
+    framebuffers_.resize(swapchain.imageCount);
+    for (uint32_t i = 0; i < swapchain.imageCount - 1; i++)
     {
         const VkFramebufferCreateInfo framebufferCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -515,7 +515,7 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
             .layers = 1,
         };
         CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffers_[i]));
-        attachments_.back() = swapChain.imageViews.at(i + 1);
+        attachments_.back() = swapchain.imageViews.at(i + 1);
     }
     const VkFramebufferCreateInfo framebufferCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -574,22 +574,28 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
     const RenderPass *renderPassObject = luna::core::renderPass(renderPass);
 
-    if (swapChain.imageIndex == -1u)
+    if (swapchain.imageIndex == -1u)
     {
         // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
         CHECK_RESULT_RETURN(commandBuffer.waitForFence(device));
         CHECK_RESULT_RETURN(commandBuffer.resetFence(device));
         acquireImageResult = vkAcquireNextImageKHR(device,
-                                                   swapChain.swapChain,
+                                                   swapchain.swapchain,
                                                    UINT64_MAX,
                                                    commandBuffer.semaphore(),
                                                    VK_NULL_HANDLE,
-                                                   &swapChain.imageIndex);
+                                                   &swapchain.imageIndex);
+
         switch (acquireImageResult)
         {
-            case VK_SUBOPTIMAL_KHR:
             case VK_SUCCESS:
                 break;
+            case VK_SUBOPTIMAL_KHR:
+                if (beginInfo->allowSuboptimalSwapchain)
+                {
+                    break;
+                }
+                return acquireImageResult;
             case VK_ERROR_OUT_OF_DATE_KHR:
                 return acquireImageResult;
             default:
@@ -619,7 +625,7 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
     const VkRenderPassBeginInfo renderPassBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPassObject->renderPass_,
-        .framebuffer = renderPassObject->framebuffers_[swapChain.imageIndex],
+        .framebuffer = renderPassObject->framebuffers_[swapchain.imageIndex],
         .renderArea = beginInfo->renderArea,
         .clearValueCount = clearValueCount,
         .pClearValues = clearValues.data(),
