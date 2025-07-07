@@ -444,7 +444,7 @@ static VkResult writeImage(const VkImage image,
     {
         if (stagingBuffer != nullptr)
         {
-            stagingBuffer->bufferRegion->destroy();
+            lunaDestroyBuffer(stagingBuffer);
         }
         const LunaBufferCreationInfo bufferCreationInfo = {
             .size = bytes,

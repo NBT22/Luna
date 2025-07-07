@@ -280,16 +280,6 @@ VkResult lunaDestroyInstance()
         descriptorSetLayout.destroy();
     }
 
-    for (Buffer buffer: buffers)
-    {
-        buffer.destroy();
-    }
-
-    device.destroy();
-    vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
-    vkDestroyInstance(instance, nullptr);
-
-
     swapchain.images.clear();
     swapchain.images.shrink_to_fit();
     swapchain.imageViews.clear();
@@ -309,6 +299,10 @@ VkResult lunaDestroyInstance()
     bufferRegionIndices.clear();
     buffers.clear();
     stagingBuffer = nullptr;
+
+    device.destroy();
+    vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
+    vkDestroyInstance(instance, nullptr);
 
     return VK_SUCCESS;
 }

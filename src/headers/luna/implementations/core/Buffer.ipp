@@ -5,12 +5,27 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 
 namespace luna::core::buffer
 {
-inline bool BufferRegion::isDestroyed(const BufferRegion &region)
+inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion):
+    buffer(buffer),
+    bufferRegion(bufferRegion)
+{}
+inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, SubRegion *subRegion):
+    buffer(buffer),
+    bufferRegion(bufferRegion),
+    subRegion(subRegion)
+{}
+
+inline size_t BufferRegionIndex::offset()
 {
-    return region.isDestroyed_;
+    if (subRegion != nullptr)
+    {
+        return bufferRegion->offset() + subRegion->offset;
+    }
+    return bufferRegion->offset();
 }
 
 inline void BufferRegion::copyToBuffer(const uint8_t *data, const size_t bytes) const

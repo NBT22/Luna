@@ -19,10 +19,21 @@ namespace buffer
             size_t offset{};
     };
     // TODO: This could be a class and introduce additional functionality, such as automatically getting the offset
-    struct BufferRegionIndex
+    class BufferRegionIndex
     {
+            using BufferRegion = class BufferRegion;
+
+        public:
+            BufferRegionIndex() = delete;
+            BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion);
+            BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, SubRegion *subRegion);
+
+            ~BufferRegionIndex();
+
+            size_t offset();
+
             Buffer *buffer{};
-            class BufferRegion *bufferRegion{};
+            BufferRegion *bufferRegion{};
             SubRegion *subRegion{};
     };
 } // namespace buffer
@@ -32,15 +43,15 @@ class Buffer
     public:
         friend class buffer::BufferRegion;
         friend void ::lunaDestroyBuffer(LunaBuffer);
+        friend buffer::BufferRegionIndex::~BufferRegionIndex();
 
         explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo);
 
+        ~Buffer();
+
         operator const VkBuffer &() const;
 
-        void destroy();
-
     private:
-        bool isDestroyed_{true};
         VkBuffer buffer_{};
         VmaAllocation allocation_{};
         VkBufferCreateFlags creationFlags_{};
@@ -58,12 +69,13 @@ namespace luna::core::buffer
 class BufferRegion
 {
     public:
+        friend BufferRegionIndex::~BufferRegionIndex();
+
         // TODO: Maybe move this to Instance where the others live and friend it here?
         static VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo,
                                            LunaBuffer **bufferOut,
                                            uint32_t count = 1,
                                            const LunaBufferCreationInfo *creationInfos = nullptr);
-        static bool isDestroyed(const BufferRegion &region);
 
         friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t, size_t offset);
 
@@ -77,17 +89,12 @@ class BufferRegion
                      const LunaBufferCreationInfo *creationInfos,
                      LunaBuffer **buffers);
 
-        void destroy();
-        void destroyAtEnd();
-        void destroySubRegion(const SubRegion *subRegion);
-
         void copyToBuffer(const uint8_t *data, size_t bytes) const;
 
         [[nodiscard]] size_t size() const;
         [[nodiscard]] size_t offset(const SubRegion *subRegion = nullptr) const;
 
     private:
-        bool isDestroyed_{true};
         size_t size_{};
         /// This is a raw pointer because I don't own the pointer. It will be an offset into the pointer provided to me
         /// by mapping the memory.
