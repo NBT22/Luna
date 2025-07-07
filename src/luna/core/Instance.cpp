@@ -191,10 +191,11 @@ VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
-VkPipeline boundPipeline{};
-VkBuffer boundVertexBuffer{};
-VkBuffer boundIndexBuffer{};
 LunaBuffer stagingBuffer{};
+VkPipeline boundPipeline{};
+LunaBuffer boundVertexBuffer{};
+LunaBuffer boundIndexBuffer{};
+VkDeviceSize boundIndexBufferOffset{};
 
 std::list<RenderPass> renderPasses{};
 std::list<DescriptorSetLayout> descriptorSetLayouts{};

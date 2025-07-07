@@ -14,9 +14,9 @@ namespace luna::core
 {
 template<typename T> struct FamilyValues
 {
-        T graphics;
-        T transfer;
-        T presentation;
+        T graphics{};
+        T transfer{};
+        T presentation{};
 };
 
 class Device

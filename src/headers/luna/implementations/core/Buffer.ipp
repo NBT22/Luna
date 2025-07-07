@@ -5,27 +5,55 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 
 namespace luna::core::buffer
 {
 inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion):
-    buffer(buffer),
-    bufferRegion(bufferRegion)
+    BufferRegionIndex(buffer, bufferRegion, nullptr)
 {}
-inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, SubRegion *subRegion):
-    buffer(buffer),
-    bufferRegion(bufferRegion),
-    subRegion(subRegion)
-{}
-
-inline size_t BufferRegionIndex::offset()
+inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, SubRegion *subRegion)
 {
-    if (subRegion != nullptr)
+    this->buffer_ = buffer;
+    this->bufferRegion_ = bufferRegion;
+    this->subRegion_ = subRegion;
+}
+
+inline size_t BufferRegionIndex::offset() const
+{
+    if (subRegion_ != nullptr)
     {
-        return bufferRegion->offset() + subRegion->offset;
+        return bufferRegion_->offset() + subRegion_->offset;
     }
-    return bufferRegion->offset();
+    return bufferRegion_->offset();
+}
+inline size_t BufferRegionIndex::size() const
+{
+    if (subRegion_ != nullptr)
+    {
+        return subRegion_->size;
+    }
+    return bufferRegion_->size();
+}
+inline uint8_t *BufferRegionIndex::data() const
+{
+    if (subRegion_ != nullptr)
+    {
+        return bufferRegion_->data_ + subRegion_->offset;
+    }
+    return bufferRegion_->data_;
+}
+
+inline const VkBuffer *BufferRegionIndex::buffer() const
+{
+    return *buffer_;
+}
+inline const BufferRegion *BufferRegionIndex::bufferRegion() const
+{
+    return bufferRegion_;
+}
+inline const SubRegion *BufferRegionIndex::subRegion() const
+{
+    return subRegion_;
 }
 
 inline void BufferRegion::copyToBuffer(const uint8_t *data, const size_t bytes) const
@@ -52,5 +80,9 @@ namespace luna::core
 inline Buffer::operator const VkBuffer &() const
 {
     return buffer_;
+}
+inline Buffer::operator const VkBuffer *() const
+{
+    return &buffer_;
 }
 } // namespace luna::core

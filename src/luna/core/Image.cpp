@@ -440,7 +440,7 @@ static VkResult writeImage(const VkImage image,
 
     const size_t bytes = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format);
     const auto *stagingBuffer = static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBuffer);
-    if (stagingBuffer == nullptr || stagingBuffer->bufferRegion->size() < bytes)
+    if (stagingBuffer == nullptr || stagingBuffer->size() < bytes)
     {
         if (stagingBuffer != nullptr)
         {
@@ -457,7 +457,7 @@ static VkResult writeImage(const VkImage image,
         stagingBuffer = static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBuffer);
     }
 
-    stagingBuffer->bufferRegion->copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
+    stagingBuffer->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
     const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {
         .aspectMask = aspectMask,
@@ -502,7 +502,7 @@ static VkResult writeImage(const VkImage image,
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           *stagingBuffer->buffer,
+                           *stagingBuffer->buffer(),
                            image,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,

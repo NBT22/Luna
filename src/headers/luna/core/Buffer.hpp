@@ -18,7 +18,6 @@ namespace buffer
             size_t size{};
             size_t offset{};
     };
-    // TODO: This could be a class and introduce additional functionality, such as automatically getting the offset
     class BufferRegionIndex
     {
             using BufferRegion = class BufferRegion;
@@ -30,11 +29,18 @@ namespace buffer
 
             ~BufferRegionIndex();
 
-            size_t offset();
+            [[nodiscard]] size_t offset() const;
+            [[nodiscard]] size_t size() const;
+            [[nodiscard]] uint8_t *data() const;
 
-            Buffer *buffer{};
-            BufferRegion *bufferRegion{};
-            SubRegion *subRegion{};
+            [[nodiscard]] const VkBuffer *buffer() const;
+            [[nodiscard]] const BufferRegion *bufferRegion() const;
+            [[nodiscard]] const SubRegion *subRegion() const;
+
+        private:
+            Buffer *buffer_{};
+            BufferRegion *bufferRegion_{};
+            SubRegion *subRegion_{};
     };
 } // namespace buffer
 
@@ -42,7 +48,6 @@ class Buffer
 {
     public:
         friend class buffer::BufferRegion;
-        friend void ::lunaDestroyBuffer(LunaBuffer);
         friend buffer::BufferRegionIndex::~BufferRegionIndex();
 
         explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo);
@@ -50,6 +55,7 @@ class Buffer
         ~Buffer();
 
         operator const VkBuffer &() const;
+        operator const VkBuffer *() const;
 
     private:
         VkBuffer buffer_{};
@@ -70,14 +76,13 @@ class BufferRegion
 {
     public:
         friend BufferRegionIndex::~BufferRegionIndex();
+        friend uint8_t *BufferRegionIndex::data() const;
 
         // TODO: Maybe move this to Instance where the others live and friend it here?
         static VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo,
                                            LunaBuffer **bufferOut,
                                            uint32_t count = 1,
                                            const LunaBufferCreationInfo *creationInfos = nullptr);
-
-        friend void ::lunaWriteDataToBuffer(LunaBuffer, const void *, size_t, size_t offset);
 
         BufferRegion(size_t size, uint8_t *data, Buffer *buffer);
         BufferRegion(size_t size, uint8_t *data, size_t offset, Buffer *buffer, LunaBuffer *index);

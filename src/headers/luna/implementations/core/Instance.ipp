@@ -48,7 +48,7 @@ inline size_t stagingBufferOffset()
     {
         return -1ull;
     }
-    return static_cast<const buffer::BufferRegionIndex *>(stagingBuffer)->bufferRegion->offset();
+    return static_cast<const buffer::BufferRegionIndex *>(stagingBuffer)->offset();
 }
 inline VkSampler sampler(const LunaSampler sampler)
 {

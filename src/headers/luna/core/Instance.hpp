@@ -31,10 +31,11 @@ extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
-extern VkPipeline boundPipeline;
-extern VkBuffer boundVertexBuffer;
-extern VkBuffer boundIndexBuffer;
 extern LunaBuffer stagingBuffer;
+extern VkPipeline boundPipeline;
+extern LunaBuffer boundVertexBuffer;
+extern LunaBuffer boundIndexBuffer;
+extern VkDeviceSize boundIndexBufferOffset;
 
 extern std::list<RenderPass> renderPasses;
 extern std::list<DescriptorSetLayout> descriptorSetLayouts;
