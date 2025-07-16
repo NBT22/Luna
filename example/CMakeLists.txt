@@ -6,14 +6,14 @@ include(${CMAKE_SOURCE_DIR}/cmake/findPackages.cmake)
 
 findSDL3()
 
-if (ALL OR HelloTriangle)
+if (LUNA_EXAMPLE_ALL OR LUNA_EXAMPLE_HelloTriangle)
     add_executable(HelloTriangle helloTriangle.c)
     set_target_properties(HelloTriangle PROPERTIES LINKER_LANGUAGE CXX)
     target_compile_options(HelloTriangle PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
     target_link_libraries(HelloTriangle PRIVATE SDL3::SDL3 Luna)
 endif ()
 
-if (ALL OR LunaCube)
+if (LUNA_EXAMPLE_ALL OR LUNA_EXAMPLE_LunaCube)
     configure_file(${CMAKE_SOURCE_DIR}/logo.png ${CMAKE_CURRENT_BINARY_DIR}/logo.png COPYONLY)
 
     fetchLodePNG()

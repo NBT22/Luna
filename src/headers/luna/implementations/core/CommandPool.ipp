@@ -81,7 +81,7 @@ VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
 {
     assert(!isDestroyed_);
     using std::make_unique;
-    #pragma warning(suppress: 4127)
+    SUPRESS_MSVC_WARNING(4127)
     if (arraySize == 1)
     {
         TRY_CATCH_RESULT(commandBuffers_.emplace_back(make_unique<commandBuffer::CommandBuffer>(logicalDevice,

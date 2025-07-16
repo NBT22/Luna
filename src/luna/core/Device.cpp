@@ -91,7 +91,8 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     {
         vkGetPhysicalDeviceFeatures2(physicalDevice, &features_);
         // checkUsability can throw an error, but it will be caught by the function calling this constructor
-        if (!checkFeatureSupport(creationInfo.requiredFeatures) || !checkUsability(physicalDevice, creationInfo.surface))
+        if (!checkFeatureSupport(creationInfo.requiredFeatures) ||
+            !checkUsability(physicalDevice, creationInfo.surface))
         {
             continue;
         }

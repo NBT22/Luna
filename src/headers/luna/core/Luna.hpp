@@ -18,6 +18,12 @@ class VkResultException final: public std::exception
 };
 } // namespace luna::helpers
 
+#ifdef _MSC_VER
+#define SUPRESS_MSVC_WARNING(NUMBER) __pragma(warning(suppress : NUMBER))
+#else
+#define SUPRESS_MSVC_WARNING(NUMBER)
+#endif
+
 // TODO: This really needs more work. It should log a message (or not, based on settings provided by the application).
 //  Maybe also non fatal? I'm not really sure what the best way to do this function is.
 #define CHECK_RESULT_RETURN(value) \

@@ -149,7 +149,7 @@ template<uint32_t count> VkResult CommandBufferArray<count>::recreateSemaphores(
     constexpr VkSemaphoreCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    for (Semaphore &semaphore : semaphores_)
+    for (Semaphore &semaphore: semaphores_)
     {
         semaphore.destroy(logicalDevice);
         CHECK_RESULT_RETURN(semaphore.recreate(logicalDevice, &createInfo));
