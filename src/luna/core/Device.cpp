@@ -87,15 +87,15 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         default:
             assert(1 <= VK_API_VERSION_MINOR(apiVersion) && VK_API_VERSION_MINOR(apiVersion) <= 4);
     }
-    for (const VkPhysicalDevice device: devices)
+    for (const VkPhysicalDevice physicalDevice: devices)
     {
-        vkGetPhysicalDeviceFeatures2(device, &features_);
+        vkGetPhysicalDeviceFeatures2(physicalDevice, &features_);
         // checkUsability can throw an error, but it will be caught by the function calling this constructor
-        if (!checkFeatureSupport(creationInfo.requiredFeatures) || !checkUsability(device, creationInfo.surface))
+        if (!checkFeatureSupport(creationInfo.requiredFeatures) || !checkUsability(physicalDevice, creationInfo.surface))
         {
             continue;
         }
-        physicalDevice_ = device;
+        physicalDevice_ = physicalDevice;
         if (properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
             break;

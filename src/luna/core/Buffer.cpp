@@ -218,7 +218,7 @@ BufferRegion::BufferRegion(const size_t totalSize,
                            Buffer *buffer,
                            const uint32_t count,
                            const LunaBufferCreationInfo *creationInfos,
-                           LunaBuffer **buffers):
+                           LunaBuffer **lunaBuffers):
     BufferRegion(totalSize, data, buffer)
 {
     offset_ = offset;
@@ -230,9 +230,9 @@ BufferRegion::BufferRegion(const size_t totalSize,
         subRegions_.emplace_back(size, subRegionOffset);
         subRegionOffset += size;
         bufferRegionIndices.emplace_back(buffer, this, &subRegions_.back());
-        if (buffers != nullptr && buffers[i] != nullptr)
+        if (lunaBuffers != nullptr && lunaBuffers[i] != nullptr)
         {
-            *buffers[i] = &bufferRegionIndices.back();
+            *lunaBuffers[i] = &bufferRegionIndices.back();
         }
     }
 }

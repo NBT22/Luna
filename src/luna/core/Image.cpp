@@ -7,6 +7,7 @@
 #include <luna/core/Image.hpp>
 #include <luna/core/Instance.hpp>
 #include <luna/luna.h>
+#include <bit>
 
 namespace luna::helpers
 {

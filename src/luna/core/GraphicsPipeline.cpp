@@ -140,18 +140,18 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
     if (bindInfo.descriptorSetCount > 0)
     {
-        std::vector<VkDescriptorSet> descriptorSets;
-        descriptorSets.reserve(bindInfo.descriptorSetCount);
+        std::vector<VkDescriptorSet> descriptorSetsVector;
+        descriptorSetsVector.reserve(bindInfo.descriptorSetCount);
         for (uint32_t i = 0; i < bindInfo.descriptorSetCount; i++)
         {
-            descriptorSets.emplace_back(*descriptorSet(bindInfo.descriptorSets[i]));
+            descriptorSetsVector.emplace_back(*descriptorSet(bindInfo.descriptorSets[i]));
         }
         vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout_,
                                 bindInfo.firstSet,
                                 bindInfo.descriptorSetCount,
-                                descriptorSets.data(),
+                                descriptorSetsVector.data(),
                                 bindInfo.dynamicOffsetCount,
                                 bindInfo.dynamicOffsets);
     }

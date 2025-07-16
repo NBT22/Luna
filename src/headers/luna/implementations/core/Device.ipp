@@ -322,7 +322,7 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
                    structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
     }
 
-    const void *pNext = reinterpret_cast<const void *>(*(requiredFeatures + 1));
+    const void *pNext = reinterpret_cast<const void *>(*reinterpret_cast<const uint64_t *>(requiredFeatures + 1));
     if (pNext != nullptr)
     {
         return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));
