@@ -55,7 +55,7 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Install Dependencies For Linux
-      if: ${{ matrix.os == ubuntu-latest }}
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       run: sudo apt-get update && sudo apt install libxcb1-dev libx11-dev libxrandr-dev libwayland-dev libdirectfb-dev
 
     - name: Configure CMake
