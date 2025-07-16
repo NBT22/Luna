@@ -43,7 +43,7 @@ macro(findVulkan)
 endmacro()
 
 macro(findSDL3)
-    makePackageAvailable(https://github.com/libsdl-org/SDL.git release-3.*.* SDL3 CONFIG REQUIRED)
+    makePackageAvailable(https://github.com/libsdl-org/SDL.git release-3.*.* SDL3 CONFIG)
 endmacro()
 
 macro(fetchVMA)
