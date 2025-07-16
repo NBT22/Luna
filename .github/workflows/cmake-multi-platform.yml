@@ -55,7 +55,7 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Install Dependencies For Linux
-      run: sudo apt-get update && sudo apt install libxcb1-dev libx11-dev libx11-xcb-dev libxrandr-dev libwayland-dev libdirectfb-dev
+      run: sudo apt-get update && sudo apt install libxcb1-dev libx11-dev libx11-xcb-dev libxrandr-dev libwayland-dev libdirectfb-dev libcglm-dev
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
