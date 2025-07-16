@@ -1,11 +1,20 @@
 include(FetchContent)
+include(CheckIncludeFile)
+
+function(getLatestPackageVersion gitRepo versionSplat)
+    find_package(Git 2.18 REQUIRED)
+    if (WIN32)
+        execute_process(COMMAND powershell -command "((& '${GIT_EXECUTABLE}' -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort=version:refname --tags ${gitRepo} '${versionSplat}' | Select-Object -Last 1) -Split '/')[2]" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE LATEST_RELEASE)
+    else ()
+        execute_process(COMMAND ${GIT_EXECUTABLE} -c "versionsort.suffix=-" ls-remote --exit-code --refs --sort=version:refname --tags ${gitRepo} "${versionSplat}" COMMAND tail --lines=1 COMMAND cut --delimiter=/ --fields=3 COMMAND tr -d "\n" OUTPUT_VARIABLE LATEST_RELEASE)
+    endif ()
+    set(LATEST_RELEASE ${LATEST_RELEASE} PARENT_SCOPE)
+endfunction()
 
 function(findVulkanHeaders)
-    find_package(Vulkan)
+    find_package(Vulkan QUIET)
     if (NOT Vulkan_FOUND)
-        find_package(Git 2.18 REQUIRED)
-        # TODO: Windows support - The git command should work, but I don't think tail, cut, or tr exist
-        execute_process(COMMAND ${GIT_EXECUTABLE} -c "versionsort.suffix=-" ls-remote --exit-code --refs --sort=version:refname --tags https://github.com/KhronosGroup/Vulkan-Headers.git "v1.4.*" COMMAND tail --lines=1 COMMAND cut --delimiter=/ --fields=3 COMMAND tr -d "\n" OUTPUT_VARIABLE LATEST_RELEASE)
+        getLatestPackageVersion(https://github.com/KhronosGroup/Vulkan-Headers.git v1.4.*)
 
         FetchContent_Declare(
                 Headers
@@ -21,11 +30,10 @@ function(findVulkanHeaders)
 endfunction()
 
 function(findVulkan)
-    find_package(Vulkan)
+    find_package(Vulkan QUIET)
+    add_library(VulkanLibrary INTERFACE)
     if (NOT Vulkan_FOUND)
-        find_package(Git 2.18 REQUIRED)
-        # TODO: Windows support - The git command should work, but I don't think tail, cut, or tr exist
-        execute_process(COMMAND ${GIT_EXECUTABLE} -c "versionsort.suffix=-" ls-remote --exit-code --refs --sort=version:refname --tags https://github.com/KhronosGroup/Vulkan-Headers.git "v1.4.*" COMMAND tail --lines=1 COMMAND cut --delimiter=/ --fields=3 COMMAND tr -d "\n" OUTPUT_VARIABLE LATEST_RELEASE)
+        getLatestPackageVersion(https://github.com/KhronosGroup/Vulkan-Headers.git v1.4.*)
 
         FetchContent_Declare(
                 Headers
@@ -43,22 +51,18 @@ function(findVulkan)
         )
         FetchContent_MakeAvailable(Headers Loader)
 
-        add_library(VulkanLibrary INTERFACE)
         target_include_directories(VulkanLibrary INTERFACE ${VULKAN_HEADERS_SOURCE_DIR}/include ${VULKAN_LOADER_SOURCE_DIR}/loader)
         target_link_libraries(VulkanLibrary INTERFACE Vulkan::Loader)
     else ()
-        add_library(VulkanLibrary INTERFACE)
         target_include_directories(VulkanLibrary INTERFACE ${Vulkan_INCLUDE_DIRS})
         target_link_libraries(VulkanLibrary INTERFACE Vulkan::Vulkan)
     endif ()
 endfunction()
 
 function(findSDL3)
-    find_package(SDL3 CONFIG)
+    find_package(SDL3 CONFIG QUIET)
     if (NOT SDL3_FOUND)
-        find_package(Git 2.18 REQUIRED)
-        # TODO: Windows support - The git command should work, but I don't think tail, cut, or tr exist
-        execute_process(COMMAND ${GIT_EXECUTABLE} -c "versionsort.suffix=-" ls-remote --exit-code --refs --sort=version:refname --tags https://github.com/libsdl-org/SDL.git "release-3.*.*" COMMAND tail --lines=1 COMMAND cut --delimiter=/ --fields=3 COMMAND tr -d "\n" OUTPUT_VARIABLE LATEST_RELEASE)
+        getLatestPackageVersion(https://github.com/libsdl-org/SDL.git release-3.*.*)
 
         FetchContent_Declare(
                 SDL3
@@ -68,6 +72,24 @@ function(findSDL3)
                 GIT_PROGRESS TRUE
         )
         FetchContent_MakeAvailable(SDL3)
+    endif ()
+endfunction()
+
+function(fetchCglm)
+    check_include_file("cglm/cglm.h" cglm_FOUND)
+    if (NOT cglm_FOUND)
+        getLatestPackageVersion(https://github.com/recp/cglm.git v0.*.*)
+
+        FetchContent_Declare(
+                cglm
+                GIT_REPOSITORY https://github.com/recp/cglm.git
+                GIT_TAG ${LATEST_RELEASE}
+                GIT_SHALLOW TRUE
+                GIT_PROGRESS TRUE
+        )
+        FetchContent_MakeAvailable(cglm)
+    else()
+        add_library(cglm INTERFACE)
     endif ()
 endfunction()
 
