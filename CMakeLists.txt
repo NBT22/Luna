@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.30)
-project(Luna CXX)
+project(Luna C CXX)
 
 include(cmake/options.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/findPackages.cmake)
+include(cmake/findPackages.cmake)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
@@ -20,22 +20,22 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release" AND ENABLE_LTO)
     endif ()
 endif ()
 
-set(COMMON_FLAGS "-Wpedantic -Wall -Wextra -Wno-missing-field-initializers")
-if (USE_PIPES)
-    set(COMMON_FLAGS "-pipe ${COMMON_FLAGS}")
+string(REPLACE " " ";" COMMON_FLAGS $<$<COMPILE_LANGUAGE:C>:${CMAKE_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_FLAGS}>)
+string(REPLACE " " ";" DEBUG_FLAGS $<$<COMPILE_LANGUAGE:C>:${CMAKE_C_FLAGS_DEBUG}>$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_FLAGS_DEBUG}>)
+string(REPLACE " " ";" RELEASE_FLAGS $<$<COMPILE_LANGUAGE:C>:${CMAKE_C_FLAGS_RELEASE}>$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CXX_FLAGS_RELEASE}>)
+if (MSVC)
+    set(COMMON_FLAGS /Wall ${COMMON_FLAGS})
+    set(DEBUG_FLAGS ${COMMON_FLAGS} ${DEBUG_FLAGS} /Zi /Od)
+    set(RELEASE_FLAGS ${COMMON_FLAGS} ${RELEASE_FLAGS} /O2 /DNDEBUG)
+else ()
+    set(COMMON_FLAGS $<$<BOOL:${USE_PIPES}>:-pipe> -Wpedantic -Wall -Wextra -Wno-missing-field-initializers ${COMMON_FLAGS})
+    set(DEBUG_FLAGS ${COMMON_FLAGS} ${DEBUG_FLAGS} -g -O0)
+    set(RELEASE_FLAGS ${COMMON_FLAGS} ${RELEASE_FLAGS} -O3 -DNDEBUG)
 endif ()
 
-set(CMAKE_C_FLAGS "${COMMON_FLAGS} ${CMAKE_C_FLAGS}")
-set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} ${CMAKE_C_FLAGS_DEBUG} -g -O0")
-set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} ${CMAKE_C_FLAGS_RELEASE} -g -O3 -DNDEBUG")
+fetchVMA()
+findVulkan()
 
-set(CMAKE_CXX_FLAGS "${COMMON_FLAGS} ${CMAKE_CXX_FLAGS} -isystem ${CMAKE_SOURCE_DIR}/vma/include")
-set(CMAKE_CXX_FLAGS_DEBUG "${COMMON_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
-set(CMAKE_CXX_FLAGS_RELEASE "${COMMON_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
-
-findVulkanHeaders()
-
-add_subdirectory(vma)
 add_library(Luna STATIC
         src/luna/core/Buffer.cpp
         src/luna/core/CommandPool.cpp
@@ -81,7 +81,10 @@ add_library(Luna STATIC
         include/luna/lunaRenderPass.h
         include/luna/lunaTypes.h
 )
-target_include_directories(Luna PRIVATE ${CMAKE_SOURCE_DIR}/src/headers ${CMAKE_SOURCE_DIR}/include ${Vulkan_INCLUDE_DIRS})
+target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
+target_link_libraries(Luna PUBLIC VMA VulkanLibrary)
+target_include_directories(Luna PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(Luna PRIVATE ${CMAKE_SOURCE_DIR}/src/headers)
 
 if (EXAMPLES)
     add_subdirectory(example)
