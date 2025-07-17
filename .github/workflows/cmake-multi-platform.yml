@@ -87,7 +87,7 @@ jobs:
       with:
         # Artifact name
         name: Luna_${{ matrix.build_type }}.lib
-        path: build/Luna.lib
+        path: build/${{ matrix.build_type }}/Luna.lib
         retention-days: 90
 
 
