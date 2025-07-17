@@ -71,6 +71,25 @@ jobs:
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+      
+    - name: Upload Compiled Binary
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        # Artifact name
+        name: 'libLuna.a'
+        path: build-${{ matrix.build_type }}/libLuna.a
+        retention-days: 90
+
+    - name: Upload Compiled Binary
+      if: ${{ matrix.os == 'windows-latest' }}
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        # Artifact name
+        name: 'Luna.lib'
+        path: build-${{ matrix.build_type }}/Luna.lib
+        retention-days: 90
+
 
 #    - name: Test
 #      working-directory: ${{ steps.strings.outputs.build-output-dir }}
