@@ -59,8 +59,8 @@ add_library(Luna STATIC
         src/headers/luna/core/Luna.hpp
         src/headers/luna/core/RenderPass.hpp
         src/headers/luna/core/Semaphore.hpp
-        src/headers/luna/core/CommandBuffer/CommandBuffer.hpp
-        src/headers/luna/core/CommandBuffer/CommandBufferArray.hpp
+        src/headers/luna/core/commandBuffer/CommandBuffer.hpp
+        src/headers/luna/core/commandBuffer/CommandBufferArray.hpp
         src/headers/luna/implementations/core/Buffer.ipp
         src/headers/luna/implementations/core/CommandPool.ipp
         src/headers/luna/implementations/core/DescriptorSetLayout.ipp
