@@ -22,9 +22,9 @@ inline void CommandPool::destroy(const VkDevice logicalDevice)
     {
         return;
     }
-    for (const std::unique_ptr<CommandBuffer> &commandBuffer: commandBuffers_)
+    for (const CommandBuffer &commandBuffer: commandBuffers_)
     {
-        commandBuffer->destroy(logicalDevice);
+        commandBuffer.destroy(logicalDevice);
     }
     vkDestroyCommandPool(logicalDevice, commandPool_, nullptr);
     isDestroyed_ = true;
@@ -51,53 +51,32 @@ inline VkResult CommandPool::allocate(const VkDevice logicalDevice, const LunaCo
     CHECK_RESULT_RETURN(allocate(logicalDevice, poolCreateInfo));
     return VK_SUCCESS;
 }
-template<uint32_t arraySize> VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
-                                                                         VkCommandBufferLevel commandBufferLevel,
-                                                                         const void *allocateInfoPNext)
+inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
+                                                   VkCommandBufferLevel commandBufferLevel,
+                                                   const void *allocateInfoPNext,
+                                                   const uint32_t arraySize)
 {
     assert(!isDestroyed_);
-    using std::make_unique;
-    if (arraySize == 1)
-    {
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(make_unique<commandBuffer::CommandBuffer>(logicalDevice,
-                                                                                                commandPool_,
-                                                                                                commandBufferLevel,
-                                                                                                allocateInfoPNext)));
-    } else
-    {
-        using commandBuffer::CommandBufferArray;
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(make_unique<CommandBufferArray<arraySize>>(logicalDevice,
-                                                                                                 commandPool_,
-                                                                                                 commandBufferLevel,
-                                                                                                 allocateInfoPNext)));
-    }
+    TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice,
+                                                  commandPool_,
+                                                  commandBufferLevel,
+                                                  allocateInfoPNext,
+                                                  arraySize));
     return VK_SUCCESS;
 }
-template<uint32_t arraySize>
-VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
-                                            VkCommandBufferLevel commandBufferLevel,
-                                            const void *allocateInfoPNext,
-                                            const VkSemaphoreCreateInfo *semaphoreCreateInfo)
+inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
+                                                   VkCommandBufferLevel commandBufferLevel,
+                                                   const void *allocateInfoPNext,
+                                                   const VkSemaphoreCreateInfo *semaphoreCreateInfo,
+                                                   const uint32_t arraySize)
 {
     assert(!isDestroyed_);
-    using std::make_unique;
-    SUPRESS_MSVC_WARNING(4127)
-    if (arraySize == 1)
-    {
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(make_unique<commandBuffer::CommandBuffer>(logicalDevice,
-                                                                                                commandPool_,
-                                                                                                commandBufferLevel,
-                                                                                                allocateInfoPNext,
-                                                                                                semaphoreCreateInfo)));
-    } else
-    {
-        using commandBuffer::CommandBufferArray;
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(make_unique<CommandBufferArray<arraySize>>(logicalDevice,
-                                                                                                 commandPool_,
-                                                                                                 commandBufferLevel,
-                                                                                                 allocateInfoPNext,
-                                                                                                 semaphoreCreateInfo)));
-    }
+    TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice,
+                                                  commandPool_,
+                                                  commandBufferLevel,
+                                                  allocateInfoPNext,
+                                                  semaphoreCreateInfo,
+                                                  arraySize));
     return VK_SUCCESS;
 }
 // inline VkResult CommandPool::reset(const VkDevice logicalDevice,
@@ -152,11 +131,11 @@ VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
 
 inline const CommandBuffer &CommandPool::commandBuffer(const uint32_t index) const
 {
-    return *commandBuffers_.at(index);
+    return commandBuffers_.at(index);
 }
 inline CommandBuffer &CommandPool::commandBuffer(const uint32_t index)
 {
-    return *commandBuffers_.at(index);
+    return commandBuffers_.at(index);
 }
 } // namespace luna::core
 

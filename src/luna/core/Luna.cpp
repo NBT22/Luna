@@ -89,11 +89,9 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
     assert(capabilities.minImageExtent.height <= swapchain.extent.height &&
            swapchain.extent.height <= capabilities.maxImageExtent.height);
 
-    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
-    const auto &commandBufferArray = dynamic_cast<const commandBuffer::CommandBufferArray<5> &>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferArray.waitForAllFences(device));
-    CHECK_RESULT_RETURN(const_cast<commandBuffer::CommandBufferArray<5> &>(commandBufferArray)
-                                .recreateSemaphores(device));
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CHECK_RESULT_RETURN(commandBuffer.waitForAllFences(device));
+    CHECK_RESULT_RETURN(commandBuffer.recreateSemaphores(device));
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
         vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);

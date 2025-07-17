@@ -4,17 +4,15 @@
 
 #pragma once
 
-#include <luna/core/CommandBuffer.hpp>
 #include <luna/core/Fence.hpp>
-#include <cstdio>
+#include <luna/core/Semaphore.hpp>
 
 namespace luna::core::commandBuffer
 {
-template<uint32_t arraySize> class CommandPool;
-
-class CommandBuffer final: public virtual core::CommandBuffer
+class CommandBuffer
 {
     public:
+        CommandBuffer() = default;
         CommandBuffer(VkDevice logicalDevice,
                       VkCommandPool commandPool,
                       VkCommandBufferLevel commandBufferLevel,
@@ -25,21 +23,21 @@ class CommandBuffer final: public virtual core::CommandBuffer
                       const void *allocateInfoPNext,
                       const VkSemaphoreCreateInfo *semaphoreCreateInfo);
 
-        operator const VkCommandBuffer &() const override;
-        const VkCommandBuffer *operator&() const override;
+        operator const VkCommandBuffer &() const;
+        const VkCommandBuffer *operator&() const;
 
-        void destroy(VkDevice logicalDevice) const override;
+        void destroy(VkDevice logicalDevice) const;
 
-        VkResult beginSingleUseCommandBuffer() override;
+        VkResult beginSingleUseCommandBuffer();
         VkResult submitCommandBuffer(VkQueue queue,
                                      const VkSubmitInfo &submitInfo,
-                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) override;
-        bool getAndSetIsSignaled(bool value) override;
-        VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const override;
-        VkResult resetFence(VkDevice logicalDevice) override;
+                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        bool getAndSetIsSignaled(bool value);
+        VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
+        VkResult resetFence(VkDevice logicalDevice);
 
-        [[nodiscard]] bool isRecording() const override;
-        [[nodiscard]] const Semaphore &semaphore() const override;
+        [[nodiscard]] bool isRecording() const;
+        [[nodiscard]] const Semaphore &semaphore() const;
 
     private:
         bool isRecording_{};

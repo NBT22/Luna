@@ -4,29 +4,65 @@
 
 #pragma once
 
-#include <luna/core/Semaphore.hpp>
+#include <luna/core/commandBuffer/CommandBuffer.hpp>
+#include <luna/core/commandBuffer/CommandBufferArray.hpp>
 
 namespace luna::core
 {
 class CommandBuffer
 {
     public:
-        virtual ~CommandBuffer() = default;
+        enum class Type : uint8_t
+        {
+            SINGLE,
+            ARRAY,
+        };
 
-        virtual operator const VkCommandBuffer &() const = 0;
-        virtual const VkCommandBuffer *operator&() const = 0;
+        CommandBuffer(const CommandBuffer& commandBuffer);
+        CommandBuffer(VkDevice logicalDevice,
+                      VkCommandPool commandPool,
+                      VkCommandBufferLevel commandBufferLevel,
+                      const void *allocateInfoPNext,
+                      uint32_t arraySize);
+        CommandBuffer(VkDevice logicalDevice,
+                      VkCommandPool commandPool,
+                      VkCommandBufferLevel commandBufferLevel,
+                      const void *allocateInfoPNext,
+                      const VkSemaphoreCreateInfo *semaphoreCreateInfo,
+                      uint32_t arraySize);
 
-        virtual void destroy(VkDevice logicalDevice) const = 0;
+        ~CommandBuffer();
 
-        virtual VkResult beginSingleUseCommandBuffer() = 0;
-        virtual VkResult submitCommandBuffer(VkQueue queue,
-                                             const VkSubmitInfo &submitInfo,
-                                             VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) = 0;
-        virtual bool getAndSetIsSignaled(bool value) = 0;
-        virtual VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const = 0;
-        virtual VkResult resetFence(VkDevice logicalDevice) = 0;
+        operator const VkCommandBuffer &() const;
+        const VkCommandBuffer *operator&() const;
 
-        [[nodiscard]] virtual bool isRecording() const = 0;
-        [[nodiscard]] virtual const Semaphore &semaphore() const = 0;
+        void destroy(VkDevice logicalDevice) const;
+
+        VkResult beginSingleUseCommandBuffer();
+        VkResult submitCommandBuffer(VkQueue queue,
+                                     const VkSubmitInfo &submitInfo,
+                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        bool getAndSetIsSignaled(bool value);
+        VkResult waitForAllFences(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
+        VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
+        VkResult resetFence(VkDevice logicalDevice);
+        VkResult recreateSemaphores(VkDevice logicalDevice);
+
+        [[nodiscard]] bool isRecording() const;
+        [[nodiscard]] const Semaphore &semaphore() const;
+
+        [[nodiscard]] Type type() const;
+        [[nodiscard]] const commandBuffer::CommandBuffer &commandBuffer() const;
+        [[nodiscard]] const commandBuffer::CommandBufferArray &commandBufferArray() const;
+
+    private:
+        Type type_{};
+        union
+        {
+                commandBuffer::CommandBuffer commandBuffer_;
+                commandBuffer::CommandBufferArray commandBufferArray_{};
+        };
 };
 } // namespace luna::core
+
+#include <luna/implementations/core/CommandBuffer.ipp>
