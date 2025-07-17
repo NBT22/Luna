@@ -78,7 +78,7 @@ jobs:
       with:
         # Artifact name
         name: 'libLuna.a'
-        path: build-${{ matrix.build_type }}/libLuna.a
+        path: build/libLuna.a
         retention-days: 90
 
     - name: Upload Compiled Binary
@@ -87,7 +87,7 @@ jobs:
       with:
         # Artifact name
         name: 'Luna.lib'
-        path: build-${{ matrix.build_type }}/Luna.lib
+        path: build/Luna.lib
         retention-days: 90
 
 
