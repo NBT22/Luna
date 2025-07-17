@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.30)
 project(examples C)
 
-include(${CMAKE_SOURCE_DIR}/cmake/options.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/findPackages.cmake)
+include(${LUNA_SOURCE_DIR}/cmake/options.cmake)
+include(${LUNA_SOURCE_DIR}/cmake/findPackages.cmake)
 
 findSDL3()
 
@@ -14,7 +14,7 @@ if (LUNA_EXAMPLE_ALL OR LUNA_EXAMPLE_HelloTriangle)
 endif ()
 
 if (LUNA_EXAMPLE_ALL OR LUNA_EXAMPLE_LunaCube)
-    configure_file(${CMAKE_SOURCE_DIR}/logo.png ${CMAKE_CURRENT_BINARY_DIR}/logo.png COPYONLY)
+    configure_file(${LUNA_SOURCE_DIR}/logo.png ${CMAKE_CURRENT_BINARY_DIR}/logo.png COPYONLY)
 
     fetchLodePNG()
     fetchCglm()

@@ -84,9 +84,10 @@ add_library(Luna STATIC
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
 target_link_libraries(Luna PUBLIC VMA VulkanLibrary)
-target_include_directories(Luna PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(Luna PRIVATE ${CMAKE_SOURCE_DIR}/src/headers)
+target_include_directories(Luna PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(Luna PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/headers)
 
 if (LUNA_EXAMPLES)
+    set(LUNA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
     add_subdirectory(example)
 endif ()
