@@ -77,7 +77,7 @@ jobs:
       uses: actions/upload-artifact@v4.6.2
       with:
         # Artifact name
-        name: 'libLuna.a'
+        name: libLuna_${{ matrix.build_type }}_${{ matrix.c_compiler }}.a
         path: build/libLuna.a
         retention-days: 90
 
@@ -86,7 +86,7 @@ jobs:
       uses: actions/upload-artifact@v4.6.2
       with:
         # Artifact name
-        name: 'Luna.lib'
+        name: Luna_${{ matrix.build_type }}.lib
         path: build/Luna.lib
         retention-days: 90
 
