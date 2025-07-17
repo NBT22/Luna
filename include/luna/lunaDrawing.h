@@ -83,7 +83,7 @@ VkResult lunaResizeSwapchain(uint32_t renderPassResizeInfoCount,
                              const LunaRenderPassResizeInfo *renderPassResizeInfos,
                              const VkExtent2D *targetExtent,
                              VkExtent2D *newSwapchainExtent);
-VkResult lunaPresentSwapchain();
+VkResult lunaPresentSwapchain(void);
 
 #ifdef __cplusplus
 }

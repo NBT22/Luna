@@ -11,6 +11,8 @@ namespace luna::core
 class CommandBuffer
 {
     public:
+        virtual ~CommandBuffer() = default;
+
         virtual operator const VkCommandBuffer &() const = 0;
         virtual const VkCommandBuffer *operator&() const = 0;
 

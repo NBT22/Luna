@@ -6,6 +6,7 @@
 
 #include <luna/core/CommandBuffer.hpp>
 #include <luna/core/Fence.hpp>
+#include <cstdio>
 
 namespace luna::core::commandBuffer
 {

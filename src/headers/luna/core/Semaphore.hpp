@@ -30,7 +30,7 @@ class Semaphore
     private:
         // bool isDestroyed_{true};
         bool isSignaled_{};
-        void *createInfoPNext{};
+        // void *createInfoPNext{};
         VkPipelineStageFlags stageMask_{};
         VkSemaphore semaphore_{};
 };
