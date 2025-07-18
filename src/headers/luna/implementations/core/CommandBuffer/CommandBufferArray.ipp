@@ -14,6 +14,9 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
                                               const void *allocateInfoPNext,
                                               const uint32_t count)
 {
+    commandBuffers_.resize(count);
+    fences_.resize(count);
+    isRecordings_.resize(count);
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .pNext = allocateInfoPNext,
@@ -40,12 +43,22 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
                                               const uint32_t count):
     CommandBufferArray(logicalDevice, commandPool, commandBufferLevel, allocateInfoPNext, count)
 {
+    semaphores_.resize(count);
     for (Semaphore &semaphore: semaphores_)
     {
         semaphore = Semaphore(logicalDevice, semaphoreCreateInfo);
     }
 }
 
+constexpr CommandBufferArray &CommandBufferArray::operator=(const CommandBufferArray &other)
+{
+    index_ = other.index_;
+    isRecordings_ = other.isRecordings_;
+    commandBuffers_ = other.commandBuffers_;
+    fences_ = other.fences_;
+    semaphores_ = other.semaphores_;
+    return *this;
+}
 inline CommandBufferArray::operator const VkCommandBuffer &() const
 {
     return commandBuffers_.at(index_);
@@ -57,13 +70,24 @@ inline const VkCommandBuffer *CommandBufferArray::operator&() const
 
 inline void CommandBufferArray::destroy(const VkDevice logicalDevice) const
 {
-    assert(semaphores_.size() != fences_.size());
+    assert(semaphores_.size() == fences_.size());
     for (size_t i = 0; i < semaphores_.size(); i++)
     {
         assert(!isRecordings_[i]);
-        vkDestroyFence(logicalDevice, fences_[i], nullptr);
+        fences_[i].destroy(logicalDevice);
         semaphores_[i].destroy(logicalDevice);
     }
+}
+inline void CommandBufferArray::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool) const
+{
+    assert(semaphores_.size() == fences_.size());
+    for (size_t i = 0; i < semaphores_.size(); i++)
+    {
+        assert(!isRecordings_[i]);
+        fences_[i].destroy(logicalDevice);
+        semaphores_[i].destroy(logicalDevice);
+    }
+    vkFreeCommandBuffers(logicalDevice, commandPool, commandBuffers_.size(), commandBuffers_.data());
 }
 
 inline VkResult CommandBufferArray::beginSingleUseCommandBuffer()

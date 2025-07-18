@@ -57,6 +57,17 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     assert(capabilities.minImageCount <= core::swapchain.imageCount &&
            core::swapchain.imageCount <= capabilities.maxImageCount);
     CHECK_RESULT_RETURN(core::device.createSemaphores(core::swapchain.imageCount));
+
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    core::device.commandPools().graphics.commandBuffer().resizeArray(core::device,
+                                                                     core::device.commandPools().graphics,
+                                                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                     nullptr,
+                                                                     &semaphoreCreateInfo,
+                                                                     core::swapchain.imageCount);
+
     core::swapchain.imageIndex = -1u;
     return VK_SUCCESS;
 }

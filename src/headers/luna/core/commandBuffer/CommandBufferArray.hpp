@@ -4,16 +4,22 @@
 
 #pragma once
 
+#include <cstring>
 #include <luna/core/Fence.hpp>
 #include <luna/core/Semaphore.hpp>
+
+namespace luna::core
+{
+class CommandBuffer;
+} // namespace luna::core
 
 namespace luna::core::commandBuffer
 {
 class CommandBufferArray
 {
     public:
+        friend class core::CommandBuffer;
         CommandBufferArray() = default;
-        // CommandBufferArray(CommandBufferArray&&) {}
         CommandBufferArray(VkDevice logicalDevice,
                            VkCommandPool commandPool,
                            VkCommandBufferLevel commandBufferLevel,
@@ -26,12 +32,12 @@ class CommandBufferArray
                            const VkSemaphoreCreateInfo *semaphoreCreateInfo,
                            uint32_t count);
 
-        // constexpr CommandBufferArray& operator=(const CommandBufferArray&) {return *this;}
-
+        constexpr CommandBufferArray &operator=(const CommandBufferArray &other);
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
         void destroy(VkDevice logicalDevice) const;
+        void destroy(VkDevice logicalDevice, VkCommandPool commandPool) const;
 
         VkResult beginSingleUseCommandBuffer();
         VkResult submitCommandBuffer(VkQueue queue,
@@ -48,7 +54,7 @@ class CommandBufferArray
 
     private:
         uint32_t index_{};
-        std::vector<bool> isRecordings_{};
+        std::vector<uint8_t> isRecordings_{};
         std::vector<VkCommandBuffer> commandBuffers_{};
         std::vector<Fence> fences_{};
         std::vector<Semaphore> semaphores_{};

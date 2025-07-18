@@ -6,6 +6,7 @@
 
 #include <luna/core/commandBuffer/CommandBuffer.hpp>
 #include <luna/core/commandBuffer/CommandBufferArray.hpp>
+#include <string>
 
 namespace luna::core
 {
@@ -18,7 +19,7 @@ class CommandBuffer
             ARRAY,
         };
 
-        CommandBuffer(const CommandBuffer& commandBuffer);
+        CommandBuffer(const CommandBuffer &other);
         CommandBuffer(VkDevice logicalDevice,
                       VkCommandPool commandPool,
                       VkCommandBufferLevel commandBufferLevel,
@@ -38,6 +39,13 @@ class CommandBuffer
 
         void destroy(VkDevice logicalDevice) const;
 
+        void resizeArray(VkDevice logicalDevice,
+                         VkCommandPool commandPool,
+                         VkCommandBufferLevel commandBufferLevel,
+                         const void *allocateInfoPNext,
+                         const VkSemaphoreCreateInfo *semaphoreCreateInfo,
+                         uint32_t arraySize,
+                         uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
         VkResult submitCommandBuffer(VkQueue queue,
                                      const VkSubmitInfo &submitInfo,
@@ -52,16 +60,14 @@ class CommandBuffer
         [[nodiscard]] const Semaphore &semaphore() const;
 
         [[nodiscard]] Type type() const;
+        [[nodiscard]] std::string typeAsString() const;
         [[nodiscard]] const commandBuffer::CommandBuffer &commandBuffer() const;
         [[nodiscard]] const commandBuffer::CommandBufferArray &commandBufferArray() const;
 
     private:
         Type type_{};
-        union
-        {
-                commandBuffer::CommandBuffer commandBuffer_;
-                commandBuffer::CommandBufferArray commandBufferArray_{};
-        };
+        commandBuffer::CommandBuffer commandBuffer_{};
+        commandBuffer::CommandBufferArray commandBufferArray_{};
 };
 } // namespace luna::core
 

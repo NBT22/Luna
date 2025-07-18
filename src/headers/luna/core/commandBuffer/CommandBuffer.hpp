@@ -27,6 +27,7 @@ class CommandBuffer
         const VkCommandBuffer *operator&() const;
 
         void destroy(VkDevice logicalDevice) const;
+        void destroy(VkDevice logicalDevice, VkCommandPool commandPool);
 
         VkResult beginSingleUseCommandBuffer();
         VkResult submitCommandBuffer(VkQueue queue,

@@ -49,8 +49,16 @@ inline const VkCommandBuffer *CommandBuffer::operator&() const
 inline void CommandBuffer::destroy(const VkDevice logicalDevice) const
 {
     assert(!isRecording_);
-    vkDestroyFence(logicalDevice, fence_, nullptr);
+    fence_.destroy(logicalDevice);
     semaphore_.destroy(logicalDevice);
+}
+inline void CommandBuffer::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool)
+{
+    assert(!isRecording_);
+    fence_.destroy(logicalDevice);
+    semaphore_.destroy(logicalDevice);
+    vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer_);
+    commandBuffer_ = VK_NULL_HANDLE;
 }
 
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
