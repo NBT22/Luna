@@ -147,7 +147,7 @@ inline void CommandBuffer::resizeArray(const VkDevice logicalDevice,
             type_ = Type::ARRAY;
             break;
         case Type::ARRAY:
-            for (const auto isRecording: commandBufferArray_.isRecordings_)
+            for ([[maybe_unused]] const auto isRecording: commandBufferArray_.isRecordings_)
             {
                 assert(!isRecording);
             }
