@@ -260,7 +260,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 
 int main(void)
 {
-    if (!SDL_Init(SDL_INIT_EVENTS))
+    if (!SDL_Init(SDL_INIT_VIDEO))
     {
         return 1;
     }
