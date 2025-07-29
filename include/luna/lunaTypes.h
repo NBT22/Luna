@@ -5,7 +5,7 @@
 #ifndef LUNATYPES_H
 #define LUNATYPES_H
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 
 #ifdef __cplusplus
 extern "C"

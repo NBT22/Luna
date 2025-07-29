@@ -238,6 +238,8 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
         enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
     }
 
+    CHECK_RESULT_RETURN(volkInitialize());
+
     const VkApplicationInfo vulkanApplicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .apiVersion = creationInfo->apiVersion,
@@ -251,6 +253,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
         .ppEnabledExtensionNames = creationInfo->extensionNames,
     };
     CHECK_RESULT_RETURN(vkCreateInstance(&createInfo, nullptr, &luna::core::instance));
+    volkLoadInstanceOnly(luna::core::instance);
     return VK_SUCCESS;
 }
 VkResult lunaDestroyInstance()
