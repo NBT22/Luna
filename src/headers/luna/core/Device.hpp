@@ -22,7 +22,7 @@ template<typename T> struct FamilyValues
 class Device
 {
     public:
-        friend VkResult(::lunaBeginRenderPass(LunaRenderPass, const LunaRenderPassBeginInfo *beginInfo));
+        friend VkResult(::lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo));
 
         Device() = default;
         explicit Device(const LunaDeviceCreationInfo2 &creationInfo);

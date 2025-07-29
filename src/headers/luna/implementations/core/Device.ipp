@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
-#include <iostream>
 
 namespace luna::core
 {
@@ -322,6 +321,7 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
                    structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
     }
 
+    // NOLINTNEXTLINE(*-no-int-to-ptr)
     const void *pNext = reinterpret_cast<const void *>(*reinterpret_cast<const uint64_t *>(requiredFeatures + 1));
     if (pNext != nullptr)
     {
@@ -331,7 +331,7 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
 }
 inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfaceKHR surface)
 {
-    uint32_t count;
+    uint32_t count = 0;
     CHECK_RESULT_THROW(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, nullptr));
     if (count == 0)
     {
@@ -348,7 +348,7 @@ inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfac
     vkGetPhysicalDeviceProperties(device, &properties_);
     vkGetPhysicalDeviceMemoryProperties(device, &memoryProperties_);
 
-    uint32_t extensionCount;
+    uint32_t extensionCount = 0;
     CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr));
     if (extensionCount == 0)
     {
@@ -361,6 +361,7 @@ inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfac
                                                             availableExtensions.data()));
     for (uint32_t j = 0; j < extensionCount; j++)
     {
+        // NOLINTNEXTLINE(*-pro-bounds-array-to-pointer-decay)
         if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
         {
             return true;

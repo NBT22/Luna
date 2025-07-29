@@ -10,6 +10,7 @@
 #ifdef __cplusplus
 extern "C"
 {
+// NOLINTBEGIN
 #else
 #include <stdbool.h>
 #endif
@@ -378,6 +379,7 @@ typedef struct
 } LunaRenderPassResizeInfo;
 
 #ifdef __cplusplus
+// NOLINTEND
 }
 #endif
 

@@ -8,7 +8,7 @@ namespace luna::core
 {
 inline RenderPass *renderPass(const LunaRenderPass renderPass)
 {
-    return const_cast<RenderPass *>(static_cast<const RenderPass *>(renderPass));
+    return const_cast<RenderPass *>(static_cast<const RenderPass *>(renderPass)); // NOLINT(*-pro-type-const-cast)
 }
 inline const VkDescriptorPool *descriptorPool(const LunaDescriptorPool descriptorPool)
 {

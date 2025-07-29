@@ -8,9 +8,9 @@
 
 namespace luna::helpers
 {
-VkResult createPipelineLayout(const LunaPipelineLayoutCreationInfo &layoutCreationInfo,
-                              std::vector<LunaPushConstantsRange> &pushConstantsRanges,
-                              VkPipelineLayout *layout)
+static VkResult createPipelineLayout(const LunaPipelineLayoutCreationInfo &layoutCreationInfo,
+                                     std::vector<LunaPushConstantsRange> &pushConstantsRanges,
+                                     VkPipelineLayout *layout)
 {
     const uint32_t descriptorSetLayoutCount = layoutCreationInfo.descriptorSetLayoutCount;
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts;

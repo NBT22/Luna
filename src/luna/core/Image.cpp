@@ -2,7 +2,6 @@
 // Created by NBT22 on 3/11/25.
 //
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <luna/core/Image.hpp>

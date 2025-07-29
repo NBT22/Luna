@@ -78,8 +78,6 @@ inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
     }
 }
 
-inline CommandBuffer::~CommandBuffer() {}
-
 inline CommandBuffer::operator const VkCommandBuffer &() const
 {
     switch (type_)
@@ -112,31 +110,33 @@ inline void CommandBuffer::destroy(const VkDevice logicalDevice) const
     switch (type_)
     {
         case Type::SINGLE:
-            return commandBuffer_.destroy(logicalDevice);
+            commandBuffer_.destroy(logicalDevice);
+            break;
         case Type::ARRAY:
-            return commandBufferArray_.destroy(logicalDevice);
+            commandBufferArray_.destroy(logicalDevice);
+            break;
         default:
             throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in destroy!");
     }
 }
 
-inline void CommandBuffer::resizeArray(const VkDevice logicalDevice,
-                                       const VkCommandPool commandPool,
-                                       const VkCommandBufferLevel commandBufferLevel,
-                                       const void *allocateInfoPNext,
-                                       const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                                       const uint32_t arraySize,
-                                       const uint64_t timeout)
+inline VkResult CommandBuffer::resizeArray(const VkDevice logicalDevice,
+                                           const VkCommandPool commandPool,
+                                           const VkCommandBufferLevel commandBufferLevel,
+                                           const void *allocateInfoPNext,
+                                           const VkSemaphoreCreateInfo *semaphoreCreateInfo,
+                                           const uint32_t arraySize,
+                                           const uint64_t timeout)
 {
     if ((type_ == Type::SINGLE && arraySize == 1) ||
         (type_ == Type::ARRAY && arraySize == commandBufferArray_.commandBuffers_.size()))
     {
-        return;
+        return VK_SUCCESS;
     }
     switch (type_)
     {
         case Type::SINGLE:
-            commandBuffer_.waitForFence(logicalDevice, timeout);
+            CHECK_RESULT_RETURN(commandBuffer_.waitForFence(logicalDevice, timeout));
             commandBuffer_.destroy(logicalDevice, commandPool);
             commandBufferArray_ = commandBuffer::CommandBufferArray(logicalDevice,
                                                                     commandPool,
@@ -151,7 +151,7 @@ inline void CommandBuffer::resizeArray(const VkDevice logicalDevice,
             {
                 assert(!isRecording);
             }
-            commandBufferArray_.waitForAllFences(logicalDevice, timeout);
+            CHECK_RESULT_RETURN(commandBufferArray_.waitForAllFences(logicalDevice, timeout));
             commandBufferArray_.destroy(logicalDevice, commandPool);
             if (arraySize == 1)
             {
@@ -172,6 +172,7 @@ inline void CommandBuffer::resizeArray(const VkDevice logicalDevice,
             }
             break;
     }
+    return VK_SUCCESS;
 }
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
 {

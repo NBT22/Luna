@@ -48,4 +48,4 @@ class CommandBuffer
 };
 } // namespace luna::core::commandBuffer
 
-#include <luna/implementations/core/CommandBuffer/CommandBuffer.ipp>
+#include <luna/implementations/core/commandBuffer/CommandBuffer.ipp>

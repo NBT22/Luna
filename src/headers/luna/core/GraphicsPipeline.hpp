@@ -14,7 +14,7 @@ class GraphicsPipeline
     public:
         static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
 
-        friend VkResult(::lunaPushConstants(LunaGraphicsPipeline));
+        friend VkResult(::lunaPushConstants(LunaGraphicsPipeline pipeline));
 
         GraphicsPipeline() = default;
         explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);

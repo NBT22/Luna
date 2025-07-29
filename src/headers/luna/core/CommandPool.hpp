@@ -6,7 +6,6 @@
 
 #include <luna/core/CommandBuffer.hpp>
 #include <luna/lunaTypes.h>
-#include <memory>
 
 namespace luna::core
 {

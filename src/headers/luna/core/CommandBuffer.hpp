@@ -32,20 +32,18 @@ class CommandBuffer
                       const VkSemaphoreCreateInfo *semaphoreCreateInfo,
                       uint32_t arraySize);
 
-        ~CommandBuffer();
-
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
         void destroy(VkDevice logicalDevice) const;
 
-        void resizeArray(VkDevice logicalDevice,
-                         VkCommandPool commandPool,
-                         VkCommandBufferLevel commandBufferLevel,
-                         const void *allocateInfoPNext,
-                         const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                         uint32_t arraySize,
-                         uint64_t timeout = UINT64_MAX);
+        VkResult resizeArray(VkDevice logicalDevice,
+                             VkCommandPool commandPool,
+                             VkCommandBufferLevel commandBufferLevel,
+                             const void *allocateInfoPNext,
+                             const VkSemaphoreCreateInfo *semaphoreCreateInfo,
+                             uint32_t arraySize,
+                             uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
         VkResult submitCommandBuffer(VkQueue queue,
                                      const VkSubmitInfo &submitInfo,

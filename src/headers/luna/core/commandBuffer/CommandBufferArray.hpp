@@ -32,7 +32,6 @@ class CommandBufferArray
                            const VkSemaphoreCreateInfo *semaphoreCreateInfo,
                            uint32_t count);
 
-        constexpr CommandBufferArray &operator=(const CommandBufferArray &other);
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
@@ -61,4 +60,4 @@ class CommandBufferArray
 };
 } // namespace luna::core::commandBuffer
 
-#include <luna/implementations/core/CommandBuffer/CommandBufferArray.ipp>
+#include <luna/implementations/core/commandBuffer/CommandBufferArray.ipp>

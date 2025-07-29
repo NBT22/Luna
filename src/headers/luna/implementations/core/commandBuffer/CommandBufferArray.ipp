@@ -30,9 +30,9 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    for (size_t i = 0; i < fences_.size(); i++)
+    for (Fence &fence: fences_)
     {
-        CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fences_.at(i)));
+        CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence));
     }
 }
 inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
@@ -50,15 +50,6 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
     }
 }
 
-constexpr CommandBufferArray &CommandBufferArray::operator=(const CommandBufferArray &other)
-{
-    index_ = other.index_;
-    isRecordings_ = other.isRecordings_;
-    commandBuffers_ = other.commandBuffers_;
-    fences_ = other.fences_;
-    semaphores_ = other.semaphores_;
-    return *this;
-}
 inline CommandBufferArray::operator const VkCommandBuffer &() const
 {
     return commandBuffers_.at(index_);
@@ -100,7 +91,7 @@ inline VkResult CommandBufferArray::beginSingleUseCommandBuffer()
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     CHECK_RESULT_RETURN(vkBeginCommandBuffer(commandBuffers_.at(index_), &commandBufferBeginInfo));
-    isRecordings_.at(index_) = true;
+    isRecordings_.at(index_) = 1u;
     return VK_SUCCESS;
 }
 inline VkResult CommandBufferArray::submitCommandBuffer(const VkQueue queue,
@@ -110,7 +101,7 @@ inline VkResult CommandBufferArray::submitCommandBuffer(const VkQueue queue,
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffers_.at(index_)));
     CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fences_.at(index_)));
     fences_.at(index_).setWillBeSignaled(true);
-    isRecordings_.at(index_) = false;
+    isRecordings_.at(index_) = 0u;
     if (submitInfo.signalSemaphoreCount > 0)
     {
         for (uint32_t i = 0; i < submitInfo.signalSemaphoreCount; i++)
@@ -183,7 +174,7 @@ inline VkResult CommandBufferArray::recreateSemaphores(const VkDevice logicalDev
 
 inline bool CommandBufferArray::isRecording() const
 {
-    return isRecordings_.at(index_);
+    return isRecordings_.at(index_) != 0u;
 }
 inline const Semaphore &CommandBufferArray::semaphore() const
 {
