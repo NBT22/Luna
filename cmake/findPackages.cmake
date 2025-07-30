@@ -2,27 +2,37 @@ include(FetchContent)
 include(CheckIncludeFile)
 include(${LUNA_SOURCE_DIR}/cmake/utils.cmake)
 
-function(findVulkan)
-    set(VOLK_PULL_IN_VULKAN OFF)
-    makePackageAvailable(https://github.com/zeux/volk.git vulkan-sdk-1.4.*.* Vulkan COMPONENTS volk)
-    set(VOLK_VERSION ${_LUNA_PACKAGE_LATEST_RELEASE_VERSION})
-    if (NOT Vulkan_volk_FOUND)
-        makePackageAvailable(https://github.com/KhronosGroup/Vulkan-Headers.git vulkan-sdk-1.4.*.* Headers)
-        ensureVersionsMatch("Volk" VOLK_VERSION "Vulkan Headers" _LUNA_PACKAGE_LATEST_RELEASE_VERSION)
-    else ()
-        add_library(volk::volk ALIAS Vulkan::volk)
-    endif ()
-
+function(findDependencies)
     disableOptions(SPIRV_REFLECT_EXECUTABLE SPIRV_REFLECT_INSTALL INSTALL_GTEST)
     set(SPIRV_REFLECT_STATIC_LIB ON)
     makePackageAvailable(https://github.com/KhronosGroup/SPIRV-Reflect.git vulkan-sdk-1.4.*.* SPIRV-Reflect)
-    ensureVersionsMatch("Volk" VOLK_VERSION "SPIRV-Reflect" _LUNA_PACKAGE_LATEST_RELEASE_VERSION)
+    set(SPIRV_REFLECT_VERSION ${_LUNA_PACKAGE_LATEST_RELEASE_VERSION})
 
     makePackageAvailable(https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git v3.*.* VulkanMemoryAllocator CONFIG)
 
-    add_library(LunaDependencies INTERFACE)
-    target_link_libraries(LunaDependencies INTERFACE volk::volk GPUOpen::VulkanMemoryAllocator spirv-reflect-static)
-    target_compile_options(LunaDependencies INTERFACE $<$<BOOL:${LUNA_DEFINE_VK_NO_PROTOTYPES}>:$<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>>)
+    find_package(Vulkan COMPONENTS volk QUIET)
+    if (Vulkan_INCLUDE_DIRS STREQUAL "Vulkan_INCLUDE_DIR-NOTFOUND") # Unable to find Vulkan headers
+        makePackageAvailable(https://github.com/KhronosGroup/Vulkan-Headers.git vulkan-sdk-1.4.*.* Headers)
+        set(HEADERS_VERSION ${_LUNA_PACKAGE_LATEST_RELEASE_VERSION})
+        ensureVersionsMatch("SPIRV-Reflect" SPIRV_REFLECT_VERSION "Vulkan headers" HEADERS_VERSION)
+        set(Vulkan_INCLUDE_DIR ${VULKAN_HEADERS_SOURCE_DIR}/include)
+        find_package(Vulkan COMPONENTS volk QUIET) # This is kept to check if volk is installed on the system
+    endif ()
+    if (Vulkan_FOUND) # Able to find Volk
+        add_library(_LunaInternalLibrary_volk INTERFACE)
+        target_link_libraries(_LunaInternalLibrary_volk INTERFACE Vulkan::volk)
+        add_library(volk::volk_headers ALIAS _LunaInternalLibrary_volk)
+    else () # No Vulkan installation
+        set(VOLK_HEADERS_ONLY ON)
+        set(VULKAN_HEADERS_INSTALL_DIR ${Vulkan_INCLUDE_DIR}/../)
+        makePackageAvailable(https://github.com/zeux/volk.git vulkan-sdk-1.4.*.* volk)
+        set(VOLK_VERSION ${_LUNA_PACKAGE_LATEST_RELEASE_VERSION})
+        ensureVersionsMatch("Volk" VOLK_VERSION "SPIRV-Reflect" SPIRV_REFLECT_VERSION)
+    endif ()
+
+    add_library(_LunaInternalLibrary_Dependencies INTERFACE)
+    target_link_libraries(_LunaInternalLibrary_Dependencies INTERFACE volk::volk_headers spirv-reflect-static GPUOpen::VulkanMemoryAllocator)
+    target_compile_options(_LunaInternalLibrary_Dependencies INTERFACE $<$<BOOL:${LUNA_DEFINE_VK_NO_PROTOTYPES}>:$<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>>)
 endfunction()
 
 function(findSDL3)

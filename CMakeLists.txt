@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.21)
 project(Luna C CXX)
 
 set(LUNA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "The root directory of the project")
@@ -36,7 +36,7 @@ else ()
     set(RELEASE_FLAGS ${COMMON_FLAGS} ${RELEASE_FLAGS} -O3 -DNDEBUG)
 endif ()
 
-findVulkan()
+findDependencies()
 
 add_library(Luna STATIC
         src/luna/core/Buffer.cpp
@@ -85,9 +85,9 @@ add_library(Luna STATIC
         include/luna/lunaTypes.h
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
-target_link_libraries(Luna PUBLIC LunaDependencies)
-    target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include)
-    target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src/headers)
+target_link_libraries(Luna PUBLIC _LunaInternalLibrary_Dependencies)
+target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include)
+target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src/headers)
 
 if (LUNA_EXAMPLES)
     add_subdirectory(example)

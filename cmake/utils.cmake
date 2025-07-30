@@ -13,7 +13,7 @@ macro(disableOptions)
 endmacro()
 
 macro(ensureVersionsMatch packageOne packageOneVersion packageTwo packageTwoVersion)
-    if (NOT ${packageOneVersion} STREQUAL ${packageTwoVersion})
+    if (NOT (${packageOneVersion} STREQUAL ${packageTwoVersion}))
         message(AUTHOR_WARNING "${packageOne} version ${${packageOneVersion}} does not match ${packageTwo} version ${${packageTwoVersion}}!")
     endif ()
 endmacro()
