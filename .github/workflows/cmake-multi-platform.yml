@@ -54,9 +54,11 @@ jobs:
         run: |
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-      - name: Install Dependencies For Linux
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: sudo apt-get update && sudo apt install libxcb1-dev libx11-dev libxrandr-dev libwayland-dev libdirectfb-dev
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.strings.outputs.build-output-dir }}/_deps
+          key: ${{ matrix.build_type }}-${{ matrix.c_compiler }}-deps-${{ hashFiles('**/.git/HEAD') }}
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
