@@ -8,7 +8,9 @@
 #include <luna/luna.h>
 
 #define VMA_IMPLEMENTATION
+#define VOLK_IMPLEMENTATION
 #include <vk_mem_alloc.h>
+#include <volk.h>
 
 namespace luna::helpers
 {
@@ -108,7 +110,6 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
         vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
     }
     vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
-
 
     CHECK_RESULT_RETURN(luna::helpers::recreateSwapchain(capabilities));
     for (uint32_t i = 0; i < renderPassResizeInfoCount; i++)
