@@ -2,10 +2,22 @@
 // Created by NBT22 on 2/13/25.
 //
 
-#include <cstring>
+#include <cassert>
+#include <cstdint>
+#include <list>
 #include <luna/lunaInstance.h>
+#include <luna/lunaTypes.h>
 #include <stdexcept>
+#include <vector>
+#include <volk.h>
+#include <vulkan/vulkan_core.h>
+#include "Buffer.hpp"
+#include "DescriptorSetLayout.hpp"
+#include "GraphicsPipeline.hpp"
+#include "Image.hpp"
 #include "Instance.hpp"
+#include "Luna.hpp"
+#include "RenderPass.hpp"
 
 namespace luna::helpers
 {
@@ -16,7 +28,7 @@ static VkResult findSwapchainFormat(const VkPhysicalDevice physicalDevice,
                                     VkSurfaceFormatKHR &destination)
 {
     destination = {.format = VK_FORMAT_UNDEFINED, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
-    uint32_t formatCount;
+    uint32_t formatCount = 0;
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr));
     if (formatCount == 0)
     {
@@ -60,7 +72,7 @@ static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
         destination = VK_PRESENT_MODE_FIFO_KHR;
         return VK_SUCCESS;
     }
-    uint32_t presentModeCount;
+    uint32_t presentModeCount = 0;
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr));
     if (presentModeCount == 0)
     {
@@ -170,6 +182,7 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
         .compositeAlpha = core::swapchain.compositeAlpha,
         .presentMode = core::swapchain.presentMode,
         .clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
+        .oldSwapchain = core::swapchain.swapchain,
     };
     CHECK_RESULT_RETURN(vkCreateSwapchainKHR(core::device, &createInfo, nullptr, &core::swapchain.swapchain));
 
@@ -181,12 +194,14 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    core::device.commandPools().graphics.commandBuffer().resizeArray(core::device,
-                                                                     core::device.commandPools().graphics,
-                                                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                     nullptr,
-                                                                     &semaphoreCreateInfo,
-                                                                     core::swapchain.imageCount);
+    CHECK_RESULT_RETURN(core::device.commandPools()
+                                .graphics.commandBuffer()
+                                .resizeArray(core::device,
+                                             core::device.commandPools().graphics,
+                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                             nullptr,
+                                             &semaphoreCreateInfo,
+                                             core::swapchain.imageCount));
 
     core::swapchain.imageIndex = -1u;
     core::swapchain.safeToUse = true;

@@ -5,18 +5,21 @@
 #ifndef LUNA_H
 #define LUNA_H
 
-#include <luna/lunaDevice.h>
-#include <luna/lunaDrawing.h>
-#include <luna/lunaImage.h>
-#include <luna/lunaInstance.h>
-#include <luna/lunaPipeline.h>
-#include <luna/lunaRenderPass.h>
-#include <luna/lunaTypes.h>
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#include <luna/lunaDevice.h> // NOLINT(*-include-cleaner)
+#include <luna/lunaDrawing.h> // NOLINT(*-include-cleaner)
+#include <luna/lunaImage.h> // NOLINT(*-include-cleaner)
+#include <luna/lunaInstance.h> // NOLINT(*-include-cleaner)
+#include <luna/lunaPipeline.h> // NOLINT(*-include-cleaner)
+#include <luna/lunaRenderPass.h> // NOLINT(*-include-cleaner)
+#include <luna/lunaTypes.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <vulkan/vulkan_core.h>
 
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
                                   LunaDescriptorPool *descriptorPool);

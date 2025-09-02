@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <cstdint>
 #include <luna/lunaTypes.h>
 #include <string>
 #include <unordered_map>
+#include <vulkan/vulkan_core.h>
 
 namespace luna::core
 {
@@ -44,4 +46,24 @@ class DescriptorSetLayout
 };
 } // namespace luna::core
 
-#include "implementations/DescriptorSetLayout.ipp"
+#pragma region "Implmentation"
+
+namespace luna::core
+{
+inline bool DescriptorSetLayout::isDestroyed(const DescriptorSetLayout &layout)
+{
+    return layout.isDestroyed_;
+}
+
+inline DescriptorSetLayout::operator const VkDescriptorSetLayout &() const
+{
+    return layout_;
+}
+
+inline const DescriptorSetLayout::Binding &DescriptorSetLayout::binding(const std::string &bindingName) const
+{
+    return bindingMap_.at(bindingName);
+}
+} // namespace luna::core
+
+#pragma endregion "Implmentation"

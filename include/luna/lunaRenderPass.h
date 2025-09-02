@@ -5,12 +5,13 @@
 #ifndef LUNARENDERPASS_H
 #define LUNARENDERPASS_H
 
-#include <luna/lunaTypes.h>
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#include <luna/lunaTypes.h>
+#include <vulkan/vulkan_core.h>
 
 VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass);
 VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass);

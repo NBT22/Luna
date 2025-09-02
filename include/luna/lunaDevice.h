@@ -5,12 +5,13 @@
 #ifndef LUNADEVICE_H
 #define LUNADEVICE_H
 
-#include <luna/lunaTypes.h>
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#include <luna/lunaTypes.h>
+#include <vulkan/vulkan_core.h>
 
 VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo);
 VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo);

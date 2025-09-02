@@ -5,12 +5,14 @@
 #ifndef LUNAINSTANCE_H
 #define LUNAINSTANCE_H
 
-#include <luna/lunaTypes.h>
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#include <luna/lunaTypes.h>
+#include <stdint.h>
+#include <vulkan/vulkan_core.h>
 
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
 VkResult lunaDestroyInstance(void);

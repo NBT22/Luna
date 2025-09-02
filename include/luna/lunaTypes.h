@@ -5,15 +5,17 @@
 #ifndef LUNATYPES_H
 #define LUNATYPES_H
 
-#include <volk.h>
-
 #ifdef __cplusplus
 extern "C"
 {
-// NOLINTBEGIN
+// NOLINTBEGIN(*-macro-usage, *-enum-size, *-use-using)
 #else
 #include <stdbool.h>
 #endif
+
+#include <stddef.h>
+#include <stdint.h>
+#include <vulkan/vulkan_core.h>
 
 #define LUNA_DEFINE_HANDLE(object) typedef const void *object
 
@@ -379,7 +381,7 @@ typedef struct
 } LunaRenderPassResizeInfo;
 
 #ifdef __cplusplus
-// NOLINTEND
+// NOLINTEND(*-macro-usage, *-enum-size, *-use-using)
 }
 #endif
 

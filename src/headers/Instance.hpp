@@ -4,7 +4,11 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <list>
+#include <luna/lunaTypes.h>
+#include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "DescriptorSetLayout.hpp"
 #include "Device.hpp"
@@ -15,7 +19,7 @@
 
 namespace luna::core
 {
-[[nodiscard]] RenderPass *renderPass(LunaRenderPass renderPass);
+[[nodiscard]] const RenderPass *renderPass(LunaRenderPass renderPass);
 [[nodiscard]] const VkDescriptorPool *descriptorPool(LunaDescriptorPool descriptorPool);
 [[nodiscard]] const DescriptorSetLayout *descriptorSetLayout(LunaDescriptorSetLayout layout);
 [[nodiscard]] const VkDescriptorSet *descriptorSet(LunaDescriptorSet descriptorSet);
@@ -49,4 +53,58 @@ extern std::list<VkSampler> samplers;
 extern std::list<Image> images;
 } // namespace luna::core
 
-#include "implementations/Instance.ipp"
+#pragma region "Implmentation"
+
+namespace luna::core
+{
+inline const RenderPass *renderPass(const LunaRenderPass renderPass)
+{
+    return static_cast<const RenderPass *>(renderPass);
+}
+inline const VkDescriptorPool *descriptorPool(const LunaDescriptorPool descriptorPool)
+{
+    return static_cast<const VkDescriptorPool *>(descriptorPool);
+}
+inline const DescriptorSetLayout *descriptorSetLayout(const LunaDescriptorSetLayout layout)
+{
+    return static_cast<const DescriptorSetLayout *>(layout);
+}
+inline const VkDescriptorSet *descriptorSet(const LunaDescriptorSet descriptorSet)
+{
+    return static_cast<const DescriptorSetIndex *>(descriptorSet)->set;
+}
+inline void descriptorSet(const LunaDescriptorSet index,
+                          VkDescriptorPool *pool,
+                          DescriptorSetLayout *layout,
+                          VkDescriptorSet *descriptorSet)
+{
+    const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(index);
+    if (pool != VK_NULL_HANDLE)
+    {
+        *pool = *descriptorSetIndex->pool;
+    }
+    if (layout != nullptr)
+    {
+        *layout = *descriptorSetIndex->layout;
+    }
+    if (descriptorSet != VK_NULL_HANDLE)
+    {
+        *descriptorSet = *descriptorSetIndex->set;
+    }
+}
+
+inline size_t stagingBufferOffset()
+{
+    if (stagingBuffer == nullptr)
+    {
+        return -1ull;
+    }
+    return static_cast<const buffer::BufferRegionIndex *>(stagingBuffer)->offset();
+}
+inline VkSampler sampler(const LunaSampler sampler)
+{
+    return *static_cast<const VkSampler *>(sampler);
+}
+} // namespace luna::core
+
+#pragma endregion "Implmentation"

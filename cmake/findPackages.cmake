@@ -31,8 +31,16 @@ function(findDependencies)
     endif ()
 
     add_library(_LunaInternal_PublicDependencies INTERFACE)
-    target_link_libraries(_LunaInternal_PublicDependencies INTERFACE volk::volk_headers spirv-reflect-static GPUOpen::VulkanMemoryAllocator)
-    target_compile_options(_LunaInternal_PublicDependencies INTERFACE $<$<BOOL:${LUNA_DEFINE_VK_NO_PROTOTYPES}>:$<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>>)
+    target_link_libraries(_LunaInternal_PublicDependencies INTERFACE volk::volk_headers GPUOpen::VulkanMemoryAllocator)
+
+    add_library(_LunaInternal_PrivateDependencies INTERFACE)
+    target_link_libraries(_LunaInternal_PrivateDependencies INTERFACE spirv-reflect-static)
+
+    if (LUNA_DEFINE_VK_NO_PROTOTYPES)
+        target_compile_options(_LunaInternal_PublicDependencies INTERFACE $<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>)
+    else ()
+        target_compile_options(_LunaInternal_PrivateDependencies INTERFACE $<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>)
+    endif ()
 endfunction()
 
 function(findSDL3)

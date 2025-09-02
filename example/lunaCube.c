@@ -341,7 +341,7 @@ static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
             .descriptorCount = 1,
         }},
     };
-    LunaDescriptorPool descriptorPool = VK_NULL_HANDLE;
+    LunaDescriptorPool descriptorPool = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaCreateDescriptorPool(&descriptorPoolCreationInfo, &descriptorPool));
     const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
         .descriptorPool = descriptorPool,
@@ -452,8 +452,8 @@ int main(void)
     mat4 transformMatrix = GLM_MAT4_IDENTITY_INIT;
     glm_mul(projectionMatrix, viewMatrix, transformMatrix);
 
-    LunaGraphicsPipeline graphicsPipeline = VK_NULL_HANDLE;
-    LunaDescriptorSet descriptorSet = VK_NULL_HANDLE;
+    LunaGraphicsPipeline graphicsPipeline = LUNA_NULL_HANDLE;
+    LunaDescriptorSet descriptorSet = LUNA_NULL_HANDLE;
     if (!createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL),
                                 &descriptorSet,
                                 &transformMatrix,

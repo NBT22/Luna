@@ -5,12 +5,14 @@
 #ifndef LUNAIMAGE_H
 #define LUNAIMAGE_H
 
-#include <luna/lunaTypes.h>
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#include <luna/lunaTypes.h>
+#include <stdint.h>
+#include <vulkan/vulkan_core.h>
 
 VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler);
 

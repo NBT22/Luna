@@ -4,9 +4,22 @@
 
 #include <array>
 #include <bit>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <list>
 #include <luna/luna.h>
+#include <luna/lunaTypes.h>
+#include <stdexcept>
+#include <volk.h>
+#include <vulkan/vulkan_core.h>
+#include "Buffer.hpp"
+#include "CommandBuffer.hpp"
+#include "DescriptorSetLayout.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
+#include "Luna.hpp"
+#include "Semaphore.hpp"
 
 namespace luna::helpers
 {
@@ -23,7 +36,7 @@ static uint8_t bytesPerPixel(const VkFormat format)
         case VK_FORMAT_R8_SINT:
         case VK_FORMAT_R8_SRGB:
         case VK_FORMAT_S8_UINT:
-            return 1;
+            return sizeof(uint8_t);
         case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
         case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
         case VK_FORMAT_R5G6B5_UNORM_PACK16:
@@ -46,7 +59,7 @@ static uint8_t bytesPerPixel(const VkFormat format)
         case VK_FORMAT_R16_SINT:
         case VK_FORMAT_R16_SFLOAT:
         case VK_FORMAT_D16_UNORM:
-            return 2;
+            return sizeof(uint16_t);
         case VK_FORMAT_R8G8B8_UNORM:
         case VK_FORMAT_R8G8B8_SNORM:
         case VK_FORMAT_R8G8B8_USCALED:
@@ -62,7 +75,7 @@ static uint8_t bytesPerPixel(const VkFormat format)
         case VK_FORMAT_B8G8R8_SINT:
         case VK_FORMAT_B8G8R8_SRGB:
         case VK_FORMAT_D16_UNORM_S8_UINT:
-            return 3;
+            return sizeof(uint8_t) * 3;
         case VK_FORMAT_R8G8B8A8_UNORM:
         case VK_FORMAT_R8G8B8A8_SNORM:
         case VK_FORMAT_R8G8B8A8_USCALED:
@@ -111,7 +124,7 @@ static uint8_t bytesPerPixel(const VkFormat format)
         case VK_FORMAT_X8_D24_UNORM_PACK32:
         case VK_FORMAT_D32_SFLOAT:
         case VK_FORMAT_D24_UNORM_S8_UINT:
-            return 4;
+            return sizeof(uint8_t) * 4;
         case VK_FORMAT_R16G16B16_UNORM:
         case VK_FORMAT_R16G16B16_SNORM:
         case VK_FORMAT_R16G16B16_USCALED:
@@ -119,7 +132,7 @@ static uint8_t bytesPerPixel(const VkFormat format)
         case VK_FORMAT_R16G16B16_UINT:
         case VK_FORMAT_R16G16B16_SINT:
         case VK_FORMAT_R16G16B16_SFLOAT:
-            return 6;
+            return sizeof(uint16_t) * 3;
         case VK_FORMAT_R16G16B16A16_UNORM:
         case VK_FORMAT_R16G16B16A16_SNORM:
         case VK_FORMAT_R16G16B16A16_USCALED:
@@ -133,26 +146,26 @@ static uint8_t bytesPerPixel(const VkFormat format)
         case VK_FORMAT_R64_UINT:
         case VK_FORMAT_R64_SINT:
         case VK_FORMAT_R64_SFLOAT:
-            return 8;
+            return sizeof(uint16_t) * 4;
         case VK_FORMAT_R32G32B32_UINT:
         case VK_FORMAT_R32G32B32_SINT:
         case VK_FORMAT_R32G32B32_SFLOAT:
-            return 12;
+            return sizeof(uint32_t) * 3;
         case VK_FORMAT_R32G32B32A32_UINT:
         case VK_FORMAT_R32G32B32A32_SINT:
         case VK_FORMAT_R32G32B32A32_SFLOAT:
         case VK_FORMAT_R64G64_UINT:
         case VK_FORMAT_R64G64_SINT:
         case VK_FORMAT_R64G64_SFLOAT:
-            return 16;
+            return sizeof(uint32_t) * 4;
         case VK_FORMAT_R64G64B64_UINT:
         case VK_FORMAT_R64G64B64_SINT:
         case VK_FORMAT_R64G64B64_SFLOAT:
-            return 24;
+            return sizeof(uint64_t) * 3;
         case VK_FORMAT_R64G64B64A64_UINT:
         case VK_FORMAT_R64G64B64A64_SINT:
         case VK_FORMAT_R64G64B64A64_SFLOAT:
-            return 32;
+            return sizeof(uint64_t) * 4;
         case VK_FORMAT_UNDEFINED:
         case VK_FORMAT_D32_SFLOAT_S8_UINT:
         case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
@@ -450,10 +463,8 @@ static VkResult writeImage(const VkImage image,
             .size = bytes,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         };
-        const LunaBuffer *stagingBufferHandle = &core::stagingBuffer;
-        CHECK_RESULT_RETURN(core::buffer::BufferRegion::
-                                    createBufferRegion(bufferCreationInfo,
-                                                       const_cast<LunaBuffer **>(&stagingBufferHandle)));
+        LunaBuffer *stagingBufferHandle = &core::stagingBuffer; // NOLINT(*-const-correctness)
+        CHECK_RESULT_RETURN(core::buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
         stagingBuffer = static_cast<const core::buffer::BufferRegionIndex *>(core::stagingBuffer);
     }
 
@@ -595,13 +606,13 @@ namespace luna::core
 {
 Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t depth, const uint32_t arrayLayers)
 {
-    assert(creationInfo.sampler == nullptr || creationInfo.samplerCreationInfo == nullptr);
-    if (creationInfo.sampler != nullptr)
+    assert(creationInfo.sampler == LUNA_NULL_HANDLE || creationInfo.samplerCreationInfo == nullptr);
+    if (creationInfo.sampler != LUNA_NULL_HANDLE)
     {
         sampler_ = sampler(creationInfo.sampler);
     } else if (creationInfo.samplerCreationInfo != nullptr)
     {
-        LunaSampler sampler;
+        LunaSampler sampler = LUNA_NULL_HANDLE;
         CHECK_RESULT_THROW(lunaCreateSampler(creationInfo.samplerCreationInfo, &sampler));
         sampler_ = core::sampler(sampler);
     }
@@ -672,14 +683,13 @@ void Image::erase(const std::list<Image>::const_iterator iterator) const
     images.erase(iterator);
 }
 
-VkSampler Image::sampler(const LunaSampler sampler)
+VkSampler Image::sampler(const LunaSampler sampler) const
 {
     if (sampler == nullptr)
     {
         return sampler_;
     }
-    sampler_ = core::sampler(sampler);
-    return sampler_;
+    return core::sampler(sampler);
 }
 } // namespace luna::core
 
@@ -709,7 +719,7 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
     CHECK_RESULT_RETURN(vkCreateSampler(luna::core::device, &createInfo, nullptr, &luna::core::samplers.back()));
     if (sampler != nullptr)
     {
-        *sampler = &luna::core::samplers.back();
+        *sampler = static_cast<LunaSampler>(&luna::core::samplers.back());
     }
     return VK_SUCCESS;
 }

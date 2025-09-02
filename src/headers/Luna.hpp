@@ -5,8 +5,10 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
+#include <exception>
 #include <vector>
-#include <volk.h>
+#include <vulkan/vulkan_core.h>
 
 namespace luna::helpers
 {

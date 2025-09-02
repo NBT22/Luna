@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include <luna/luna.h>
+#include <luna/lunaDrawing.h>
+#include <luna/lunaTypes.h>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace luna::core
 {
@@ -33,4 +35,19 @@ class GraphicsPipeline
 };
 } // namespace luna::core
 
-#include "implementations/GraphicsPipeline.ipp"
+#pragma region "Implmentation"
+
+namespace luna::core
+{
+inline bool GraphicsPipeline::isDestroyed(const GraphicsPipeline &graphicsPipeline)
+{
+    return graphicsPipeline.isDestroyed_;
+}
+
+inline VkPipelineLayout GraphicsPipeline::layout() const
+{
+    return layout_;
+}
+} // namespace luna::core
+
+#pragma endregion "Implmentation"

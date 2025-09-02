@@ -3,8 +3,21 @@
 //
 
 #include <luna/luna.h>
-#include <SDL3/SDL.h>
+#include <luna/lunaDevice.h>
+#include <luna/lunaDrawing.h>
+#include <luna/lunaInstance.h>
+#include <luna/lunaPipeline.h>
+#include <luna/lunaRenderPass.h>
+#include <luna/lunaTypes.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <vulkan/vulkan_core.h>
 
 #define CHECK_RESULT(value) \
     if ((value) < 0) \
@@ -149,8 +162,8 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 {
     const VkExtent2D swapchainExtent = lunaGetSwapchainExtent();
 
-    LunaShaderModule vertexShaderModule;
-    LunaShaderModule fragmentShaderModule;
+    LunaShaderModule vertexShaderModule = LUNA_NULL_HANDLE;
+    LunaShaderModule fragmentShaderModule = LUNA_NULL_HANDLE;
     VkResult vertexShaderCreationResult = lunaCreateShaderModule(VERTEX_SHADER_SPIRV,
                                                                  sizeof(VERTEX_SHADER_SPIRV),
                                                                  &vertexShaderModule);
@@ -288,7 +301,7 @@ int main(void)
         return 3;
     }
 
-    VkSurfaceKHR surface;
+    VkSurfaceKHR surface = LUNA_NULL_HANDLE;
     if (!SDL_Vulkan_CreateSurface(window, lunaGetInstance(), NULL, &surface))
     {
         return 4;
@@ -316,17 +329,17 @@ int main(void)
     };
     CHECK_RESULT(lunaCreateSwapchain(&swapchainCreationInfo));
 
-    LunaRenderPass renderPass;
+    LunaRenderPass renderPass = LUNA_NULL_HANDLE;
     CHECK_RESULT(createRenderPass(extent, &renderPass));
 
-    LunaGraphicsPipeline graphicsPipeline;
+    LunaGraphicsPipeline graphicsPipeline = LUNA_NULL_HANDLE;
     CHECK_RESULT(createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline));
 
     const LunaBufferCreationInfo bufferCreationInfo = {
         .size = sizeof(vertices),
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
     };
-    LunaBuffer vertexBuffer;
+    LunaBuffer vertexBuffer = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer));
     lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices), 0);
 

@@ -64,20 +64,6 @@ add_library(Luna STATIC
         src/headers/RenderPass.hpp
         src/headers/Semaphore.hpp
 
-        src/implementations/commandBuffer/CommandBuffer.ipp
-        src/implementations/commandBuffer/CommandBufferArray.ipp
-        src/implementations/Buffer.ipp
-        src/implementations/CommandBuffer.ipp
-        src/implementations/CommandPool.ipp
-        src/implementations/DescriptorSetLayout.ipp
-        src/implementations/Device.ipp
-        src/implementations/Fence.ipp
-        src/implementations/GraphicsPipeline.ipp
-        src/implementations/Image.ipp
-        src/implementations/Instance.ipp
-        src/implementations/RenderPass.ipp
-        src/implementations/Semaphore.ipp
-
         include/luna/luna.h
         include/luna/lunaDevice.h
         include/luna/lunaDrawing.h
@@ -89,8 +75,9 @@ add_library(Luna STATIC
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
 target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)
+target_link_libraries(Luna PRIVATE _LunaInternal_PrivateDependencies)
 target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include)
-target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src ${LUNA_SOURCE_DIR}/src/headers)
+target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src/headers)
 
 if (LUNA_EXAMPLES)
     add_subdirectory(example)

@@ -2,8 +2,12 @@
 // Created by NBT22 on 5/19/25.
 //
 
-#include "CommandPool.hpp"
+#include <cassert>
+#include <luna/luna.h>
+#include <luna/lunaTypes.h>
+#include <vulkan/vulkan_core.h>
 #include "Instance.hpp"
+#include "Luna.hpp"
 
 VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool)
 {

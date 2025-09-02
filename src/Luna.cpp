@@ -3,9 +3,18 @@
 //
 
 #include <array>
+#include <cassert>
+#include <cstdint>
 #include <luna/luna.h>
+#include <luna/lunaTypes.h>
+#include <vector>
+#include <vulkan/vulkan_core.h>
+#include "Buffer.hpp"
+#include "DescriptorSetLayout.hpp"
+#include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "Semaphore.hpp"
 
 #define VMA_IMPLEMENTATION
 #define VOLK_IMPLEMENTATION
@@ -63,12 +72,14 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    core::device.commandPools().graphics.commandBuffer().resizeArray(core::device,
-                                                                     core::device.commandPools().graphics,
-                                                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                     nullptr,
-                                                                     &semaphoreCreateInfo,
-                                                                     core::swapchain.imageCount);
+    CHECK_RESULT_RETURN(core::device.commandPools()
+                                .graphics.commandBuffer()
+                                .resizeArray(core::device,
+                                             core::device.commandPools().graphics,
+                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                             nullptr,
+                                             &semaphoreCreateInfo,
+                                             core::swapchain.imageCount));
 
     core::swapchain.imageIndex = -1u;
     return VK_SUCCESS;
@@ -118,7 +129,8 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
         const uint32_t width = renderPassResizeInfo.width == -1u ? swapchain.extent.width : renderPassResizeInfo.width;
         const uint32_t height = renderPassResizeInfo.height == -1u ? swapchain.extent.height
                                                                    : renderPassResizeInfo.height;
-        CHECK_RESULT_RETURN(renderPass(renderPassResizeInfo.renderPass)
+        // NOLINTNEXTLINE(*-pro-type-const-cast)
+        CHECK_RESULT_RETURN(const_cast<RenderPass *>(renderPass(renderPassResizeInfo.renderPass))
                                     ->recreateFramebuffer(device, swapchain, width, height));
     }
     swapchain.safeToUse = true;
@@ -174,8 +186,8 @@ VkResult lunaPresentSwapchain()
 
     swapchain.imageIndex = -1u;
     boundPipeline = VK_NULL_HANDLE;
-    boundVertexBuffer = VK_NULL_HANDLE;
-    boundIndexBuffer = VK_NULL_HANDLE;
+    boundVertexBuffer = LUNA_NULL_HANDLE;
+    boundIndexBuffer = LUNA_NULL_HANDLE;
     return presentationResult;
 }
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
@@ -194,7 +206,7 @@ VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creation
     CHECK_RESULT_RETURN(vkCreateDescriptorPool(device, &createInfo, nullptr, &descriptorPools.back()));
     if (descriptorPool != nullptr)
     {
-        *descriptorPool = &descriptorPools.back();
+        *descriptorPool = static_cast<LunaDescriptorPool>(&descriptorPools.back());
     }
     return VK_SUCCESS;
 }
@@ -245,7 +257,7 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
         const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
         if (imageInfo != nullptr)
         {
-            Image *image = const_cast<Image *>(static_cast<const Image *>(imageInfo->image));
+            const Image *image = static_cast<const Image *>(imageInfo->image);
             descriptorImageInfo = {
                 .sampler = image->sampler(imageInfo->sampler),
                 .imageView = image->imageView(),

@@ -5,12 +5,14 @@
 #ifndef LUNADRAWING_H
 #define LUNADRAWING_H
 
-#include <luna/lunaTypes.h>
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#include <luna/lunaTypes.h>
+#include <stdint.h>
+#include <vulkan/vulkan_core.h>
 
 void lunaBindVertexBuffers(uint32_t firstBinding,
                            uint32_t bindingCount,
