@@ -11,7 +11,7 @@
 #include "commandBuffer/CommandBufferArray.hpp"
 #include "Semaphore.hpp"
 
-namespace luna::core
+namespace luna
 {
 class CommandBuffer
 {
@@ -70,7 +70,7 @@ class CommandBuffer
         commandBuffer::CommandBuffer commandBuffer_{};
         commandBuffer::CommandBufferArray commandBufferArray_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
@@ -79,7 +79,7 @@ class CommandBuffer
 #include <type_traits>
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 inline CommandBuffer::CommandBuffer(const CommandBuffer &other)
 {
@@ -401,6 +401,6 @@ inline const commandBuffer::CommandBufferArray &CommandBuffer::commandBufferArra
                                      " when used in commandBufferArray!");
     }
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

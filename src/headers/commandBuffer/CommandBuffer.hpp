@@ -9,7 +9,7 @@
 #include "Fence.hpp"
 #include "Semaphore.hpp"
 
-namespace luna::core::commandBuffer
+namespace luna::commandBuffer
 {
 class CommandBuffer
 {
@@ -48,14 +48,14 @@ class CommandBuffer
         Fence fence_{};
         Semaphore semaphore_{};
 };
-} // namespace luna::core::commandBuffer
+} // namespace luna::commandBuffer
 
 #pragma region "Implmentation"
 
 #include <cassert>
 #include "Luna.hpp"
 
-namespace luna::core::commandBuffer
+namespace luna::commandBuffer
 {
 inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
                                     const VkCommandPool commandPool,
@@ -176,6 +176,6 @@ inline const Semaphore &CommandBuffer::semaphore() const
 {
     return semaphore_;
 }
-} // namespace luna::core::commandBuffer
+} // namespace luna::commandBuffer
 
 #pragma endregion "Implmentation"

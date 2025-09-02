@@ -13,7 +13,7 @@
 #include "Instance.hpp"
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo)
 {
@@ -61,12 +61,12 @@ void DescriptorSetLayout::destroy()
     bindingMap_.clear();
     isDestroyed_ = true;
 }
-} // namespace luna::core
+} // namespace luna
 
 VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
                                        LunaDescriptorSetLayout *descriptorSetLayout)
 {
-    using namespace luna::core;
+    using namespace luna;
     assert(creationInfo);
     TRY_CATCH_RESULT(descriptorSetLayouts.emplace_back(*creationInfo));
     if (descriptorSetLayout != nullptr)

@@ -14,7 +14,7 @@
 #include "CommandPool.hpp"
 #include "Semaphore.hpp"
 
-namespace luna::core
+namespace luna
 {
 template<typename T> struct FamilyValues
 {
@@ -85,7 +85,7 @@ class Device
         std::vector<VkShaderModule> shaderModules_{};
         std::list<uint32_t> shaderModuleIndices_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
@@ -95,7 +95,7 @@ class Device
 #include <volk.h>
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 inline Device::operator const VkPhysicalDevice &() const
 {
@@ -503,6 +503,6 @@ inline VkResult Device::createCommandPools()
     // }
     return VK_SUCCESS;
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

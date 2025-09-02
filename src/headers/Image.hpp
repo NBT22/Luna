@@ -21,7 +21,7 @@ VkResult createImageView(VkDevice logicalDevice,
                          VkImageView *imageView);
 } // namespace luna::helpers
 
-namespace luna::core
+namespace luna
 {
 // TODO: Support for 1D images
 class Image
@@ -42,7 +42,7 @@ class Image
         VmaAllocation allocation_{};
         VkSampler sampler_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
@@ -82,7 +82,7 @@ inline VkResult createImageView(const VkDevice logicalDevice,
 }
 } // namespace luna::helpers
 
-namespace luna::core
+namespace luna
 {
 inline VkImageView Image::imageView() const
 {
@@ -92,6 +92,6 @@ inline VkSampler Image::sampler() const
 {
     return sampler_;
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

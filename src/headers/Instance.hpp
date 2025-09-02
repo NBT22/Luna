@@ -17,7 +17,7 @@
 #include "Luna.hpp"
 #include "RenderPass.hpp"
 
-namespace luna::core
+namespace luna
 {
 [[nodiscard]] const RenderPass *renderPass(LunaRenderPass renderPass);
 [[nodiscard]] const VkDescriptorPool *descriptorPool(LunaDescriptorPool descriptorPool);
@@ -51,11 +51,11 @@ extern std::list<Buffer> buffers;
 extern std::list<buffer::BufferRegionIndex> bufferRegionIndices;
 extern std::list<VkSampler> samplers;
 extern std::list<Image> images;
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
-namespace luna::core
+namespace luna
 {
 inline const RenderPass *renderPass(const LunaRenderPass renderPass)
 {
@@ -105,6 +105,6 @@ inline VkSampler sampler(const LunaSampler sampler)
 {
     return *static_cast<const VkSampler *>(sampler);
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

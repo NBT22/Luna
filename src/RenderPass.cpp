@@ -39,7 +39,7 @@ static void createDepthAttachment(const VkSampleCountFlagBits samples,
 
     attachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    attachmentDescription.format = core::depthImageFormat;
+    attachmentDescription.format = depthImageFormat;
     attachmentDescription.samples = samples;
     attachmentDescription.loadOp = loadOp;
     attachmentDescription.storeOp = depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
@@ -72,7 +72,7 @@ static void createDepthAttachment2(const VkSampleCountFlagBits samples,
     attachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     attachmentDescription.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-    attachmentDescription.format = core::depthImageFormat;
+    attachmentDescription.format = depthImageFormat;
     attachmentDescription.samples = samples;
     attachmentDescription.loadOp = loadOp;
     attachmentDescription.storeOp = depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
@@ -108,7 +108,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
     attachmentReferences.at(1).attachment = colorAttachmentIndex;
     attachmentReferences.at(1).layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    attachmentDescriptions.at(colorAttachmentIndex).format = core::swapchain.format.format;
+    attachmentDescriptions.at(colorAttachmentIndex).format = swapchain.format.format;
     attachmentDescriptions.at(colorAttachmentIndex).samples = samples;
     attachmentDescriptions.at(colorAttachmentIndex).loadOp = loadOp;
     attachmentDescriptions.at(colorAttachmentIndex).storeOp = storeOp;
@@ -121,7 +121,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
         attachmentReferences.at(2).attachment = colorAttachmentIndex + 1;
         attachmentReferences.at(2).layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        attachmentDescriptions.at(colorAttachmentIndex + 1).format = core::swapchain.format.format;
+        attachmentDescriptions.at(colorAttachmentIndex + 1).format = swapchain.format.format;
         attachmentDescriptions.at(colorAttachmentIndex + 1).samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions.at(colorAttachmentIndex + 1).loadOp = loadOp;
         attachmentDescriptions.at(colorAttachmentIndex + 1).storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -159,7 +159,7 @@ static void createColorAttachment2(const uint32_t colorAttachmentIndex,
     attachmentReferences.at(1).attachment = colorAttachmentIndex;
 
     attachmentDescriptions.at(colorAttachmentIndex).sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-    attachmentDescriptions.at(colorAttachmentIndex).format = core::swapchain.format.format;
+    attachmentDescriptions.at(colorAttachmentIndex).format = swapchain.format.format;
     attachmentDescriptions.at(colorAttachmentIndex).samples = samples;
     attachmentDescriptions.at(colorAttachmentIndex).loadOp = loadOp;
     attachmentDescriptions.at(colorAttachmentIndex).storeOp = storeOp;
@@ -176,7 +176,7 @@ static void createColorAttachment2(const uint32_t colorAttachmentIndex,
         attachmentReferences.at(2).layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         attachmentDescriptions.at(colorAttachmentIndex + 1).sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-        attachmentDescriptions.at(colorAttachmentIndex + 1).format = core::swapchain.format.format;
+        attachmentDescriptions.at(colorAttachmentIndex + 1).format = swapchain.format.format;
         attachmentDescriptions.at(colorAttachmentIndex + 1).samples = VK_SAMPLE_COUNT_1_BIT;
         attachmentDescriptions.at(colorAttachmentIndex + 1).loadOp = loadOp;
         attachmentDescriptions.at(colorAttachmentIndex + 1).storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -288,7 +288,7 @@ static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
         .dependencyCount = creationInfo.dependencyCount,
         .pDependencies = creationInfo.dependencies,
     };
-    CHECK_RESULT_RETURN(vkCreateRenderPass(core::device, &createInfo, nullptr, &renderPass));
+    CHECK_RESULT_RETURN(vkCreateRenderPass(luna::device, &createInfo, nullptr, &renderPass));
 
     return VK_SUCCESS;
 }
@@ -344,13 +344,13 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
         .correlatedViewMaskCount = creationInfo.correlatedViewMaskCount,
         .pCorrelatedViewMasks = creationInfo.correlatedViewMasks,
     };
-    CHECK_RESULT_RETURN(vkCreateRenderPass2(core::device, &createInfo, nullptr, &renderPass));
+    CHECK_RESULT_RETURN(vkCreateRenderPass2(luna::device, &createInfo, nullptr, &renderPass));
 
     return VK_SUCCESS;
 }
 } // namespace luna::helpers
 
-namespace luna::core
+namespace luna
 {
 RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo)
 {
@@ -521,11 +521,11 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
     CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffers_.back()));
     return VK_SUCCESS;
 }
-} // namespace luna::core
+} // namespace luna
 
 VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass)
 {
-    using namespace luna::core;
+    using namespace luna;
     assert(creationInfo);
 
     TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
@@ -538,7 +538,7 @@ VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, Lu
 
 VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass)
 {
-    using namespace luna::core;
+    using namespace luna;
     assert(creationInfo);
 
     TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
@@ -553,18 +553,18 @@ LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass render
 {
     if (name == nullptr)
     {
-        return luna::core::renderPass(renderPass)->getUnnamedSubpass();
+        return luna::renderPass(renderPass)->getUnnamedSubpass();
     }
-    return luna::core::renderPass(renderPass)->getSubpassIndexByName(name);
+    return luna::renderPass(renderPass)->getSubpassIndexByName(name);
 }
 
 VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo)
 {
-    using namespace luna::core;
+    using namespace luna;
     assert(renderPass);
     VkResult acquireImageResult = VK_SUCCESS;
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
-    const RenderPass *renderPassObject = luna::core::renderPass(renderPass);
+    const RenderPass *renderPassObject = luna::renderPass(renderPass);
 
     if (swapchain.imageIndex == -1u)
     {
@@ -628,13 +628,13 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
 }
 void lunaNextSubpass()
 {
-    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer();
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
     assert(commandBuffer.isRecording());
     vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 }
 void lunaEndRenderPass()
 {
-    const luna::core::CommandBuffer &commandBuffer = luna::core::device.commandPools().graphics.commandBuffer();
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
     assert(commandBuffer.isRecording());
     vkCmdEndRenderPass(commandBuffer);
 }

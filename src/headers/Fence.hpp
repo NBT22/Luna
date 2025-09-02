@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan_core.h>
 
-namespace luna::core
+namespace luna
 {
 class Fence
 {
@@ -28,14 +28,14 @@ class Fence
         bool willBeSignaled_{};
         VkFence fence_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
 #include <volk.h>
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 inline Fence::Fence(const VkDevice logicalDevice, const VkFenceCreateInfo *fenceCreateInfo)
 {
@@ -69,6 +69,6 @@ inline bool Fence::willBeSignaled() const
 {
     return willBeSignaled_;
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

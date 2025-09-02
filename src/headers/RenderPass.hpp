@@ -15,7 +15,7 @@
 #include "Device.hpp"
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 struct RenderPassSubpassIndex
 {
@@ -69,7 +69,7 @@ class RenderPass
         std::vector<VkImageView> attachments_{};
         std::vector<VkFramebuffer> framebuffers_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
@@ -77,7 +77,7 @@ class RenderPass
 #include <stdexcept>
 #include <volk.h>
 
-namespace luna::core
+namespace luna
 {
 inline bool RenderPass::isDestroyed(const RenderPass &renderPass)
 {
@@ -191,6 +191,6 @@ inline void RenderPass::init_(const LunaRenderPassCreationInfo2 &creationInfo)
         }
     }
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

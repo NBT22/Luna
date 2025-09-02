@@ -12,7 +12,7 @@
 VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool)
 {
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::core::device.addApplicationCommandPool(*creationInfo, commandPool));
+    CHECK_RESULT_RETURN(luna::device.addApplicationCommandPool(*creationInfo, commandPool));
     return VK_SUCCESS;
 }
 
@@ -21,7 +21,7 @@ VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, 
 //     switch (reinterpret_cast<uintptr_t>(commandPool))
 //     {
 //         case LUNA_INTERNAL_GRAPHICS_COMMAND_POOL:
-//             CHECK_RESULT_RETURN(luna::core::device.commandPools().graphics.reset(luna::core::device, flags));
+//             CHECK_RESULT_RETURN(luna::device.commandPools().graphics.reset(luna::device, flags));
 //             return VK_SUCCESS;
 //         default:
 //             return VK_ERROR_UNKNOWN;

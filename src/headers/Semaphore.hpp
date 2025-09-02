@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan_core.h>
 
-namespace luna::core
+namespace luna
 {
 class Semaphore
 {
@@ -34,14 +34,14 @@ class Semaphore
         VkPipelineStageFlags stageMask_{};
         VkSemaphore semaphore_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
 #include <volk.h>
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 inline Semaphore::Semaphore(const VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo)
 {
@@ -92,6 +92,6 @@ inline const VkPipelineStageFlags &Semaphore::stageMask() const
 {
     return stageMask_;
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

@@ -9,7 +9,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-namespace luna::core
+namespace luna
 {
 class GraphicsPipeline
 {
@@ -33,11 +33,11 @@ class GraphicsPipeline
         VkPipelineLayout layout_{};
         std::vector<LunaPushConstantsRange> pushConstantsRanges_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
-namespace luna::core
+namespace luna
 {
 inline bool GraphicsPipeline::isDestroyed(const GraphicsPipeline &graphicsPipeline)
 {
@@ -48,6 +48,6 @@ inline VkPipelineLayout GraphicsPipeline::layout() const
 {
     return layout_;
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

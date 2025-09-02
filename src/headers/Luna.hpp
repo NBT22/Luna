@@ -47,7 +47,7 @@ class VkResultException final: public std::exception
         return exception.result; \
     }
 
-namespace luna::core
+namespace luna
 {
 struct Swapchain
 {
@@ -64,4 +64,4 @@ struct Swapchain
         std::vector<VkImageView> imageViews{};
         std::atomic_bool safeToUse{};
 };
-} // namespace luna::core
+} // namespace luna

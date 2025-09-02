@@ -18,7 +18,7 @@
 #include "Instance.hpp"
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 {
@@ -207,7 +207,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     CHECK_RESULT_THROW(createCommandPools());
     isDestroyed_ = false;
 }
-} // namespace luna::core
+} // namespace luna
 
 VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
 {
@@ -222,28 +222,28 @@ VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
         .requiredFeatures = requiredFeatures2,
         .surface = creationInfo->surface,
     };
-    TRY_CATCH_RESULT(luna::core::device = luna::core::Device(creationInfo2));
+    TRY_CATCH_RESULT(luna::device = luna::Device(creationInfo2));
     return VK_SUCCESS;
 }
 
 VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
     assert(creationInfo);
-    TRY_CATCH_RESULT(luna::core::device = luna::core::Device(*creationInfo));
+    TRY_CATCH_RESULT(luna::device = luna::Device(*creationInfo));
     return VK_SUCCESS;
 }
 
 VkPhysicalDeviceProperties lunaGetPhysicalDeviceProperties()
 {
     VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(luna::core::device, &properties);
+    vkGetPhysicalDeviceProperties(luna::device, &properties);
     return properties;
 }
 
 VkPhysicalDeviceProperties2 lunaGetPhysicalDeviceProperties2()
 {
     VkPhysicalDeviceProperties2 properties;
-    vkGetPhysicalDeviceProperties2(luna::core::device, &properties);
+    vkGetPhysicalDeviceProperties2(luna::device, &properties);
     return properties;
 }
 
@@ -255,6 +255,6 @@ VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, LunaS
         .codeSize = bytes,
         .pCode = spirv,
     };
-    CHECK_RESULT_RETURN(luna::core::device.addShaderModule(&creationInfo, shaderModule));
+    CHECK_RESULT_RETURN(luna::device.addShaderModule(&creationInfo, shaderModule));
     return VK_SUCCESS;
 }

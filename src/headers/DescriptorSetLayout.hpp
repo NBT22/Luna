@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
 
-namespace luna::core
+namespace luna
 {
 struct DescriptorSetIndex
 {
@@ -44,11 +44,11 @@ class DescriptorSetLayout
         VkDescriptorSetLayout layout_{};
         std::unordered_map<std::string, Binding> bindingMap_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
-namespace luna::core
+namespace luna
 {
 inline bool DescriptorSetLayout::isDestroyed(const DescriptorSetLayout &layout)
 {
@@ -64,6 +64,6 @@ inline const DescriptorSetLayout::Binding &DescriptorSetLayout::binding(const st
 {
     return bindingMap_.at(bindingName);
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

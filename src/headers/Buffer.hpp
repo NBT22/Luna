@@ -11,7 +11,7 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
-namespace luna::core
+namespace luna
 {
 class Buffer;
 namespace buffer
@@ -71,9 +71,9 @@ class Buffer
         void *data_{};
         std::list<buffer::BufferRegion> regions_{};
 };
-} // namespace luna::core
+} // namespace luna
 
-namespace luna::core::buffer
+namespace luna::buffer
 {
 class BufferRegion
 {
@@ -111,13 +111,13 @@ class BufferRegion
         Buffer *buffer_{};
         std::list<SubRegion> subRegions_{};
 };
-} // namespace luna::core::buffer
+} // namespace luna::buffer
 
 #pragma region "Implmentation"
 
 #include <algorithm>
 
-namespace luna::core
+namespace luna
 {
 inline Buffer::operator const VkBuffer &() const
 {
@@ -127,9 +127,9 @@ inline Buffer::operator const VkBuffer *() const
 {
     return &buffer_;
 }
-} // namespace luna::core
+} // namespace luna
 
-namespace luna::core::buffer
+namespace luna::buffer
 {
 inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion):
     BufferRegionIndex(buffer, bufferRegion, nullptr)
@@ -196,6 +196,6 @@ inline size_t BufferRegion::offset(const SubRegion *subRegion) const
     }
     return offset_;
 }
-} // namespace luna::core::buffer
+} // namespace luna::buffer
 
 #pragma endregion "Implementation"

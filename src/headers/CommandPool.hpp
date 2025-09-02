@@ -10,7 +10,7 @@
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
 
-namespace luna::core
+namespace luna
 {
 class CommandPool
 {
@@ -45,7 +45,7 @@ class CommandPool
         VkCommandPool commandPool_{};
         std::vector<CommandBuffer> commandBuffers_{};
 };
-} // namespace luna::core
+} // namespace luna
 
 #pragma region "Implmentation"
 
@@ -53,7 +53,7 @@ class CommandPool
 #include <volk.h>
 #include "Luna.hpp"
 
-namespace luna::core
+namespace luna
 {
 inline bool CommandPool::isDestroyed(const CommandPool &commandPool)
 {
@@ -186,6 +186,6 @@ inline CommandBuffer &CommandPool::commandBuffer(const uint32_t index)
 {
     return commandBuffers_.at(index);
 }
-} // namespace luna::core
+} // namespace luna
 
 #pragma endregion "Implmentation"

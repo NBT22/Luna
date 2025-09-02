@@ -10,17 +10,17 @@
 #include "Fence.hpp"
 #include "Semaphore.hpp"
 
-namespace luna::core
+namespace luna
 {
 class CommandBuffer;
-} // namespace luna::core
+} // namespace luna
 
-namespace luna::core::commandBuffer
+namespace luna::commandBuffer
 {
 class CommandBufferArray
 {
     public:
-        friend class core::CommandBuffer;
+        friend class luna::CommandBuffer;
         CommandBufferArray() = default;
         CommandBufferArray(VkDevice logicalDevice,
                            VkCommandPool commandPool,
@@ -60,7 +60,7 @@ class CommandBufferArray
         std::vector<Fence> fences_{};
         std::vector<Semaphore> semaphores_{};
 };
-} // namespace luna::core::commandBuffer
+} // namespace luna::commandBuffer
 
 #pragma region "Implmentation"
 
@@ -68,7 +68,7 @@ class CommandBufferArray
 #include <cstddef>
 #include "Luna.hpp"
 
-namespace luna::core::commandBuffer
+namespace luna::commandBuffer
 {
 inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
                                               const VkCommandPool commandPool,
@@ -243,6 +243,6 @@ inline const Semaphore &CommandBufferArray::semaphore() const
     assert(!semaphores_.at(index_).isSignaled());
     return semaphores_.at(index_);
 }
-} // namespace luna::core::commandBuffer
+} // namespace luna::commandBuffer
 
 #pragma endregion "Implmentation"
