@@ -137,7 +137,7 @@ IncludeCategories:
     Priority: 2
   - Regex: '.*'
     Priority: 3
-IncludeIsMainRegex: '([-_](test|unittest))?$'
+IncludeIsMainRegex: '^$'
 #IncludeIsMainSourceRegex:
 IndentAccessModifiers: true
 IndentCaseBlocks: false

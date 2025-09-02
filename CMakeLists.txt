@@ -39,42 +39,45 @@ endif ()
 findDependencies()
 
 add_library(Luna STATIC
-        src/luna/core/Buffer.cpp
-        src/luna/core/CommandPool.cpp
-        src/luna/core/DescriptorSetLayout.cpp
-        src/luna/core/Device.cpp
-        src/luna/core/GraphicsPipeline.cpp
-        src/luna/core/Image.cpp
-        src/luna/core/Instance.cpp
-        src/luna/core/Luna.cpp
-        src/luna/core/RenderPass.cpp
-        src/headers/luna/core/Buffer.hpp
-        src/headers/luna/core/CommandBuffer.hpp
-        src/headers/luna/core/CommandPool.hpp
-        src/headers/luna/core/DescriptorSetLayout.hpp
-        src/headers/luna/core/Device.hpp
-        src/headers/luna/core/Fence.hpp
-        src/headers/luna/core/GraphicsPipeline.hpp
-        src/headers/luna/core/Image.hpp
-        src/headers/luna/core/Instance.hpp
-        src/headers/luna/core/Luna.hpp
-        src/headers/luna/core/RenderPass.hpp
-        src/headers/luna/core/Semaphore.hpp
-        src/headers/luna/core/commandBuffer/CommandBuffer.hpp
-        src/headers/luna/core/commandBuffer/CommandBufferArray.hpp
-        src/headers/luna/implementations/core/Buffer.ipp
-        src/headers/luna/implementations/core/CommandBuffer.ipp
-        src/headers/luna/implementations/core/CommandPool.ipp
-        src/headers/luna/implementations/core/DescriptorSetLayout.ipp
-        src/headers/luna/implementations/core/Device.ipp
-        src/headers/luna/implementations/core/Fence.ipp
-        src/headers/luna/implementations/core/GraphicsPipeline.ipp
-        src/headers/luna/implementations/core/Image.ipp
-        src/headers/luna/implementations/core/Instance.ipp
-        src/headers/luna/implementations/core/RenderPass.ipp
-        src/headers/luna/implementations/core/Semaphore.ipp
-        src/headers/luna/implementations/core/commandBuffer/CommandBuffer.ipp
-        src/headers/luna/implementations/core/commandBuffer/CommandBufferArray.ipp
+        src/Buffer.cpp
+        src/CommandPool.cpp
+        src/DescriptorSetLayout.cpp
+        src/Device.cpp
+        src/GraphicsPipeline.cpp
+        src/Image.cpp
+        src/Instance.cpp
+        src/Luna.cpp
+        src/RenderPass.cpp
+
+        src/headers/commandBuffer/CommandBuffer.hpp
+        src/headers/commandBuffer/CommandBufferArray.hpp
+        src/headers/Buffer.hpp
+        src/headers/CommandBuffer.hpp
+        src/headers/CommandPool.hpp
+        src/headers/DescriptorSetLayout.hpp
+        src/headers/Device.hpp
+        src/headers/Fence.hpp
+        src/headers/GraphicsPipeline.hpp
+        src/headers/Image.hpp
+        src/headers/Instance.hpp
+        src/headers/Luna.hpp
+        src/headers/RenderPass.hpp
+        src/headers/Semaphore.hpp
+
+        src/implementations/commandBuffer/CommandBuffer.ipp
+        src/implementations/commandBuffer/CommandBufferArray.ipp
+        src/implementations/Buffer.ipp
+        src/implementations/CommandBuffer.ipp
+        src/implementations/CommandPool.ipp
+        src/implementations/DescriptorSetLayout.ipp
+        src/implementations/Device.ipp
+        src/implementations/Fence.ipp
+        src/implementations/GraphicsPipeline.ipp
+        src/implementations/Image.ipp
+        src/implementations/Instance.ipp
+        src/implementations/RenderPass.ipp
+        src/implementations/Semaphore.ipp
+
         include/luna/luna.h
         include/luna/lunaDevice.h
         include/luna/lunaDrawing.h
@@ -85,9 +88,9 @@ add_library(Luna STATIC
         include/luna/lunaTypes.h
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
-target_link_libraries(Luna PUBLIC _LunaInternalLibrary_Dependencies)
+target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)
 target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include)
-target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src/headers)
+target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src ${LUNA_SOURCE_DIR}/src/headers)
 
 if (LUNA_EXAMPLES)
     add_subdirectory(example)

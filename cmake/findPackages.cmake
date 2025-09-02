@@ -19,9 +19,9 @@ function(findDependencies)
         find_package(Vulkan COMPONENTS volk QUIET) # This is kept to check if volk is installed on the system
     endif ()
     if (Vulkan_FOUND) # Able to find Volk
-        add_library(_LunaInternalLibrary_volk INTERFACE)
-        target_link_libraries(_LunaInternalLibrary_volk INTERFACE Vulkan::volk)
-        add_library(volk::volk_headers ALIAS _LunaInternalLibrary_volk)
+        add_library(_LunaInternal_volk INTERFACE)
+        target_link_libraries(_LunaInternal_volk INTERFACE Vulkan::volk)
+        add_library(volk::volk_headers ALIAS _LunaInternal_volk)
     else () # No Vulkan installation
         set(VOLK_HEADERS_ONLY ON)
         set(VULKAN_HEADERS_INSTALL_DIR ${Vulkan_INCLUDE_DIR}/../)
@@ -30,9 +30,9 @@ function(findDependencies)
         ensureVersionsMatch("Volk" VOLK_VERSION "SPIRV-Reflect" SPIRV_REFLECT_VERSION)
     endif ()
 
-    add_library(_LunaInternalLibrary_Dependencies INTERFACE)
-    target_link_libraries(_LunaInternalLibrary_Dependencies INTERFACE volk::volk_headers spirv-reflect-static GPUOpen::VulkanMemoryAllocator)
-    target_compile_options(_LunaInternalLibrary_Dependencies INTERFACE $<$<BOOL:${LUNA_DEFINE_VK_NO_PROTOTYPES}>:$<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>>)
+    add_library(_LunaInternal_PublicDependencies INTERFACE)
+    target_link_libraries(_LunaInternal_PublicDependencies INTERFACE volk::volk_headers spirv-reflect-static GPUOpen::VulkanMemoryAllocator)
+    target_compile_options(_LunaInternal_PublicDependencies INTERFACE $<$<BOOL:${LUNA_DEFINE_VK_NO_PROTOTYPES}>:$<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>>)
 endfunction()
 
 function(findSDL3)
