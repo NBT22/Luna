@@ -105,7 +105,7 @@ static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
     return VK_SUCCESS;
 }
 
-static VkResult createSwapchainImages(const VkDevice logicalDevice, Swapchain &swapchain)
+static VkResult createSwapchainImages(const VkDevice logicalDevice)
 {
     CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice, swapchain.swapchain, &swapchain.imageCount, nullptr));
 
@@ -186,7 +186,7 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
     };
     CHECK_RESULT_RETURN(vkCreateSwapchainKHR(luna::device, &createInfo, nullptr, &luna::swapchain.swapchain));
 
-    CHECK_RESULT_RETURN(helpers::createSwapchainImages(luna::device, luna::swapchain));
+    CHECK_RESULT_RETURN(helpers::createSwapchainImages(luna::device));
     assert(capabilities.minImageCount <= luna::swapchain.imageCount &&
            luna::swapchain.imageCount <= capabilities.maxImageCount);
     CHECK_RESULT_RETURN(luna::device.createSemaphores(luna::swapchain.imageCount));

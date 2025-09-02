@@ -452,23 +452,23 @@ static VkResult writeImage(const VkImage image,
     }
 
     const size_t bytes = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format);
-    const auto *stagingBuffer = static_cast<const buffer::BufferRegionIndex *>(luna::stagingBuffer);
-    if (stagingBuffer == nullptr || stagingBuffer->size() < bytes)
+    const auto *stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
+    if (stagingBufferRegionIndex == nullptr || stagingBufferRegionIndex->size() < bytes)
     {
-        if (stagingBuffer != nullptr)
+        if (stagingBufferRegionIndex != nullptr)
         {
-            lunaDestroyBuffer(stagingBuffer);
+            lunaDestroyBuffer(stagingBufferRegionIndex);
         }
         const LunaBufferCreationInfo bufferCreationInfo = {
             .size = bytes,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         };
-        LunaBuffer *stagingBufferHandle = &luna::stagingBuffer; // NOLINT(*-const-correctness)
+        LunaBuffer *stagingBufferHandle = &stagingBuffer; // NOLINT(*-const-correctness)
         CHECK_RESULT_RETURN(luna::buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-        stagingBuffer = static_cast<const buffer::BufferRegionIndex *>(luna::stagingBuffer);
+        stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
     }
 
-    stagingBuffer->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
+    stagingBufferRegionIndex->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
     const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {
         .aspectMask = aspectMask,
@@ -513,7 +513,7 @@ static VkResult writeImage(const VkImage image,
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           *stagingBuffer->buffer(),
+                           *stagingBufferRegionIndex->buffer(),
                            image,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,

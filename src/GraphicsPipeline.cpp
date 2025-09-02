@@ -23,11 +23,11 @@ static VkResult createPipelineLayout(const LunaPipelineLayoutCreationInfo &layou
                                      VkPipelineLayout *layout)
 {
     const uint32_t descriptorSetLayoutCount = layoutCreationInfo.descriptorSetLayoutCount;
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
-    descriptorSetLayouts.reserve(descriptorSetLayoutCount);
+    std::vector<VkDescriptorSetLayout> vkDescriptorSetLayouts;
+    vkDescriptorSetLayouts.reserve(descriptorSetLayoutCount);
     for (uint32_t i = 0; i < descriptorSetLayoutCount; i++)
     {
-        descriptorSetLayouts.emplace_back(*descriptorSetLayout(layoutCreationInfo.descriptorSetLayouts[i]));
+        vkDescriptorSetLayouts.emplace_back(*descriptorSetLayout(layoutCreationInfo.descriptorSetLayouts[i]));
     }
     uint32_t pushConstantsOffset = 0;
     std::vector<VkPushConstantRange> pushConstantRanges;
@@ -43,7 +43,7 @@ static VkResult createPipelineLayout(const LunaPipelineLayoutCreationInfo &layou
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .flags = layoutCreationInfo.flags,
         .setLayoutCount = descriptorSetLayoutCount,
-        .pSetLayouts = descriptorSetLayouts.data(),
+        .pSetLayouts = vkDescriptorSetLayouts.data(),
         .pushConstantRangeCount = layoutCreationInfo.pushConstantRangeCount,
         .pPushConstantRanges = pushConstantRanges.data(),
     };
