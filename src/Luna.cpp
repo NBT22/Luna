@@ -95,6 +95,8 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
 
     VkSurfaceCapabilitiesKHR capabilities;
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, swapchain.surface, &capabilities));
+    // TODO: Check platform compatability because this is only known to work on Wayland
+    capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
     swapchain.safeToUse.wait(false);
     swapchain.safeToUse = false;
     if (targetExtent != nullptr)
