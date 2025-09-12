@@ -320,9 +320,9 @@ inline void Device::initQueueFamilyIndices()
 inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
     const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures.features);
-    constexpr int featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
+    constexpr size_t featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
     const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_.features);
-    for (int i = 0; i < featureCount; i++)
+    for (size_t i = 0; i < featureCount; i++)
     {
         if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
         {
@@ -350,9 +350,9 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
     {
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
         {
-            constexpr int vulkan11FeatureCount = (sizeof(VkPhysicalDeviceVulkan11Features) - 16) / sizeof(VkBool32);
+            constexpr size_t vulkan11FeatureCount = (sizeof(VkPhysicalDeviceVulkan11Features) - 16) / sizeof(VkBool32);
             const VkBool32 *supportedFeatureArray = &vulkan11Features_.storageBuffer16BitAccess;
-            for (int i = 0; i < vulkan11FeatureCount; i++)
+            for (size_t i = 0; i < vulkan11FeatureCount; i++)
             {
                 if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
                 {
@@ -363,9 +363,9 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
         }
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
         {
-            constexpr int vulkan12FeatureCount = (sizeof(VkPhysicalDeviceVulkan12Features) - 16) / sizeof(VkBool32);
+            constexpr size_t vulkan12FeatureCount = (sizeof(VkPhysicalDeviceVulkan12Features) - 16) / sizeof(VkBool32);
             const VkBool32 *supportedFeatureArray = &vulkan12Features_.samplerMirrorClampToEdge;
-            for (int i = 0; i < vulkan12FeatureCount; i++)
+            for (size_t i = 0; i < vulkan12FeatureCount; i++)
             {
                 if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
                 {
@@ -376,9 +376,9 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
         }
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES:
         {
-            constexpr int vulkan13FeatureCount = (sizeof(VkPhysicalDeviceVulkan13Features) - 16) / sizeof(VkBool32);
+            constexpr size_t vulkan13FeatureCount = (sizeof(VkPhysicalDeviceVulkan13Features) - 16) / sizeof(VkBool32);
             const VkBool32 *supportedFeatureArray = &vulkan13Features_.robustImageAccess;
-            for (int i = 0; i < vulkan13FeatureCount; i++)
+            for (size_t i = 0; i < vulkan13FeatureCount; i++)
             {
                 if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
                 {
@@ -389,9 +389,9 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
         }
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES:
         {
-            constexpr int vulkan14FeatureCount = (sizeof(VkPhysicalDeviceVulkan14Features) - 16) / sizeof(VkBool32);
+            constexpr size_t vulkan14FeatureCount = (sizeof(VkPhysicalDeviceVulkan14Features) - 16) / sizeof(VkBool32);
             const VkBool32 *supportedFeatureArray = &vulkan14Features_.globalPriorityQuery;
-            for (int i = 0; i < vulkan14FeatureCount; i++)
+            for (size_t i = 0; i < vulkan14FeatureCount; i++)
             {
                 if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
                 {
@@ -408,8 +408,7 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
                    structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
     }
 
-    // NOLINTNEXTLINE(*-no-int-to-ptr)
-    const void *pNext = reinterpret_cast<const void *>(*reinterpret_cast<const uint64_t *>(requiredFeatures + 1));
+    const void *pNext = *reinterpret_cast<const void *const *>(requiredFeatures + 1);
     if (pNext != nullptr)
     {
         return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));
