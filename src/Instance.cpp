@@ -166,6 +166,7 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
     swapchain.imageUsage = creationInfo.imageUsage == 0 ? colorAttachmentUsage : creationInfo.imageUsage;
     swapchain.compositeAlpha = creationInfo.compositeAlpha == 0 ? VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
                                                                 : creationInfo.compositeAlpha;
+    swapchain.clipped = creationInfo.clipped;
     const VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = swapchain.surface,
@@ -181,7 +182,7 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
         .preTransform = capabilities.currentTransform,
         .compositeAlpha = swapchain.compositeAlpha,
         .presentMode = swapchain.presentMode,
-        .clipped = VK_TRUE, // TODO: Support applications being able to set this... somehow
+        .clipped = swapchain.clipped,
         .oldSwapchain = swapchain.swapchain,
     };
     CHECK_RESULT_RETURN(vkCreateSwapchainKHR(luna::device, &createInfo, nullptr, &luna::swapchain.swapchain));

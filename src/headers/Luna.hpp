@@ -52,16 +52,18 @@ namespace luna
 struct Swapchain
 {
         VkSurfaceKHR surface{};
-        uint32_t imageCount{};
         VkSurfaceFormatKHR format{};
         VkExtent2D extent{};
         VkImageUsageFlags imageUsage{};
-        VkPresentModeKHR presentMode{};
         VkCompositeAlphaFlagBitsKHR compositeAlpha{};
+        VkPresentModeKHR presentMode{};
+        bool clipped{};
+
+        std::atomic_bool safeToUse{};
         VkSwapchainKHR swapchain{};
+        uint32_t imageCount{};
         uint32_t imageIndex{};
         std::vector<VkImage> images{};
         std::vector<VkImageView> imageViews{};
-        std::atomic_bool safeToUse{};
 };
 } // namespace luna

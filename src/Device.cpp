@@ -106,7 +106,8 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
             continue;
         }
         physicalDevice_ = physicalDevice;
-        if (properties_.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        if (creationInfo.physicalDevicePreferenceDefinition != nullptr &&
+            properties_.deviceType == creationInfo.physicalDevicePreferenceDefinition->preferredDeviceType)
         {
             break;
         }
@@ -221,6 +222,7 @@ VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
         .extensionNames = creationInfo->extensionNames,
         .requiredFeatures = requiredFeatures2,
         .surface = creationInfo->surface,
+        .physicalDevicePreferenceDefinition = creationInfo->physicalDevicePreferenceDefinition,
     };
     TRY_CATCH_RESULT(luna::device = luna::Device(creationInfo2));
     return VK_SUCCESS;

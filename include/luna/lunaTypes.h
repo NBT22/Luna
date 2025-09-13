@@ -62,22 +62,27 @@ typedef struct
 
 typedef struct
 {
+        VkPhysicalDeviceType preferredDeviceType;
+} LunaPhysicalDevicePreferenceDefinition;
+
+typedef struct
+{
         uint32_t extensionCount;
         const char *const *extensionNames;
-
         VkPhysicalDeviceFeatures requiredFeatures;
         VkSurfaceKHR surface;
-        VkPhysicalDeviceType preferredDeviceType;
+
+        LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
 } LunaDeviceCreationInfo;
 
 typedef struct
 {
         uint32_t extensionCount;
         const char *const *extensionNames;
-
         VkPhysicalDeviceFeatures2 requiredFeatures;
         VkSurfaceKHR surface;
-        VkPhysicalDeviceType preferredDeviceType;
+
+        LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
 } LunaDeviceCreationInfo2;
 
 typedef struct
