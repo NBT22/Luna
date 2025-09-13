@@ -195,14 +195,21 @@ static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
                                    mat4 *const pushConstantData,
                                    LunaGraphicsPipeline *pipeline)
 {
-    LunaShaderModule vertexShaderModule;
-    LunaShaderModule fragmentShaderModule;
-    if (lunaCreateShaderModule(VERTEX_SHADER_SPIRV, sizeof(VERTEX_SHADER_SPIRV), &vertexShaderModule) != VK_SUCCESS)
+    LunaShaderModule vertexShaderModule = LUNA_NULL_HANDLE;
+    LunaShaderModule fragmentShaderModule = LUNA_NULL_HANDLE;
+    const LunaShaderModuleCreationInfo vertexShaderModuleCreationInfo = {
+        .size = sizeof(VERTEX_SHADER_SPIRV),
+        .spirv = VERTEX_SHADER_SPIRV,
+    };
+    const LunaShaderModuleCreationInfo fragmentShaderModuleCreationInfo = {
+        .size = sizeof(FRAGMENT_SHADER_SPIRV),
+        .spirv = FRAGMENT_SHADER_SPIRV,
+    };
+    if (lunaCreateShaderModule(&vertexShaderModuleCreationInfo, &vertexShaderModule) != VK_SUCCESS)
     {
         return false;
     }
-    if (lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV, sizeof(FRAGMENT_SHADER_SPIRV), &fragmentShaderModule) !=
-        VK_SUCCESS)
+    if (lunaCreateShaderModule(&fragmentShaderModuleCreationInfo, &fragmentShaderModule) != VK_SUCCESS)
     {
         return false;
     }
@@ -486,8 +493,8 @@ int main(void)
         .depthAttachmentClearValue.depthStencil.depth = 1,
     };
     const LunaGraphicsPipelineBindInfo bindInfo = {
-        .descriptorSetCount = 1,
-        .descriptorSets = &descriptorSet,
+        .descriptorSetBindInfo.descriptorSetCount = 1,
+        .descriptorSetBindInfo.descriptorSets = &descriptorSet,
     };
 
     while (!shouldQuit())

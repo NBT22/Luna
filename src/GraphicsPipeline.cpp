@@ -133,37 +133,37 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
         {
             case VK_DYNAMIC_STATE_VIEWPORT:
                 vkCmdSetViewport(commandBuffer,
-                                 dynamicState.viewportBindInfo->firstViewport,
-                                 dynamicState.viewportBindInfo->viewportCount,
-                                 dynamicState.viewportBindInfo->viewports);
+                                 dynamicState.bindInfo.viewportBindInfo->firstViewport,
+                                 dynamicState.bindInfo.viewportBindInfo->viewportCount,
+                                 dynamicState.bindInfo.viewportBindInfo->viewports);
                 break;
             case VK_DYNAMIC_STATE_SCISSOR:
                 vkCmdSetScissor(commandBuffer,
-                                dynamicState.scissorBindInfo->firstScissor,
-                                dynamicState.scissorBindInfo->scissorCount,
-                                dynamicState.scissorBindInfo->scissors);
+                                dynamicState.bindInfo.scissorBindInfo->firstScissor,
+                                dynamicState.bindInfo.scissorBindInfo->scissorCount,
+                                dynamicState.bindInfo.scissorBindInfo->scissors);
                 break;
             default:
                 throw std::runtime_error("Unhandled dynamic state type!");
         }
     }
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
-    if (bindInfo.descriptorSetCount > 0)
+    if (bindInfo.descriptorSetBindInfo.descriptorSetCount > 0)
     {
         std::vector<VkDescriptorSet> descriptorSetsVector;
-        descriptorSetsVector.reserve(bindInfo.descriptorSetCount);
-        for (uint32_t i = 0; i < bindInfo.descriptorSetCount; i++)
+        descriptorSetsVector.reserve(bindInfo.descriptorSetBindInfo.descriptorSetCount);
+        for (uint32_t i = 0; i < bindInfo.descriptorSetBindInfo.descriptorSetCount; i++)
         {
-            descriptorSetsVector.emplace_back(*descriptorSet(bindInfo.descriptorSets[i]));
+            descriptorSetsVector.emplace_back(*descriptorSet(bindInfo.descriptorSetBindInfo.descriptorSets[i]));
         }
         vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout_,
-                                bindInfo.firstSet,
-                                bindInfo.descriptorSetCount,
+                                bindInfo.descriptorSetBindInfo.firstSet,
+                                bindInfo.descriptorSetBindInfo.descriptorSetCount,
                                 descriptorSetsVector.data(),
-                                bindInfo.dynamicOffsetCount,
-                                bindInfo.dynamicOffsets);
+                                bindInfo.descriptorSetBindInfo.dynamicOffsetCount,
+                                bindInfo.descriptorSetBindInfo.dynamicOffsets);
     }
     boundPipeline = pipeline_;
     return VK_SUCCESS;
@@ -183,7 +183,7 @@ VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *crea
     return VK_SUCCESS;
 }
 
-void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaGraphicsPipelineBindInfo *bindInfo)
+void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescriptorSetBindInfo *bindInfo)
 {
     std::vector<VkDescriptorSet> descriptorSets;
     descriptorSets.reserve(bindInfo->descriptorSetCount);

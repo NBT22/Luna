@@ -7,7 +7,7 @@ While it is still in a very early state right now, it is actively being develope
 I follow sematic versioning for my version numbers, and until 1.0.0 an increment in the minor version will be used to indicate an API-breaking change, while changes to the patch version are non-breaking.
 
 ## Bindings
-Currently Luna only has bindings for C11, though in the future I hope to not only provide C++ bindings but also to support older versions of the C specification.
+Currently, Luna only has bindings for C99 though I plan to add C++ bindings in the future.
 
 ## Usage
 As I've been more focused on getting the code working, there is no real documentation available yet. I do plan to document the entire library in full at some point, but as of right now it does not have any.

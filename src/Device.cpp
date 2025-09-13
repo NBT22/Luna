@@ -247,14 +247,13 @@ VkPhysicalDeviceProperties2 lunaGetPhysicalDeviceProperties2()
     return properties;
 }
 
-VkResult lunaCreateShaderModule(const uint32_t *spirv, const size_t bytes, LunaShaderModule *shaderModule)
+VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule)
 {
-    const VkShaderModuleCreateInfo creationInfo = {
+    const VkShaderModuleCreateInfo shaderModuleCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        // TODO: pNext
-        .codeSize = bytes,
-        .pCode = spirv,
+        .codeSize = creationInfo->size,
+        .pCode = creationInfo->spirv,
     };
-    CHECK_RESULT_RETURN(luna::device.addShaderModule(&creationInfo, shaderModule));
+    CHECK_RESULT_RETURN(luna::device.addShaderModule(&shaderModuleCreateInfo, shaderModule));
     return VK_SUCCESS;
 }

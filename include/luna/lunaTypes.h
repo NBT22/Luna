@@ -33,11 +33,14 @@ LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
 LUNA_DEFINE_HANDLE(LunaCommandPool);
 
+static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
+static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
+
 typedef enum
 {
-    LUNA_ATTACHMENT_LOAD_UNDEFINED = 1 << 0,
-    LUNA_ATTACHMENT_LOAD_CLEAR = 1 << 1,
-    LUNA_ATTACHMENT_LOAD_PRESERVE = 1 << 2,
+    LUNA_ATTACHMENT_LOAD_UNDEFINED,
+    LUNA_ATTACHMENT_LOAD_CLEAR,
+    LUNA_ATTACHMENT_LOAD_PRESERVE,
 } LunaAttachmentLoadMode;
 
 typedef enum
@@ -47,32 +50,34 @@ typedef enum
 
 typedef struct
 {
-        const uint32_t apiVersion;
+        uint32_t apiVersion;
 
-        const uint32_t extensionCount;
+        uint32_t extensionCount;
         const char *const *extensionNames;
 
         bool enableValidation;
-        const uint32_t layerCount;
+        uint32_t layerCount;
         const char *const *layerNames;
 } LunaInstanceCreationInfo;
 
 typedef struct
 {
-        const uint32_t extensionCount;
+        uint32_t extensionCount;
         const char *const *extensionNames;
 
-        const VkPhysicalDeviceFeatures requiredFeatures;
+        VkPhysicalDeviceFeatures requiredFeatures;
         VkSurfaceKHR surface;
+        VkPhysicalDeviceType preferredDeviceType;
 } LunaDeviceCreationInfo;
 
 typedef struct
 {
-        const uint32_t extensionCount;
+        uint32_t extensionCount;
         const char *const *extensionNames;
 
-        const VkPhysicalDeviceFeatures2 requiredFeatures;
+        VkPhysicalDeviceFeatures2 requiredFeatures;
         VkSurfaceKHR surface;
+        VkPhysicalDeviceType preferredDeviceType;
 } LunaDeviceCreationInfo2;
 
 typedef struct
@@ -80,14 +85,13 @@ typedef struct
         VkSurfaceKHR surface;
         uint32_t width;
         uint32_t height;
-
         uint32_t formatCount;
         const VkSurfaceFormatKHR *formatPriorityList;
-        uint32_t presentModeCount;
-        const VkPresentModeKHR *presentModePriorityList;
-
         VkImageUsageFlags imageUsage;
         VkCompositeAlphaFlagBitsKHR compositeAlpha;
+        uint32_t presentModeCount;
+        const VkPresentModeKHR *presentModePriorityList;
+        bool clipped;
 } LunaSwapchainCreationInfo;
 
 typedef struct
@@ -181,7 +185,7 @@ typedef struct
         uint32_t descriptorCount;
         VkShaderStageFlags stageFlags;
         const VkSampler *immutableSamplers;
-        const VkDescriptorBindingFlags bindingFlags;
+        VkDescriptorBindingFlags bindingFlags;
 } LunaDescriptorSetLayoutBinding;
 
 typedef struct
@@ -237,7 +241,7 @@ typedef struct
         VkShaderStageFlags stageFlags;
         uint32_t size;
 
-        void *const dataPointer;
+        void *dataPointer;
         uint32_t dataPointerOffset;
 } LunaPushConstantsRange;
 
@@ -264,7 +268,7 @@ typedef struct
         const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
         const VkPipelineColorBlendStateCreateInfo *colorBlendState;
         const VkPipelineDynamicStateCreateInfo *dynamicState;
-        const LunaPipelineLayoutCreationInfo layoutCreationInfo;
+        LunaPipelineLayoutCreationInfo layoutCreationInfo;
         LunaRenderPassSubpass subpass;
 } LunaGraphicsPipelineCreationInfo;
 
@@ -289,7 +293,7 @@ typedef struct
         {
                 const LunaViewportBindInfo *viewportBindInfo;
                 const LunaScissorBindInfo *scissorBindInfo;
-        };
+        } bindInfo;
 } LunaDynamicStateBindInfo;
 
 typedef struct
@@ -299,6 +303,11 @@ typedef struct
         const LunaDescriptorSet *descriptorSets;
         uint32_t dynamicOffsetCount;
         const uint32_t *dynamicOffsets;
+} LunaDescriptorSetBindInfo;
+
+typedef struct
+{
+        LunaDescriptorSetBindInfo descriptorSetBindInfo;
         uint32_t dynamicStateCount;
         const LunaDynamicStateBindInfo *dynamicStates;
 } LunaGraphicsPipelineBindInfo;
@@ -371,14 +380,18 @@ typedef struct
         bool requireQueuePresentationSupport;
 } LunaCommandPoolCreationInfo;
 
-#define LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH (-1u)
-#define LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT (-1u)
 typedef struct
 {
         LunaRenderPass renderPass;
         uint32_t width;
         uint32_t height;
 } LunaRenderPassResizeInfo;
+
+typedef struct
+{
+        size_t size;
+        const uint32_t *spirv;
+} LunaShaderModuleCreationInfo;
 
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using)

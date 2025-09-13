@@ -164,16 +164,12 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 
     LunaShaderModule vertexShaderModule = LUNA_NULL_HANDLE;
     LunaShaderModule fragmentShaderModule = LUNA_NULL_HANDLE;
-    VkResult vertexShaderCreationResult = lunaCreateShaderModule(VERTEX_SHADER_SPIRV,
-                                                                 sizeof(VERTEX_SHADER_SPIRV),
-                                                                 &vertexShaderModule);
+    VkResult vertexShaderCreationResult = lunaCreateShaderModule(sizeof(VERTEX_SHADER_SPIRV), TODO);
     if (vertexShaderCreationResult != VK_SUCCESS)
     {
         return vertexShaderCreationResult;
     }
-    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(FRAGMENT_SHADER_SPIRV,
-                                                                   sizeof(FRAGMENT_SHADER_SPIRV),
-                                                                   &fragmentShaderModule);
+    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(sizeof(FRAGMENT_SHADER_SPIRV), TODO);
     if (fragmentShaderCreationResult != VK_SUCCESS)
     {
         return fragmentShaderCreationResult;
