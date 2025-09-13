@@ -39,7 +39,6 @@ extern LunaBuffer stagingBuffer;
 extern VkPipeline boundPipeline;
 extern LunaBuffer boundVertexBuffer;
 extern LunaBuffer boundIndexBuffer;
-extern VkDeviceSize boundIndexBufferOffset;
 
 extern std::list<RenderPass> renderPasses;
 extern std::list<DescriptorSetLayout> descriptorSetLayouts;

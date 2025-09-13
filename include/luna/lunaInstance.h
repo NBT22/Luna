@@ -11,12 +11,16 @@ extern "C"
 #endif
 
 #include <luna/lunaTypes.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
 VkResult lunaDestroyInstance(void);
 VkInstance lunaGetInstance(void);
+
+bool lunaIsInstanceExtensionAvailable(const char *extensionName);
+bool lunaIsInstanceExtensionVersionAvailable(const char *extensionName, uint32_t extensionVersion);
 
 VkResult lunaGetSurfaceCapabilities(VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 

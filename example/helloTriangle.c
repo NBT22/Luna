@@ -297,7 +297,7 @@ int main(void)
         return 3;
     }
 
-    VkSurfaceKHR surface = LUNA_NULL_HANDLE;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
     if (!SDL_Vulkan_CreateSurface(window, lunaGetInstance(), NULL, &surface))
     {
         return 4;
@@ -342,7 +342,7 @@ int main(void)
     const LunaRenderPassBeginInfo beginInfo = {
         .renderArea.extent.width = extent.width,
         .renderArea.extent.height = extent.height,
-        .depthAttachmentClearValue.depthStencil.depth = 1,
+        .depthAttachmentClearValue.depthStencil.depth = 1, // TODO: This is unneeded?
     };
 
     while (!shouldQuit())

@@ -8,6 +8,8 @@
 #include <luna/lunaInstance.h>
 #include <luna/lunaTypes.h>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
@@ -19,8 +21,34 @@
 #include "Luna.hpp"
 #include "RenderPass.hpp"
 
+namespace
+{
+std::unordered_map<std::string, uint32_t> extensionMap;
+
+void fillExtensionMap()
+{
+    uint32_t propertyCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &propertyCount, nullptr);
+    std::vector<VkExtensionProperties> extensionsProperties(propertyCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &propertyCount, extensionsProperties.data());
+    for (const VkExtensionProperties &extensionProperties: extensionsProperties)
+    {
+        extensionMap[extensionProperties.extensionName] = extensionProperties.specVersion;
+    }
+}
+} // namespace
+
 namespace luna::helpers
 {
+static bool isInstanceExtensionAvailable(const char *extensionName, const uint32_t version = -1)
+{
+    if (extensionMap.empty())
+    {
+        fillExtensionMap();
+    }
+    return extensionMap.contains(extensionName) && extensionMap.at(extensionName) >= version;
+}
+
 static VkResult findSwapchainFormat(const VkPhysicalDevice physicalDevice,
                                     const VkSurfaceKHR surface,
                                     const uint32_t targetFormatCount,
@@ -182,7 +210,7 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
         .preTransform = capabilities.currentTransform,
         .compositeAlpha = swapchain.compositeAlpha,
         .presentMode = swapchain.presentMode,
-        .clipped = swapchain.clipped,
+        .clipped = static_cast<VkBool32>(swapchain.clipped),
         .oldSwapchain = swapchain.swapchain,
     };
     CHECK_RESULT_RETURN(vkCreateSwapchainKHR(luna::device, &createInfo, nullptr, &luna::swapchain.swapchain));
@@ -222,7 +250,6 @@ LunaBuffer stagingBuffer{};
 VkPipeline boundPipeline{};
 LunaBuffer boundVertexBuffer{};
 LunaBuffer boundIndexBuffer{};
-VkDeviceSize boundIndexBufferOffset{};
 
 std::list<RenderPass> renderPasses{};
 std::list<DescriptorSetLayout> descriptorSetLayouts{};
@@ -241,14 +268,8 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
     assert(creationInfo);
     luna::apiVersion = creationInfo->apiVersion;
 
-    const uint32_t enabledLayerCount = creationInfo->enableValidation ? creationInfo->layerCount + 1
-                                                                      : creationInfo->layerCount;
-    std::vector<const char *> enabledLayers;
-    enabledLayers.reserve(enabledLayerCount);
-    for (uint32_t i = 0; i < creationInfo->layerCount; i++)
-    {
-        enabledLayers.emplace_back(creationInfo->layerNames[i]);
-    }
+    std::vector<const char *> enabledLayers(creationInfo->layerNames,
+                                            creationInfo->layerNames + creationInfo->layerCount);
     if (creationInfo->enableValidation)
     {
         enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
@@ -262,8 +283,9 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
     };
     const VkInstanceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .flags = creationInfo->flags,
         .pApplicationInfo = &vulkanApplicationInfo,
-        .enabledLayerCount = enabledLayerCount,
+        .enabledLayerCount = creationInfo->enableValidation ? creationInfo->layerCount + 1 : creationInfo->layerCount,
         .ppEnabledLayerNames = enabledLayers.data(),
         .enabledExtensionCount = creationInfo->extensionCount,
         .ppEnabledExtensionNames = creationInfo->extensionNames,
@@ -340,6 +362,14 @@ VkResult lunaDestroyInstance()
 VkInstance lunaGetInstance()
 {
     return luna::instance;
+}
+bool lunaIsInstanceExtensionAvailable(const char *extensionName)
+{
+    return luna::helpers::isInstanceExtensionAvailable(extensionName);
+}
+bool lunaIsInstanceExtensionVersionAvailable(const char *extensionName, const uint32_t extensionVersion)
+{
+    return luna::helpers::isInstanceExtensionAvailable(extensionName, extensionVersion);
 }
 VkResult lunaCreateSwapchain(const LunaSwapchainCreationInfo *creationInfo)
 {

@@ -50,12 +50,13 @@ typedef enum
 
 typedef struct
 {
+        VkInstanceCreateFlags flags;
         uint32_t apiVersion;
 
         uint32_t extensionCount;
         const char *const *extensionNames;
-
         bool enableValidation;
+
         uint32_t layerCount;
         const char *const *layerNames;
 } LunaInstanceCreationInfo;
@@ -291,14 +292,16 @@ typedef struct
         const VkRect2D *scissors;
 } LunaScissorBindInfo;
 
+typedef union
+{
+    const LunaViewportBindInfo *viewportBindInfo;
+    const LunaScissorBindInfo *scissorBindInfo;
+} LunaDynamicStateBindInfoUnion;
+
 typedef struct
 {
         VkDynamicState dynamicStateType;
-        union
-        {
-                const LunaViewportBindInfo *viewportBindInfo;
-                const LunaScissorBindInfo *scissorBindInfo;
-        } bindInfo;
+        LunaDynamicStateBindInfoUnion bindInfo;
 } LunaDynamicStateBindInfo;
 
 typedef struct

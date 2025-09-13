@@ -504,7 +504,6 @@ int main(void)
         CHECK_RESULT(lunaPushConstants(graphicsPipeline));
         CHECK_RESULT(lunaDrawBufferIndexed(vertexBuffer,
                                            indexBuffer,
-                                           0,
                                            VK_INDEX_TYPE_UINT32,
                                            graphicsPipeline,
                                            &bindInfo,

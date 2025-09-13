@@ -445,7 +445,6 @@ VkResult lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
 
 VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
                                const LunaBuffer indexBuffer,
-                               const VkDeviceSize indexOffset,
                                const VkIndexType indexType,
                                const LunaGraphicsPipeline pipeline,
                                const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
@@ -472,12 +471,11 @@ VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
     }
     if (indexBuffer != nullptr)
     {
-        if (boundIndexBuffer != indexBuffer || boundIndexBufferOffset != indexOffset)
+        if (boundIndexBuffer != indexBuffer)
         {
             boundIndexBuffer = indexBuffer;
-            boundIndexBufferOffset = indexOffset;
             const buffer::BufferRegionIndex *index = static_cast<const buffer::BufferRegionIndex *>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset() + boundIndexBufferOffset, indexType);
+            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset(), indexType);
         }
     }
     vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
@@ -486,7 +484,6 @@ VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
 
 VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
                                        const LunaBuffer indexBuffer,
-                                       const VkDeviceSize indexOffset,
                                        const VkIndexType indexType,
                                        const LunaGraphicsPipeline pipeline,
                                        const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
@@ -513,12 +510,11 @@ VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
     }
     if (indexBuffer != nullptr)
     {
-        if (boundIndexBuffer != indexBuffer || boundIndexBufferOffset != indexOffset)
+        if (boundIndexBuffer != indexBuffer)
         {
             boundIndexBuffer = indexBuffer;
-            boundIndexBufferOffset = indexOffset;
             const buffer::BufferRegionIndex *index = static_cast<const buffer::BufferRegionIndex *>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset() + boundIndexBufferOffset, indexType);
+            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset(), indexType);
         }
     }
     vkCmdDrawIndexedIndirect(commandBuffer,
@@ -531,7 +527,6 @@ VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
 
 VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
                                             const LunaBuffer indexBuffer,
-                                            const VkDeviceSize indexOffset,
                                             const VkIndexType indexType,
                                             const LunaGraphicsPipeline pipeline,
                                             const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
@@ -561,12 +556,11 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
     }
     if (indexBuffer != nullptr)
     {
-        if (boundIndexBuffer != indexBuffer || boundIndexBufferOffset != indexOffset)
+        if (boundIndexBuffer != indexBuffer)
         {
             boundIndexBuffer = indexBuffer;
-            boundIndexBufferOffset = indexOffset;
             const buffer::BufferRegionIndex *index = static_cast<const buffer::BufferRegionIndex *>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset() + boundIndexBufferOffset, indexType);
+            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset(), indexType);
         }
     }
     vkCmdDrawIndexedIndirectCount(commandBuffer,
