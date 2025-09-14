@@ -430,7 +430,6 @@ int main(void)
         .extensionNames = instanceExtensions,
 
 #ifndef NDEBUG
-        // TODO: Using validation requires having the Vulkan SDK installed
         .enableValidation = true,
 #endif
     };
@@ -477,7 +476,7 @@ int main(void)
     mat4 viewMatrix = GLM_MAT4_IDENTITY_INIT;
     glm_lookat((vec3){2.0f, 2.0f, 2.0f}, GLM_VEC3_ZERO, (vec3){0.0f, 0.0f, -1.0f}, viewMatrix);
     mat4 projectionMatrix = GLM_MAT4_IDENTITY_INIT;
-    glm_perspective(0.7853981633974483f, 1, 0.1f, 4.25f, projectionMatrix);
+    glm_perspective(GLM_PI_4f, 1, 0.1f, 4.25f, projectionMatrix);
     mat4 transformMatrix = GLM_MAT4_IDENTITY_INIT;
     glm_mul(projectionMatrix, viewMatrix, transformMatrix);
 

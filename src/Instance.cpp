@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <list>
 #include <luna/lunaInstance.h>
 #include <luna/lunaTypes.h>
@@ -278,14 +279,27 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
     assert(creationInfo);
     luna::apiVersion = creationInfo->apiVersion;
 
+    CHECK_RESULT_RETURN(lunaInitializeVolk());
+
     std::vector<const char *> enabledLayers(creationInfo->layerNames,
                                             creationInfo->layerNames + creationInfo->layerCount);
     if (creationInfo->enableValidation)
     {
-        enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
+        uint32_t propertyCount = 0;
+        vkEnumerateInstanceLayerProperties(&propertyCount, nullptr);
+        std::vector<VkLayerProperties> properties(propertyCount);
+        vkEnumerateInstanceLayerProperties(&propertyCount, properties.data());
+        constexpr const char *validationLayerName = "VK_LAYER_KHRONOS_validation";
+        constexpr size_t validationLayerNameLength = std::size("VK_LAYER_KHRONOS_validation") - 1;
+        for (const VkLayerProperties &layerProperties: properties)
+        {
+            if (std::strncmp(layerProperties.layerName, validationLayerName, validationLayerNameLength) == 0)
+            {
+                enabledLayers.emplace_back(validationLayerName);
+                break;
+            }
+        }
     }
-
-    CHECK_RESULT_RETURN(lunaInitializeVolk());
 
     const VkApplicationInfo vulkanApplicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,

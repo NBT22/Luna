@@ -222,7 +222,6 @@ inline VkResult CommandBufferArray::resetFence(const VkDevice logicalDevice)
 }
 inline VkResult CommandBufferArray::recreateSemaphores(const VkDevice logicalDevice)
 {
-    // TODO: Should this function take an take an array of creation infos instead of doing this?
     constexpr VkSemaphoreCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };

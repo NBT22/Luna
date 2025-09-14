@@ -472,7 +472,6 @@ inline VkResult Device::createCommandPools()
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    // TODO: The count should be dynamic, which means this shouldn't use templates but instead just function args
     CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer(logicalDevice_,
                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                                                              nullptr,

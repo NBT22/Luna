@@ -131,7 +131,6 @@ VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creation
                 buffer->regions_.sort(byAscendingOffset);
             }
             const auto hasLargeEnoughGap = [&creationInfo](const BufferRegion &a, const BufferRegion &b) -> bool {
-                // TODO: Test to make sure this actually works
                 return a.offset() + a.size() < b.offset() - creationInfo.size;
             };
             const std::list<BufferRegion>::iterator regionIterator = std::adjacent_find(buffer->regions_.begin(),

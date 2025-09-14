@@ -296,7 +296,6 @@ int main(void)
         .extensionNames = instanceExtensions,
 
 #ifndef NDEBUG
-        // TODO: Using validation requires having the Vulkan SDK installed
         .enableValidation = true,
 #endif
     };

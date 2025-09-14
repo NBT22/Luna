@@ -36,7 +36,7 @@ VkResult lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo);
 VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);
 VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer **buffers);
 void lunaDestroyBuffer(LunaBuffer buffer);
-VkResult lunaResizeBuffer(VkDeviceSize newSize, LunaBuffer *buffer);
+VkResult lunaResizeBuffer(LunaBuffer buffer, VkDeviceSize newSize);
 void lunaWriteDataToBuffer(LunaBuffer buffer, const void *data, size_t bytes, size_t offset);
 
 VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool);
