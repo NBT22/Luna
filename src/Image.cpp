@@ -5,17 +5,14 @@
 #include <array>
 #include <bit>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <list>
 #include <luna/luna.h>
 #include <luna/lunaTypes.h>
-#include <stdexcept>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "CommandBuffer.hpp"
-#include "DescriptorSetLayout.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
@@ -23,209 +20,6 @@
 
 namespace luna::helpers
 {
-static uint8_t bytesPerPixel(const VkFormat format)
-{
-    switch (format)
-    {
-        case VK_FORMAT_R4G4_UNORM_PACK8:
-        case VK_FORMAT_R8_UNORM:
-        case VK_FORMAT_R8_SNORM:
-        case VK_FORMAT_R8_USCALED:
-        case VK_FORMAT_R8_SSCALED:
-        case VK_FORMAT_R8_UINT:
-        case VK_FORMAT_R8_SINT:
-        case VK_FORMAT_R8_SRGB:
-        case VK_FORMAT_S8_UINT:
-            return sizeof(uint8_t);
-        case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
-        case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
-        case VK_FORMAT_R5G6B5_UNORM_PACK16:
-        case VK_FORMAT_B5G6R5_UNORM_PACK16:
-        case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-        case VK_FORMAT_B5G5R5A1_UNORM_PACK16:
-        case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-        case VK_FORMAT_R8G8_UNORM:
-        case VK_FORMAT_R8G8_SNORM:
-        case VK_FORMAT_R8G8_USCALED:
-        case VK_FORMAT_R8G8_SSCALED:
-        case VK_FORMAT_R8G8_UINT:
-        case VK_FORMAT_R8G8_SINT:
-        case VK_FORMAT_R8G8_SRGB:
-        case VK_FORMAT_R16_UNORM:
-        case VK_FORMAT_R16_SNORM:
-        case VK_FORMAT_R16_USCALED:
-        case VK_FORMAT_R16_SSCALED:
-        case VK_FORMAT_R16_UINT:
-        case VK_FORMAT_R16_SINT:
-        case VK_FORMAT_R16_SFLOAT:
-        case VK_FORMAT_D16_UNORM:
-            return sizeof(uint16_t);
-        case VK_FORMAT_R8G8B8_UNORM:
-        case VK_FORMAT_R8G8B8_SNORM:
-        case VK_FORMAT_R8G8B8_USCALED:
-        case VK_FORMAT_R8G8B8_SSCALED:
-        case VK_FORMAT_R8G8B8_UINT:
-        case VK_FORMAT_R8G8B8_SINT:
-        case VK_FORMAT_R8G8B8_SRGB:
-        case VK_FORMAT_B8G8R8_UNORM:
-        case VK_FORMAT_B8G8R8_SNORM:
-        case VK_FORMAT_B8G8R8_USCALED:
-        case VK_FORMAT_B8G8R8_SSCALED:
-        case VK_FORMAT_B8G8R8_UINT:
-        case VK_FORMAT_B8G8R8_SINT:
-        case VK_FORMAT_B8G8R8_SRGB:
-        case VK_FORMAT_D16_UNORM_S8_UINT:
-            return sizeof(uint8_t) * 3;
-        case VK_FORMAT_R8G8B8A8_UNORM:
-        case VK_FORMAT_R8G8B8A8_SNORM:
-        case VK_FORMAT_R8G8B8A8_USCALED:
-        case VK_FORMAT_R8G8B8A8_SSCALED:
-        case VK_FORMAT_R8G8B8A8_UINT:
-        case VK_FORMAT_R8G8B8A8_SINT:
-        case VK_FORMAT_R8G8B8A8_SRGB:
-        case VK_FORMAT_B8G8R8A8_UNORM:
-        case VK_FORMAT_B8G8R8A8_SNORM:
-        case VK_FORMAT_B8G8R8A8_USCALED:
-        case VK_FORMAT_B8G8R8A8_SSCALED:
-        case VK_FORMAT_B8G8R8A8_UINT:
-        case VK_FORMAT_B8G8R8A8_SINT:
-        case VK_FORMAT_B8G8R8A8_SRGB:
-        case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
-        case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
-        case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
-        case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
-        case VK_FORMAT_A8B8G8R8_UINT_PACK32:
-        case VK_FORMAT_A8B8G8R8_SINT_PACK32:
-        case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
-        case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
-        case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
-        case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
-        case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
-        case VK_FORMAT_A2R10G10B10_UINT_PACK32:
-        case VK_FORMAT_A2R10G10B10_SINT_PACK32:
-        case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
-        case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
-        case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
-        case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
-        case VK_FORMAT_A2B10G10R10_UINT_PACK32:
-        case VK_FORMAT_A2B10G10R10_SINT_PACK32:
-        case VK_FORMAT_R16G16_UNORM:
-        case VK_FORMAT_R16G16_SNORM:
-        case VK_FORMAT_R16G16_USCALED:
-        case VK_FORMAT_R16G16_SSCALED:
-        case VK_FORMAT_R16G16_UINT:
-        case VK_FORMAT_R16G16_SINT:
-        case VK_FORMAT_R16G16_SFLOAT:
-        case VK_FORMAT_R32_UINT:
-        case VK_FORMAT_R32_SINT:
-        case VK_FORMAT_R32_SFLOAT:
-        case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
-        case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
-        case VK_FORMAT_X8_D24_UNORM_PACK32:
-        case VK_FORMAT_D32_SFLOAT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-            return sizeof(uint8_t) * 4;
-        case VK_FORMAT_R16G16B16_UNORM:
-        case VK_FORMAT_R16G16B16_SNORM:
-        case VK_FORMAT_R16G16B16_USCALED:
-        case VK_FORMAT_R16G16B16_SSCALED:
-        case VK_FORMAT_R16G16B16_UINT:
-        case VK_FORMAT_R16G16B16_SINT:
-        case VK_FORMAT_R16G16B16_SFLOAT:
-            return sizeof(uint16_t) * 3;
-        case VK_FORMAT_R16G16B16A16_UNORM:
-        case VK_FORMAT_R16G16B16A16_SNORM:
-        case VK_FORMAT_R16G16B16A16_USCALED:
-        case VK_FORMAT_R16G16B16A16_SSCALED:
-        case VK_FORMAT_R16G16B16A16_UINT:
-        case VK_FORMAT_R16G16B16A16_SINT:
-        case VK_FORMAT_R16G16B16A16_SFLOAT:
-        case VK_FORMAT_R32G32_UINT:
-        case VK_FORMAT_R32G32_SINT:
-        case VK_FORMAT_R32G32_SFLOAT:
-        case VK_FORMAT_R64_UINT:
-        case VK_FORMAT_R64_SINT:
-        case VK_FORMAT_R64_SFLOAT:
-            return sizeof(uint16_t) * 4;
-        case VK_FORMAT_R32G32B32_UINT:
-        case VK_FORMAT_R32G32B32_SINT:
-        case VK_FORMAT_R32G32B32_SFLOAT:
-            return sizeof(uint32_t) * 3;
-        case VK_FORMAT_R32G32B32A32_UINT:
-        case VK_FORMAT_R32G32B32A32_SINT:
-        case VK_FORMAT_R32G32B32A32_SFLOAT:
-        case VK_FORMAT_R64G64_UINT:
-        case VK_FORMAT_R64G64_SINT:
-        case VK_FORMAT_R64G64_SFLOAT:
-            return sizeof(uint32_t) * 4;
-        case VK_FORMAT_R64G64B64_UINT:
-        case VK_FORMAT_R64G64B64_SINT:
-        case VK_FORMAT_R64G64B64_SFLOAT:
-            return sizeof(uint64_t) * 3;
-        case VK_FORMAT_R64G64B64A64_UINT:
-        case VK_FORMAT_R64G64B64A64_SINT:
-        case VK_FORMAT_R64G64B64A64_SFLOAT:
-            return sizeof(uint64_t) * 4;
-        case VK_FORMAT_UNDEFINED:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
-        case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
-        case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
-        case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
-        case VK_FORMAT_BC2_UNORM_BLOCK:
-        case VK_FORMAT_BC2_SRGB_BLOCK:
-        case VK_FORMAT_BC3_UNORM_BLOCK:
-        case VK_FORMAT_BC3_SRGB_BLOCK:
-        case VK_FORMAT_BC4_UNORM_BLOCK:
-        case VK_FORMAT_BC4_SNORM_BLOCK:
-        case VK_FORMAT_BC5_UNORM_BLOCK:
-        case VK_FORMAT_BC5_SNORM_BLOCK:
-        case VK_FORMAT_BC6H_UFLOAT_BLOCK:
-        case VK_FORMAT_BC6H_SFLOAT_BLOCK:
-        case VK_FORMAT_BC7_UNORM_BLOCK:
-        case VK_FORMAT_BC7_SRGB_BLOCK:
-        case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
-        case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
-        case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
-        case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
-        case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
-        case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
-        case VK_FORMAT_EAC_R11_UNORM_BLOCK:
-        case VK_FORMAT_EAC_R11_SNORM_BLOCK:
-        case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
-        case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
-        case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
-        case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
-        case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
-        default:
-            throw std::runtime_error("Unhandled image format!");
-    }
-}
 static void transitionImageLayout(const VkCommandBuffer &commandBuffer,
                                   const VkImage image,
                                   const VkAccessFlags sourceAccessMask,
@@ -288,283 +82,7 @@ static void transitionImageLayout2(const VkCommandBuffer &commandBuffer,
     };
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 }
-// TODO: Support filtering with something other than linear
-// TODO: Check support for images with multiple layers
-static void generateMipmaps(const CommandBuffer &commandBuffer,
-                            const VkImage image,
-                            VkExtent3D extent,
-                            const uint32_t mipmapLevels,
-                            const VkImageAspectFlags aspectMask,
-                            const uint32_t arrayLayers,
-                            const LunaSampledImageCreationInfo &creationInfo)
-{
-    for (uint32_t i = 0; i < mipmapLevels - 1; i++)
-    {
-        const VkOffset3D oldExtent = std::bit_cast<VkOffset3D>(extent); // NOLINT(missing-ref)
-        extent.width /= 2;
-        extent.height /= 2;
 
-        const VkImageSubresourceRange subresourceRange = {
-            .aspectMask = aspectMask,
-            .baseMipLevel = i,
-            .levelCount = 1,
-            .layerCount = arrayLayers,
-        };
-        const VkImageSubresourceLayers sourceSubresourceLayers = {
-            .aspectMask = aspectMask,
-            .mipLevel = i,
-            .layerCount = arrayLayers,
-        };
-        const VkImageSubresourceLayers destinationSubresourceLayers = {
-            .aspectMask = aspectMask,
-            .mipLevel = i + 1,
-            .layerCount = arrayLayers,
-        };
-        if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3)
-        {
-            transitionImageLayout2(commandBuffer,
-                                   image,
-                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                                   VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                                   VK_ACCESS_2_TRANSFER_READ_BIT,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                   subresourceRange);
-        } else
-        {
-            transitionImageLayout(commandBuffer,
-                                  image,
-                                  VK_ACCESS_TRANSFER_WRITE_BIT,
-                                  VK_ACCESS_TRANSFER_READ_BIT,
-                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                  subresourceRange,
-                                  VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                  VK_PIPELINE_STAGE_TRANSFER_BIT);
-            const VkImageBlit blitRegion = {
-                .srcSubresource = sourceSubresourceLayers,
-                .srcOffsets = {{}, oldExtent},
-                .dstSubresource = destinationSubresourceLayers,
-                .dstOffsets = {{}, std::bit_cast<VkOffset3D>(extent)},
-            };
-            vkCmdBlitImage(commandBuffer,
-                           image,
-                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                           image,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                           1,
-                           &blitRegion,
-                           VK_FILTER_LINEAR);
-        }
-    }
-    const VkImageSubresourceRange blittedSubresourceRange = {
-        .aspectMask = aspectMask,
-        .levelCount = mipmapLevels - 1,
-        .layerCount = arrayLayers,
-    };
-    const VkImageSubresourceRange lastSubresourceRange = {
-        .aspectMask = aspectMask,
-        .baseMipLevel = mipmapLevels - 1,
-        .levelCount = 1,
-        .layerCount = arrayLayers,
-    };
-    if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3)
-    {
-        const VkImageMemoryBarrier2 blittedRegionBarrier = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-            .srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-            .dstAccessMask = creationInfo.destinationAccessMask,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            .newLayout = creationInfo.layout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = blittedSubresourceRange,
-        };
-        const VkImageMemoryBarrier2 lastRegionBarrier = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-            .dstAccessMask = creationInfo.destinationAccessMask,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .newLayout = creationInfo.layout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = lastSubresourceRange,
-        };
-        const std::array<VkImageMemoryBarrier2, 2> memoryBarriers = {lastRegionBarrier, blittedRegionBarrier};
-        const VkDependencyInfo dependencyInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .imageMemoryBarrierCount = 2,
-            .pImageMemoryBarriers = memoryBarriers.data(),
-        };
-        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
-    } else
-    {
-        const VkImageMemoryBarrier blittedRegionBarrier = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-            .dstAccessMask = creationInfo.destinationAccessMask,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            .newLayout = creationInfo.layout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = blittedSubresourceRange,
-        };
-        const VkImageMemoryBarrier lastRegionBarrier = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .dstAccessMask = creationInfo.destinationAccessMask,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .newLayout = creationInfo.layout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = lastSubresourceRange,
-        };
-        const std::array<VkImageMemoryBarrier, 2> memoryBarriers = {lastRegionBarrier, blittedRegionBarrier};
-        vkCmdPipelineBarrier(commandBuffer,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             creationInfo.destinationStageMask,
-                             0,
-                             0,
-                             nullptr,
-                             0,
-                             nullptr,
-                             2,
-                             memoryBarriers.data());
-    }
-}
-static VkResult writeImage(const VkImage image,
-                           const VkExtent3D &extent,
-                           const uint32_t arrayLayers,
-                           const LunaSampledImageCreationInfo &creationInfo,
-                           const VkImageAspectFlags aspectMask)
-{
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
-    if (!commandBuffer.isRecording())
-    {
-        CHECK_RESULT_RETURN(commandBuffer.waitForFence(luna::device));
-        CHECK_RESULT_RETURN(commandBuffer.resetFence(luna::device));
-        CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
-    }
-
-    const size_t bytes = extent.width * extent.height * extent.depth * bytesPerPixel(creationInfo.format);
-    const auto *stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
-    if (stagingBufferRegionIndex == nullptr || stagingBufferRegionIndex->size() < bytes)
-    {
-        if (stagingBufferRegionIndex != nullptr)
-        {
-            lunaDestroyBuffer(stagingBufferRegionIndex);
-        }
-        const LunaBufferCreationInfo bufferCreationInfo = {
-            .size = bytes,
-            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        };
-        LunaBuffer *stagingBufferHandle = &stagingBuffer; // NOLINT(*-const-correctness)
-        CHECK_RESULT_RETURN(luna::buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-        stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
-    }
-
-    stagingBufferRegionIndex->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(creationInfo.pixels), bytes);
-    const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
-    const VkImageSubresourceRange subresourceRange = {
-        .aspectMask = aspectMask,
-        .levelCount = mipmapLevels,
-        .layerCount = arrayLayers,
-    };
-    if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3)
-    {
-        transitionImageLayout2(commandBuffer,
-                               image,
-                               creationInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE
-                                       ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
-                                       : creationInfo.sourceStageMask,
-                               VK_ACCESS_2_NONE,
-                               VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                               VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                               VK_IMAGE_LAYOUT_UNDEFINED,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                               subresourceRange);
-    } else
-    {
-        constexpr VkPipelineStageFlags transferStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        transitionImageLayout(commandBuffer,
-                              image,
-                              VK_ACCESS_NONE,
-                              VK_ACCESS_TRANSFER_WRITE_BIT,
-                              VK_IMAGE_LAYOUT_UNDEFINED,
-                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                              subresourceRange,
-                              creationInfo.sourceStageMask == VK_PIPELINE_STAGE_NONE ? transferStageMask
-                                                                                     : creationInfo.sourceStageMask,
-                              VK_PIPELINE_STAGE_TRANSFER_BIT);
-    }
-
-    const VkImageSubresourceLayers subresourceLayers = {
-        .aspectMask = aspectMask,
-        .layerCount = arrayLayers,
-    };
-    const VkBufferImageCopy bufferCopyInfo = {
-        .bufferOffset = stagingBufferOffset(),
-        .imageSubresource = subresourceLayers,
-        .imageExtent = extent,
-    };
-    vkCmdCopyBufferToImage(commandBuffer,
-                           *stagingBufferRegionIndex->buffer(),
-                           image,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                           1,
-                           &bufferCopyInfo);
-
-    if (creationInfo.generateMipmaps && creationInfo.mipmapLevels > 1)
-    {
-        generateMipmaps(commandBuffer, image, extent, mipmapLevels, aspectMask, arrayLayers, creationInfo);
-    } else
-    {
-        if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3)
-        {
-            transitionImageLayout2(commandBuffer,
-                                   image,
-                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                                   VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                                   creationInfo.destinationStageMask,
-                                   creationInfo.destinationAccessMask,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                   creationInfo.layout,
-                                   subresourceRange);
-        } else
-        {
-            transitionImageLayout(commandBuffer,
-                                  image,
-                                  VK_ACCESS_TRANSFER_WRITE_BIT,
-                                  creationInfo.destinationAccessMask,
-                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                  creationInfo.layout,
-                                  subresourceRange,
-                                  VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                  creationInfo.destinationStageMask);
-        }
-    }
-
-    const Semaphore &semaphore = commandBuffer.semaphore();
-    const VkSubmitInfo queueSubmitInfo = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
-        .pWaitSemaphores = semaphore.isSignaled() ? &semaphore : nullptr,
-        .pWaitDstStageMask = &semaphore.stageMask(),
-        .commandBufferCount = 1,
-        .pCommandBuffers = &commandBuffer,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &semaphore,
-    };
-    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
-                                                          queueSubmitInfo,
-                                                          creationInfo.destinationStageMask));
-    return VK_SUCCESS;
-}
 static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
                             uint32_t depth,
                             uint32_t arrayLayers,
@@ -572,26 +90,11 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
 {
     TRY_CATCH_RESULT(luna::images.emplace_back(creationInfo, depth, arrayLayers));
     const Image &image = images.back();
-    if (creationInfo.descriptorSet != nullptr)
+    if (creationInfo.writeInfo.descriptorSet != nullptr)
     {
-        assert(creationInfo.descriptorLayoutBindingName);
-        const VkDescriptorImageInfo imageInfo = {
-            .sampler = image.sampler(),
-            .imageView = image.imageView(),
-            .imageLayout = creationInfo.layout,
-        };
-        const auto *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(creationInfo.descriptorSet);
-        const char *bindingName = creationInfo.descriptorLayoutBindingName;
-        const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
-        const VkWriteDescriptorSet writeDescriptor = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = *descriptorSetIndex->set,
-            .dstBinding = binding.index,
-            .descriptorCount = 1,
-            .descriptorType = binding.type,
-            .pImageInfo = &imageInfo,
-        };
-        vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, nullptr);
+        image.updateDescriptorBinding(device,
+                                      creationInfo.writeInfo.descriptorSet,
+                                      creationInfo.writeInfo.descriptorLayoutBindingName);
     }
 
     if (imageIndex != nullptr)
@@ -616,22 +119,23 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
         CHECK_RESULT_THROW(lunaCreateSampler(creationInfo.samplerCreationInfo, &sampler));
         sampler_ = luna::sampler(sampler);
     }
-    const VkExtent3D extent = {
-        .width = creationInfo.width,
-        .height = creationInfo.height,
-        .depth = depth == 0 ? 1 : depth,
-    };
-    const uint32_t mipmapLevels = creationInfo.mipmapLevels == 0 ? 1 : creationInfo.mipmapLevels;
+    extent_.width = creationInfo.width;
+    extent_.height = creationInfo.height;
+    extent_.depth = depth == 0 ? 1 : depth;
+    arrayLayers_ = arrayLayers;
+    const uint32_t mipmapLevels = creationInfo.writeInfo.mipmapLevels == 0 ? 1 : creationInfo.writeInfo.mipmapLevels;
     VkImageUsageFlags usage = creationInfo.usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    usage |= creationInfo.generateMipmaps && creationInfo.mipmapLevels > 1 ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0;
+    usage |= creationInfo.writeInfo.generateMipmaps && creationInfo.writeInfo.mipmapLevels > 1
+                     ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+                     : 0;
     const VkImageCreateInfo imageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .flags = creationInfo.flags,
         .imageType = depth == 0 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D,
         .format = creationInfo.format,
-        .extent = extent,
+        .extent = extent_,
         .mipLevels = mipmapLevels,
-        .arrayLayers = arrayLayers,
+        .arrayLayers = arrayLayers_,
         .samples = creationInfo.samples == 0 ? VK_SAMPLE_COUNT_1_BIT : creationInfo.samples,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = usage,
@@ -650,23 +154,24 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
                                       &image_,
                                       &allocation_,
                                       &allocationInfo));
-    VkImageAspectFlags aspectMask = creationInfo.aspectMask;
-    if (aspectMask == 0)
+    layout_ = creationInfo.layout;
+    aspectMask_ = creationInfo.aspectMask;
+    if (aspectMask_ == 0)
     {
-        if (creationInfo.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-            creationInfo.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+        if (layout_ == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+            layout_ == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
         {
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            aspectMask_ = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
         } else
         {
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            aspectMask_ = VK_IMAGE_ASPECT_COLOR_BIT;
         }
     }
-    CHECK_RESULT_THROW(helpers::writeImage(image_, extent, arrayLayers, creationInfo, aspectMask));
+    CHECK_RESULT_THROW(write(creationInfo.writeInfo));
     CHECK_RESULT_THROW(helpers::createImageView(device,
                                                 image_,
                                                 creationInfo.format,
-                                                aspectMask,
+                                                aspectMask_,
                                                 mipmapLevels,
                                                 &imageView_));
 }
@@ -683,6 +188,136 @@ void Image::erase(const std::list<Image>::const_iterator iterator) const
     images.erase(iterator);
 }
 
+VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
+{
+    if (writeInfo.bytes == 0 || writeInfo.pixels == nullptr)
+    {
+        return VK_SUCCESS;
+    }
+    VkExtent3D extent = writeInfo.extent == nullptr ? extent_ : *writeInfo.extent;
+    if (writeInfo.extent != nullptr && extent.depth == 0)
+    {
+        extent.depth = 1;
+    }
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+
+    const auto *stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
+    if (stagingBufferRegionIndex == nullptr || stagingBufferRegionIndex->size() < writeInfo.bytes)
+    {
+        if (stagingBufferRegionIndex != nullptr)
+        {
+            lunaDestroyBuffer(stagingBufferRegionIndex);
+        }
+        const LunaBufferCreationInfo bufferCreationInfo = {
+            .size = writeInfo.bytes,
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        };
+        LunaBuffer *stagingBufferHandle = &stagingBuffer; // NOLINT(*-const-correctness)
+        CHECK_RESULT_RETURN(luna::buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
+        stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
+    }
+
+    stagingBufferRegionIndex->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels),
+                                                           writeInfo.bytes);
+    const uint32_t mipmapLevels = writeInfo.mipmapLevels == 0 ? 1 : writeInfo.mipmapLevels;
+    const VkImageSubresourceRange subresourceRange = {
+        .aspectMask = aspectMask_,
+        .levelCount = mipmapLevels,
+        .layerCount = arrayLayers_,
+    };
+    if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3 && device.vulkan13Features().synchronization2 == VK_TRUE)
+    {
+        helpers::transitionImageLayout2(commandBuffer,
+                                        image_,
+                                        writeInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE
+                                                ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
+                                                : writeInfo.sourceStageMask,
+                                        VK_ACCESS_2_NONE,
+                                        VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                        VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                        VK_IMAGE_LAYOUT_UNDEFINED,
+                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                        subresourceRange);
+    } else
+    {
+        constexpr VkPipelineStageFlags transferStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        helpers::transitionImageLayout(commandBuffer,
+                                       image_,
+                                       VK_ACCESS_NONE,
+                                       VK_ACCESS_TRANSFER_WRITE_BIT,
+                                       VK_IMAGE_LAYOUT_UNDEFINED,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                       subresourceRange,
+                                       writeInfo.sourceStageMask == VK_PIPELINE_STAGE_NONE ? transferStageMask
+                                                                                           : writeInfo.sourceStageMask,
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT);
+    }
+
+    const VkImageSubresourceLayers subresourceLayers = {
+        .aspectMask = aspectMask_,
+        .layerCount = arrayLayers_,
+    };
+    const VkBufferImageCopy bufferCopyInfo = {
+        .bufferOffset = stagingBufferOffset(),
+        .imageSubresource = writeInfo.subresourceLayers == nullptr ? subresourceLayers : *writeInfo.subresourceLayers,
+        .imageOffset = writeInfo.offset == nullptr ? VkOffset3D{} : *writeInfo.offset,
+        .imageExtent = extent,
+    };
+    vkCmdCopyBufferToImage(commandBuffer,
+                           *stagingBufferRegionIndex->buffer(),
+                           image_,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1,
+                           &bufferCopyInfo);
+
+    if (writeInfo.generateMipmaps && writeInfo.mipmapLevels > 1)
+    {
+        generateMipmaps_(commandBuffer, std::bit_cast<VkOffset3D>(extent), mipmapLevels, writeInfo);
+    } else
+    {
+        if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3 && device.vulkan13Features().synchronization2 == VK_TRUE)
+        {
+            helpers::transitionImageLayout2(commandBuffer,
+                                            image_,
+                                            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                            VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                            writeInfo.destinationStageMask,
+                                            writeInfo.destinationAccessMask,
+                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                            layout_,
+                                            subresourceRange);
+        } else
+        {
+            helpers::transitionImageLayout(commandBuffer,
+                                           image_,
+                                           VK_ACCESS_TRANSFER_WRITE_BIT,
+                                           writeInfo.destinationAccessMask,
+                                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                           layout_,
+                                           subresourceRange,
+                                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                           writeInfo.destinationStageMask);
+        }
+    }
+
+    const Semaphore &semaphore = commandBuffer.semaphore();
+    const VkSubmitInfo queueSubmitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
+        .pWaitSemaphores = semaphore.isSignaled() ? &semaphore : nullptr,
+        .pWaitDstStageMask = &semaphore.stageMask(),
+        .commandBufferCount = 1,
+        .pCommandBuffers = &commandBuffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &semaphore,
+    };
+    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
+                                                          queueSubmitInfo,
+                                                          writeInfo.destinationStageMask));
+    return VK_SUCCESS;
+}
+
 VkSampler Image::sampler(const LunaSampler sampler) const
 {
     if (sampler == nullptr)
@@ -691,6 +326,154 @@ VkSampler Image::sampler(const LunaSampler sampler) const
     }
     return luna::sampler(sampler);
 }
+
+// TODO: Support filtering with something other than linear
+// TODO: Check support for images with multiple layers
+void Image::generateMipmaps_(const CommandBuffer &commandBuffer,
+                             VkOffset3D extent,
+                             uint32_t mipmapLevels,
+                             const LunaImageWriteInfo &writeInfo) const
+{
+    for (uint32_t i = 0; i < mipmapLevels - 1; i++)
+    {
+        const VkOffset3D oldExtent = extent; // NOLINT(missing-ref)
+        extent.x /= 2;
+        extent.y /= 2;
+
+        const VkImageSubresourceRange subresourceRange = {
+            .aspectMask = aspectMask_,
+            .baseMipLevel = i,
+            .levelCount = 1,
+            .layerCount = arrayLayers_,
+        };
+        const VkImageSubresourceLayers sourceSubresourceLayers = {
+            .aspectMask = aspectMask_,
+            .mipLevel = i,
+            .layerCount = arrayLayers_,
+        };
+        const VkImageSubresourceLayers destinationSubresourceLayers = {
+            .aspectMask = aspectMask_,
+            .mipLevel = i + 1,
+            .layerCount = arrayLayers_,
+        };
+        if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3 && device.vulkan13Features().synchronization2 == VK_TRUE)
+        {
+            helpers::transitionImageLayout2(commandBuffer,
+                                            image_,
+                                            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                            VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                            VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                            VK_ACCESS_2_TRANSFER_READ_BIT,
+                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                            subresourceRange);
+        } else
+        {
+            helpers::transitionImageLayout(commandBuffer,
+                                           image_,
+                                           VK_ACCESS_TRANSFER_WRITE_BIT,
+                                           VK_ACCESS_TRANSFER_READ_BIT,
+                                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                           subresourceRange,
+                                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                           VK_PIPELINE_STAGE_TRANSFER_BIT);
+        }
+        const VkImageBlit blitRegion = {
+            .srcSubresource = sourceSubresourceLayers,
+            .srcOffsets = {{}, oldExtent},
+            .dstSubresource = destinationSubresourceLayers,
+            .dstOffsets = {{}, extent},
+        };
+        vkCmdBlitImage(commandBuffer,
+                       image_,
+                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                       image_,
+                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                       1,
+                       &blitRegion,
+                       VK_FILTER_LINEAR);
+    }
+    const VkImageSubresourceRange blittedSubresourceRange = {
+        .aspectMask = aspectMask_,
+        .levelCount = mipmapLevels - 1,
+        .layerCount = arrayLayers_,
+    };
+    const VkImageSubresourceRange lastSubresourceRange = {
+        .aspectMask = aspectMask_,
+        .baseMipLevel = mipmapLevels - 1,
+        .levelCount = 1,
+        .layerCount = arrayLayers_,
+    };
+    if (VK_API_VERSION_MINOR(luna::apiVersion) >= 3 && device.vulkan13Features().synchronization2 == VK_TRUE)
+    {
+        const VkImageMemoryBarrier2 blittedRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+            .dstAccessMask = writeInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .newLayout = layout_,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image_,
+            .subresourceRange = blittedSubresourceRange,
+        };
+        const VkImageMemoryBarrier2 lastRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            .dstAccessMask = writeInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = layout_,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image_,
+            .subresourceRange = lastSubresourceRange,
+        };
+        const std::array<VkImageMemoryBarrier2, 2> memoryBarriers = {lastRegionBarrier, blittedRegionBarrier};
+        const VkDependencyInfo dependencyInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .imageMemoryBarrierCount = 2,
+            .pImageMemoryBarriers = memoryBarriers.data(),
+        };
+        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+    } else
+    {
+        const VkImageMemoryBarrier blittedRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+            .dstAccessMask = writeInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .newLayout = layout_,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image_,
+            .subresourceRange = blittedSubresourceRange,
+        };
+        const VkImageMemoryBarrier lastRegionBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstAccessMask = writeInfo.destinationAccessMask,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = layout_,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = image_,
+            .subresourceRange = lastSubresourceRange,
+        };
+        const std::array<VkImageMemoryBarrier, 2> memoryBarriers = {lastRegionBarrier, blittedRegionBarrier};
+        vkCmdPipelineBarrier(commandBuffer,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             writeInfo.destinationStageMask,
+                             0,
+                             0,
+                             nullptr,
+                             0,
+                             nullptr,
+                             2,
+                             memoryBarriers.data());
+    }
+}
+
 } // namespace luna
 
 VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
@@ -747,4 +530,25 @@ VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo
 {
     assert(creationInfo && arrayLayers);
     return luna::helpers::createImage(*creationInfo, depth, arrayLayers, image);
+}
+
+VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeInfo)
+{
+    assert(image);
+    assert(writeInfo);
+
+    const luna::Image *imageObject = static_cast<const luna::Image *>(image);
+    CHECK_RESULT_RETURN(imageObject->write(*writeInfo));
+    if (writeInfo->descriptorSet != nullptr)
+    {
+        imageObject->updateDescriptorBinding(luna::device,
+                                             writeInfo->descriptorSet,
+                                             writeInfo->descriptorLayoutBindingName);
+    }
+    return VK_SUCCESS;
+}
+
+void lunaDestroyImage(LunaImage image)
+{
+    (void)image;
 }

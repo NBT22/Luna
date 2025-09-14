@@ -164,12 +164,20 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
 
     LunaShaderModule vertexShaderModule = LUNA_NULL_HANDLE;
     LunaShaderModule fragmentShaderModule = LUNA_NULL_HANDLE;
-    VkResult vertexShaderCreationResult = lunaCreateShaderModule(sizeof(VERTEX_SHADER_SPIRV), TODO);
+    const LunaShaderModuleCreationInfo vertexShaderCreationInfo = {
+        .size = sizeof(VERTEX_SHADER_SPIRV),
+        .spirv = VERTEX_SHADER_SPIRV,
+    };
+    VkResult vertexShaderCreationResult = lunaCreateShaderModule(&vertexShaderCreationInfo, &vertexShaderModule);
     if (vertexShaderCreationResult != VK_SUCCESS)
     {
         return vertexShaderCreationResult;
     }
-    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(sizeof(FRAGMENT_SHADER_SPIRV), TODO);
+    const LunaShaderModuleCreationInfo fragmentShaderCreationInfo = {
+        .size = sizeof(FRAGMENT_SHADER_SPIRV),
+        .spirv = FRAGMENT_SHADER_SPIRV,
+    };
+    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(&fragmentShaderCreationInfo, &fragmentShaderModule);
     if (fragmentShaderCreationResult != VK_SUCCESS)
     {
         return fragmentShaderCreationResult;
@@ -342,7 +350,6 @@ int main(void)
     const LunaRenderPassBeginInfo beginInfo = {
         .renderArea.extent.width = extent.width,
         .renderArea.extent.height = extent.height,
-        .depthAttachmentClearValue.depthStencil.depth = 1, // TODO: This is unneeded?
     };
 
     while (!shouldQuit())

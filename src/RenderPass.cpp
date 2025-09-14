@@ -595,9 +595,9 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
                 return acquireImageResult;
         }
         CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
-    } else if (!commandBuffer.isRecording())
+    } else
     {
-        CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
+        CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
     }
 
     uint32_t clearValueCount = 1;

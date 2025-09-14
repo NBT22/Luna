@@ -4,7 +4,6 @@
 
 #include <array>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <luna/luna.h>
 #include <luna/lunaDevice.h>
@@ -150,9 +149,17 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     }
     initQueueFamilyIndices();
 
+    const VkPhysicalDeviceSynchronization2Features synchronization2Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+        .pNext = creationInfo.requiredFeatures.pNext,
+        .synchronization2 = vulkan13Features_.synchronization2,
+    };
+    const void *pNext = VK_API_VERSION_MINOR(apiVersion) >= 3 ? &synchronization2Features
+                                                              : creationInfo.requiredFeatures.pNext;
+
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = creationInfo.requiredFeatures.pNext,
+        .pNext = pNext,
         .queueCreateInfoCount = familyCount_,
         .pQueueCreateInfos = queuesCreateInfo.data(),
         .enabledExtensionCount = creationInfo.extensionCount,

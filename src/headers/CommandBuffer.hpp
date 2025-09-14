@@ -56,6 +56,7 @@ class CommandBuffer
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
         VkResult resetFence(VkDevice logicalDevice);
         VkResult recreateSemaphores(VkDevice logicalDevice);
+        VkResult ensureIsRecording(VkDevice logicalDevice, bool shouldResetFence = false);
 
         [[nodiscard]] bool isRecording() const;
         [[nodiscard]] const Semaphore &semaphore() const;
@@ -337,6 +338,19 @@ inline VkResult CommandBuffer::recreateSemaphores(const VkDevice logicalDevice)
                                      typeAsString() +
                                      " when used in recreateSemaphores!");
     }
+}
+inline VkResult CommandBuffer::ensureIsRecording(const VkDevice logicalDevice, const bool shouldResetFence)
+{
+    if (!isRecording())
+    {
+        CHECK_RESULT_RETURN(waitForFence(logicalDevice));
+        if (shouldResetFence)
+        {
+            CHECK_RESULT_RETURN(resetFence(logicalDevice));
+        }
+        CHECK_RESULT_RETURN(beginSingleUseCommandBuffer());
+    }
+    return VK_SUCCESS;
 }
 
 inline bool CommandBuffer::isRecording() const

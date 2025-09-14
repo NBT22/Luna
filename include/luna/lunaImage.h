@@ -24,6 +24,8 @@ VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo
                                 uint32_t arrayLayers,
                                 LunaImage *image);
 
+VkResult lunaUpdateImage(LunaImage image, const LunaImageWriteInfo *writeInfo);
+
 void lunaDestroyImage(LunaImage image);
 
 #ifdef __cplusplus

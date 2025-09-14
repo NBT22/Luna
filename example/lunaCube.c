@@ -5,10 +5,24 @@
 #include <cglm/cglm.h>
 #include <lodepng.h>
 #include <luna/luna.h>
-#include <SDL3/SDL.h>
+#include <luna/lunaDevice.h>
+#include <luna/lunaDrawing.h>
+#include <luna/lunaImage.h>
+#include <luna/lunaInstance.h>
+#include <luna/lunaPipeline.h>
+#include <luna/lunaRenderPass.h>
+#include <luna/lunaTypes.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <vulkan/vulkan_core.h>
 
 #define CHECK_RESULT(value) \
     if ((value) < 0) \
@@ -311,7 +325,7 @@ static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
         .bindingCount = 1,
         .bindings = &binding,
     };
-    LunaDescriptorSetLayout descriptorSetLayout;
+    LunaDescriptorSetLayout descriptorSetLayout = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaCreateDescriptorSetLayout(&descriptorSetLayoutCreationInfo, &descriptorSetLayout));
     const LunaPushConstantsRange pushConstantsRange = {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -357,9 +371,9 @@ static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
     };
     CHECK_RESULT(lunaAllocateDescriptorSets(&descriptorSetAllocationInfo, descriptorSet));
 
-    uint8_t *pixels;
-    uint32_t width;
-    uint32_t height;
+    uint8_t *pixels = NULL;
+    uint32_t width = 0;
+    uint32_t height = 0;
     uint32_t result = lodepng_decode32_file(&pixels, &width, &height, "logo.png");
     if (result != 0)
     {
@@ -368,6 +382,13 @@ static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
         return false;
     }
 
+    const LunaImageWriteInfo imageWriteInfo = {
+        .bytes = width * height * sizeof(*pixels) * 4,
+        .pixels = pixels,
+        .destinationStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .descriptorSet = *descriptorSet,
+        .descriptorLayoutBindingName = "Texture",
+    };
     const LunaSamplerCreationInfo samplerCreationInfo = {
         .magFilter = VK_FILTER_LINEAR,
         .minFilter = VK_FILTER_LINEAR,
@@ -378,12 +399,9 @@ static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
         .width = width,
         .height = height,
         .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-        .pixels = pixels,
         .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        .descriptorSet = *descriptorSet,
-        .descriptorLayoutBindingName = "Texture",
+        .writeInfo = imageWriteInfo,
         .samplerCreationInfo = &samplerCreationInfo,
-        .destinationStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
     };
     CHECK_RESULT(lunaCreateImage(&imageCreationInfo, NULL));
     free(pixels);
@@ -421,15 +439,19 @@ int main(void)
         return 3;
     }
 
-    VkSurfaceKHR surface;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
     if (!SDL_Vulkan_CreateSurface(window, lunaGetInstance(), NULL, &surface))
     {
         return 4;
     }
+    const LunaPhysicalDevicePreferenceDefinition physicalDevicePreferenceDefinition = {
+        .preferredDeviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
+    };
     const LunaDeviceCreationInfo deviceCreationInfo = {
         .extensionCount = 1,
         .extensionNames = (const char *const[]){VK_KHR_SWAPCHAIN_EXTENSION_NAME},
         .surface = surface,
+        .physicalDevicePreferenceDefinition = &physicalDevicePreferenceDefinition,
     };
     CHECK_RESULT(lunaAddNewDevice(&deviceCreationInfo));
 
@@ -449,7 +471,7 @@ int main(void)
     };
     CHECK_RESULT(lunaCreateSwapchain(&swapchainCreationInfo));
 
-    LunaRenderPass renderPass;
+    LunaRenderPass renderPass = LUNA_NULL_HANDLE;
     CHECK_RESULT(createRenderPass(extent, &renderPass));
 
     mat4 viewMatrix = GLM_MAT4_IDENTITY_INIT;
@@ -479,8 +501,8 @@ int main(void)
             .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         },
     };
-    LunaBuffer vertexBuffer;
-    LunaBuffer indexBuffer;
+    LunaBuffer vertexBuffer = LUNA_NULL_HANDLE;
+    LunaBuffer indexBuffer = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaCreateBuffers(sizeof(bufferCreationInfos) / sizeof(*bufferCreationInfos),
                                    bufferCreationInfos,
                                    (LunaBuffer *[]){&vertexBuffer, &indexBuffer}));

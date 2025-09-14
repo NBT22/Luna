@@ -15,6 +15,7 @@ extern "C"
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 
+VkResult lunaInitializeVolk(void);
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
 VkResult lunaDestroyInstance(void);
 VkInstance lunaGetInstance(void);

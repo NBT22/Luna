@@ -52,6 +52,7 @@ class Device
         [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
         [[nodiscard]] Semaphore &renderFinishedSemaphore(uint32_t imageIndex);
         [[nodiscard]] VkShaderModule shaderModule(LunaShaderModule shaderModule) const;
+        [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const;
 
     private:
         VkResult findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -227,6 +228,10 @@ inline Semaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex)
 inline VkShaderModule Device::shaderModule(const LunaShaderModule shaderModule) const
 {
     return shaderModules_.at(*static_cast<const uint32_t *>(shaderModule));
+}
+inline VkPhysicalDeviceVulkan13Features Device::vulkan13Features() const
+{
+    return vulkan13Features_;
 }
 
 // TODO: Better family finding logic to allow for

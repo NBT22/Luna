@@ -56,6 +56,7 @@ CheckOptions:
   bugprone-multi-level-implicit-pointer-conversion.EnableInC: false
   bugprone-unused-return-value.CheckedReturnTypes: '^::(Vk|Luna).+$;^::luna.+$'
   bugprone-unused-return-value.AllowCastToVoid: true
+  misc-include-cleaner.IgnoreHeaders: "cglm/.*"
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
   readability-function-cognitive-complexity.IgnoreMacros: true
   readability-operators-representation.BinaryOperators: '&&;&=;&;|;~;!;!=;||;|=;^;^='

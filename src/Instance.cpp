@@ -23,6 +23,7 @@
 
 namespace
 {
+bool volkInitialized{};
 std::unordered_map<std::string, uint32_t> extensionMap;
 
 void fillExtensionMap()
@@ -263,6 +264,15 @@ std::list<VkSampler> samplers{};
 std::list<Image> images{};
 } // namespace luna
 
+VkResult lunaInitializeVolk()
+{
+    if (!volkInitialized)
+    {
+        CHECK_RESULT_RETURN(volkInitialize());
+        volkInitialized = true;
+    }
+    return VK_SUCCESS;
+}
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 {
     assert(creationInfo);
@@ -275,7 +285,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
         enabledLayers.emplace_back("VK_LAYER_KHRONOS_validation");
     }
 
-    CHECK_RESULT_RETURN(volkInitialize());
+    CHECK_RESULT_RETURN(lunaInitializeVolk());
 
     const VkApplicationInfo vulkanApplicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,

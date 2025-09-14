@@ -68,7 +68,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
     {
         // I literally have an assert to ensure it isn't
         // ReSharper disable once CppDFANullDereference
-        const LunaPipelineShaderStageCreationInfo shaderStage = creationInfo.shaderStages[i];
+        const LunaPipelineShaderStageCreationInfo &shaderStage = creationInfo.shaderStages[i];
         shaderStages.emplace_back(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                                   nullptr,
                                   shaderStage.flags,
@@ -121,14 +121,10 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
         return VK_SUCCESS;
     }
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
-    if (!commandBuffer.isRecording())
-    {
-        CHECK_RESULT_RETURN(commandBuffer.waitForFence(device));
-        CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
-    }
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
     for (uint32_t i = 0; i < bindInfo.dynamicStateCount; i++)
     {
-        const LunaDynamicStateBindInfo dynamicState = bindInfo.dynamicStates[i];
+        const LunaDynamicStateBindInfo &dynamicState = bindInfo.dynamicStates[i];
         switch (dynamicState.dynamicStateType)
         {
             case VK_DYNAMIC_STATE_VIEWPORT:
@@ -206,11 +202,7 @@ VkResult lunaPushConstants(const LunaGraphicsPipeline pipeline)
     const luna::GraphicsPipeline *graphicsPipeline = static_cast<const luna::GraphicsPipeline *>(pipeline);
     const std::vector<LunaPushConstantsRange> &pushConstantsRanges = graphicsPipeline->pushConstantsRanges_;
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
-    if (!commandBuffer.isRecording())
-    {
-        CHECK_RESULT_RETURN(commandBuffer.waitForFence(luna::device));
-        CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
-    }
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device));
     uint32_t offset = 0;
     for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
     {

@@ -73,7 +73,7 @@ typedef struct
         VkPhysicalDeviceFeatures requiredFeatures;
         VkSurfaceKHR surface;
 
-        LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
+        const LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
 } LunaDeviceCreationInfo;
 
 typedef struct
@@ -83,7 +83,7 @@ typedef struct
         VkPhysicalDeviceFeatures2 requiredFeatures;
         VkSurfaceKHR surface;
 
-        LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
+        const LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
 } LunaDeviceCreationInfo2;
 
 typedef struct
@@ -294,8 +294,8 @@ typedef struct
 
 typedef union
 {
-    const LunaViewportBindInfo *viewportBindInfo;
-    const LunaScissorBindInfo *scissorBindInfo;
+        const LunaViewportBindInfo *viewportBindInfo;
+        const LunaScissorBindInfo *scissorBindInfo;
 } LunaDynamicStateBindInfoUnion;
 
 typedef struct
@@ -347,6 +347,24 @@ typedef struct
         bool unnormalizedCoordinates;
 } LunaSamplerCreationInfo;
 
+typedef struct
+{
+        size_t bytes;
+        const void *pixels;
+        VkImageSubresourceLayers *subresourceLayers;
+        const VkOffset3D *offset;
+        const VkExtent3D *extent;
+        uint32_t mipmapLevels;
+        bool generateMipmaps;
+
+        VkPipelineStageFlags sourceStageMask;
+        VkPipelineStageFlags destinationStageMask;
+        VkAccessFlags destinationAccessMask;
+
+        LunaDescriptorSet descriptorSet;
+        const char *descriptorLayoutBindingName;
+} LunaImageWriteInfo;
+
 // TODO: There should also be a `LunaSampledImageCreationInfo2`
 typedef struct
 {
@@ -354,23 +372,14 @@ typedef struct
         VkFormat format;
         uint32_t width;
         uint32_t height;
-        uint32_t mipmapLevels;
-        bool generateMipmaps;
         VkSampleCountFlagBits samples;
         VkImageUsageFlags usage;
-
-        const void *pixels;
         VkImageLayout layout;
         VkImageAspectFlags aspectMask;
-        LunaDescriptorSet descriptorSet;
-        const char *descriptorLayoutBindingName;
+        LunaImageWriteInfo writeInfo;
 
         LunaSampler sampler;
         const LunaSamplerCreationInfo *samplerCreationInfo;
-
-        VkPipelineStageFlags sourceStageMask;
-        VkPipelineStageFlags destinationStageMask;
-        VkAccessFlags destinationAccessMask;
 } LunaSampledImageCreationInfo;
 
 typedef struct

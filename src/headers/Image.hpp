@@ -9,6 +9,7 @@
 #include <luna/lunaTypes.h>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
+#include "CommandBuffer.hpp"
 
 namespace luna::helpers
 {
@@ -32,21 +33,37 @@ class Image
         void destroy() const;
         void erase(std::list<Image>::const_iterator iterator) const;
 
+        [[nodiscard]] VkResult write(const LunaImageWriteInfo &writeInfo) const;
+        void updateDescriptorBinding(VkDevice logicalDevice,
+                                     LunaDescriptorSet descriptorSet,
+                                     const char *descriptorLayoutBindingName) const;
+
         [[nodiscard]] VkImageView imageView() const;
         [[nodiscard]] VkSampler sampler() const;
         [[nodiscard]] VkSampler sampler(LunaSampler sampler) const;
 
     private:
+        void generateMipmaps_(const CommandBuffer &commandBuffer,
+                              VkOffset3D extent,
+                              uint32_t mipmapLevels,
+                              const LunaImageWriteInfo &writeInfo) const;
+
         VkImage image_{};
         VkImageView imageView_{};
         VmaAllocation allocation_{};
+        VkExtent3D extent_{};
+        uint32_t arrayLayers_{};
+        VkImageAspectFlags aspectMask_{};
+        VkImageLayout layout_{};
         VkSampler sampler_{};
 };
 } // namespace luna
 
 #pragma region "Implmentation"
 
+#include <cassert>
 #include <volk.h>
+#include "DescriptorSetLayout.hpp"
 #include "Luna.hpp"
 
 namespace luna::helpers
@@ -84,6 +101,31 @@ inline VkResult createImageView(const VkDevice logicalDevice,
 
 namespace luna
 {
+inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
+                                           const LunaDescriptorSet descriptorSet,
+                                           const char *descriptorLayoutBindingName) const
+{
+    assert(descriptorSet);
+    assert(descriptorLayoutBindingName);
+    const VkDescriptorImageInfo imageInfo = {
+        .sampler = sampler_,
+        .imageView = imageView_,
+        .imageLayout = layout_,
+    };
+    const auto *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(descriptorSet);
+    const char *bindingName = descriptorLayoutBindingName;
+    const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
+    const VkWriteDescriptorSet writeDescriptor = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = *descriptorSetIndex->set,
+        .dstBinding = binding.index,
+        .descriptorCount = 1,
+        .descriptorType = binding.type,
+        .pImageInfo = &imageInfo,
+    };
+    vkUpdateDescriptorSets(logicalDevice, 1, &writeDescriptor, 0, nullptr);
+}
+
 inline VkImageView Image::imageView() const
 {
     return imageView_;
