@@ -249,46 +249,44 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
     writes.reserve(writeCount);
     for (uint32_t i = 0; i < writeCount; i++)
     {
-        const auto &[descriptorSet,
-                     bindingName,
-                     descriptorArrayElement,
-                     descriptorCount,
-                     imageInfo,
-                     bufferInfo] = descriptorWrites[i];
+        const LunaWriteDescriptorSet &descriptorWrite = descriptorWrites[i];
+        const LunaDescriptorSet descriptorSet = descriptorWrite.descriptorSet;
         const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(descriptorSet);
-        const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
-        if (imageInfo != nullptr)
+        const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(descriptorWrite.bindingName);
+        if (descriptorWrite.imageInfo != nullptr)
         {
-            const Image *image = static_cast<const Image *>(imageInfo->image);
+            const Image *image = static_cast<const Image *>(descriptorWrite.imageInfo->image);
             descriptorImageInfo = {
-                .sampler = image->sampler(imageInfo->sampler),
+                .sampler = image->sampler(descriptorWrite.imageInfo->sampler),
                 .imageView = image->imageView(),
-                .imageLayout = imageInfo->imageLayout,
+                .imageLayout = descriptorWrite.imageInfo->imageLayout,
             };
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
                                 binding.index,
-                                descriptorArrayElement,
-                                descriptorCount,
+                                descriptorWrite.descriptorArrayElement,
+                                descriptorWrite.descriptorCount,
                                 binding.type,
                                 &descriptorImageInfo,
                                 nullptr,
                                 nullptr);
-        } else if (bufferInfo != nullptr)
+        } else if (descriptorWrite.bufferInfo != nullptr)
         {
-            const auto *bufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(bufferInfo->buffer);
+            const LunaBuffer buffer = descriptorWrite.bufferInfo->buffer;
+            const BufferRegionIndex *bufferRegionIndex = static_cast<const BufferRegionIndex *>(buffer);
             const VkDescriptorBufferInfo descriptorBufferInfo = {
                 .buffer = *bufferRegionIndex->buffer(),
-                .offset = bufferInfo->offset + bufferRegionIndex->offset(),
-                .range = bufferInfo->range == 0 ? bufferRegionIndex->size() : bufferInfo->range,
+                .offset = descriptorWrite.bufferInfo->offset + bufferRegionIndex->offset(),
+                .range = descriptorWrite.bufferInfo->range == 0 ? bufferRegionIndex->size()
+                                                                : descriptorWrite.bufferInfo->range,
             };
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
                                 binding.index,
-                                descriptorArrayElement,
-                                descriptorCount,
+                                descriptorWrite.descriptorArrayElement,
+                                descriptorWrite.descriptorCount,
                                 binding.type,
                                 nullptr,
                                 &descriptorBufferInfo,

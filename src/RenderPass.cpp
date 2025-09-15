@@ -577,7 +577,6 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
                                                    commandBuffer.semaphore(),
                                                    VK_NULL_HANDLE,
                                                    &swapchain.imageIndex);
-
         switch (acquireImageResult)
         {
             case VK_SUCCESS:

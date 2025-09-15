@@ -35,7 +35,7 @@ extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
-extern LunaBuffer stagingBuffer;
+extern const BufferRegionIndex *stagingBuffer;
 extern VkPipeline boundPipeline;
 extern LunaBuffer boundVertexBuffer;
 extern LunaBuffer boundIndexBuffer;
@@ -47,7 +47,7 @@ extern std::list<VkDescriptorSet> descriptorSets;
 extern std::list<DescriptorSetIndex> descriptorSetIndices;
 extern std::list<GraphicsPipeline> graphicsPipelines;
 extern std::list<Buffer> buffers;
-extern std::list<buffer::BufferRegionIndex> bufferRegionIndices;
+extern std::list<BufferRegionIndex> bufferRegionIndices;
 extern std::list<VkSampler> samplers;
 extern std::list<Image> images;
 } // namespace luna
@@ -98,7 +98,7 @@ inline size_t stagingBufferOffset()
     {
         return -1ull;
     }
-    return static_cast<const buffer::BufferRegionIndex *>(stagingBuffer)->offset();
+    return stagingBuffer->offset();
 }
 inline VkSampler sampler(const LunaSampler sampler)
 {

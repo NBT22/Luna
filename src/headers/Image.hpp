@@ -112,7 +112,7 @@ inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
         .imageView = imageView_,
         .imageLayout = layout_,
     };
-    const auto *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(descriptorSet);
+    const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(descriptorSet);
     const char *bindingName = descriptorLayoutBindingName;
     const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
     const VkWriteDescriptorSet writeDescriptor = {

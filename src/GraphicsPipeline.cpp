@@ -116,10 +116,6 @@ void GraphicsPipeline::destroy()
 }
 VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) const
 {
-    if (pipeline_ == boundPipeline)
-    {
-        return VK_SUCCESS;
-    }
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
     for (uint32_t i = 0; i < bindInfo.dynamicStateCount; i++)
@@ -143,7 +139,10 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
                 throw std::runtime_error("Unhandled dynamic state type!");
         }
     }
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+    if (pipeline_ != boundPipeline)
+    {
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+    }
     if (bindInfo.descriptorSetBindInfo.descriptorSetCount > 0)
     {
         std::vector<VkDescriptorSet> descriptorSetsVector;

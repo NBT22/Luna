@@ -16,6 +16,7 @@
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "DescriptorSetLayout.hpp"
+#include "Device.hpp"
 #include "GraphicsPipeline.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
@@ -248,7 +249,7 @@ VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
-LunaBuffer stagingBuffer{};
+const BufferRegionIndex *stagingBuffer{};
 VkPipeline boundPipeline{};
 LunaBuffer boundVertexBuffer{};
 LunaBuffer boundIndexBuffer{};
@@ -260,7 +261,7 @@ std::list<VkDescriptorSet> descriptorSets{};
 std::list<DescriptorSetIndex> descriptorSetIndices{};
 std::list<GraphicsPipeline> graphicsPipelines{};
 std::list<Buffer> buffers{};
-std::list<buffer::BufferRegionIndex> bufferRegionIndices{};
+std::list<BufferRegionIndex> bufferRegionIndices{};
 std::list<VkSampler> samplers{};
 std::list<Image> images{};
 } // namespace luna

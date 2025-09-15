@@ -309,10 +309,14 @@ int main(void)
     {
         return 4;
     }
+    const LunaPhysicalDevicePreferenceDefinition physicalDevicePreferenceDefinition = {
+        .preferredDeviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
+    };
     const LunaDeviceCreationInfo deviceCreationInfo = {
         .extensionCount = 1,
         .extensionNames = (const char *const[]){VK_KHR_SWAPCHAIN_EXTENSION_NAME},
         .surface = surface,
+        .physicalDevicePreferenceDefinition = &physicalDevicePreferenceDefinition,
     };
     CHECK_RESULT(lunaAddNewDevice(&deviceCreationInfo));
 

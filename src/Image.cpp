@@ -202,7 +202,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
 
-    const auto *stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
+    const BufferRegionIndex *stagingBufferRegionIndex = stagingBuffer;
     if (stagingBufferRegionIndex == nullptr || stagingBufferRegionIndex->size() < writeInfo.bytes)
     {
         if (stagingBufferRegionIndex != nullptr)
@@ -213,9 +213,9 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
             .size = writeInfo.bytes,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         };
-        LunaBuffer *stagingBufferHandle = &stagingBuffer; // NOLINT(*-const-correctness)
-        CHECK_RESULT_RETURN(luna::buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-        stagingBufferRegionIndex = static_cast<const buffer::BufferRegionIndex *>(stagingBuffer);
+        LunaBuffer stagingBufferHandle = stagingBuffer;
+        CHECK_RESULT_RETURN(lunaCreateBuffer(&bufferCreationInfo, &stagingBufferHandle));
+        stagingBufferRegionIndex = stagingBuffer;
     }
 
     stagingBufferRegionIndex->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels),
