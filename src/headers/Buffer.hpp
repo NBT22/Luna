@@ -8,7 +8,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <list>
+#include <luna/lunaInstance.h>
 #include <luna/lunaTypes.h>
+#include <thread>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
@@ -29,8 +31,12 @@ class Buffer
             public: // BufferRegion public types
                 class BufferRegionIndex
                 {
+                        friend VkResult(::lunaDestroyInstance());
+
                     private: // BufferRegionIndex private static
-                        static void destroyBuffer(Buffer *buffer);
+                        static void destroyBuffer_(Buffer *buffer);
+
+                        static inline std::thread cleanupThread_{};
 
                     public: // BufferRegionIndex public members
                         BufferRegionIndex() = delete;
@@ -114,7 +120,6 @@ using BufferRegionIndex = Buffer::BufferRegion::BufferRegionIndex;
 
 #include <algorithm>
 #include <cassert>
-#include <thread>
 
 namespace luna
 {
@@ -167,8 +172,11 @@ inline BufferRegionIndex::~BufferRegionIndex()
     }
     if (buffer_->regions_.empty())
     {
-        std::thread cleanupThread(destroyBuffer, buffer_);
-        cleanupThread.detach();
+        if (cleanupThread_.joinable())
+        {
+            cleanupThread_.join();
+        }
+        cleanupThread_ = std::thread(destroyBuffer_, buffer_);
     }
 }
 

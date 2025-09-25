@@ -202,12 +202,11 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
 
-    const BufferRegionIndex *stagingBufferRegionIndex = stagingBuffer;
-    if (stagingBufferRegionIndex == nullptr || stagingBufferRegionIndex->size() < writeInfo.bytes)
+    if (stagingBuffer == nullptr || stagingBuffer->size() < writeInfo.bytes)
     {
-        if (stagingBufferRegionIndex != nullptr)
+        if (stagingBuffer != nullptr)
         {
-            lunaDestroyBuffer(stagingBufferRegionIndex);
+            lunaDestroyBuffer(stagingBuffer);
         }
         const LunaBufferCreationInfo bufferCreationInfo = {
             .size = writeInfo.bytes,
@@ -215,11 +214,10 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         };
         LunaBuffer stagingBufferHandle = stagingBuffer;
         CHECK_RESULT_RETURN(lunaCreateBuffer(&bufferCreationInfo, &stagingBufferHandle));
-        stagingBufferRegionIndex = stagingBuffer;
+        stagingBuffer = static_cast<const BufferRegionIndex *>(stagingBufferHandle);
     }
 
-    stagingBufferRegionIndex->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels),
-                                                           writeInfo.bytes);
+    stagingBuffer->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels), writeInfo.bytes);
     const uint32_t mipmapLevels = writeInfo.mipmapLevels == 0 ? 1 : writeInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {
         .aspectMask = aspectMask_,
@@ -265,7 +263,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           *stagingBufferRegionIndex->buffer(),
+                           *stagingBuffer->buffer(),
                            image_,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,

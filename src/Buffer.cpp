@@ -43,7 +43,7 @@ static bool sortBufferRegionsByOffsetAscending(const Buffer::BufferRegion &a, co
 
 namespace luna
 {
-void BufferRegionIndex::destroyBuffer(Buffer *buffer)
+void BufferRegionIndex::destroyBuffer_(Buffer *buffer)
 {
     buffer->shouldBeDestroyed_ = true;
     vkDeviceWaitIdle(device);

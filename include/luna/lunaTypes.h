@@ -8,6 +8,7 @@
 #ifdef __cplusplus
 extern "C"
 {
+// ReSharper disable CppVariableCanBeMadeConstexpr
 // NOLINTBEGIN(*-macro-usage, *-enum-size, *-use-using)
 #else
 #include <stdbool.h>
