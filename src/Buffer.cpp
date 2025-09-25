@@ -234,6 +234,8 @@ VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &
 
 Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
 {
+    BufferRegion::BufferRegionIndex::waitForCleanupThread();
+
     creationFlags_ = bufferCreateInfo.flags;
     usageFlags_ = bufferCreateInfo.usage;
     freeBytes_ = bufferCreateInfo.size;

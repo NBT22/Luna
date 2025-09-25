@@ -31,7 +31,14 @@ class Buffer
             public: // BufferRegion public types
                 class BufferRegionIndex
                 {
-                        friend VkResult(::lunaDestroyInstance());
+                    public:
+                        static void waitForCleanupThread()
+                        {
+                            if (cleanupThread_.joinable())
+                            {
+                                cleanupThread_.join();
+                            }
+                        }
 
                     private: // BufferRegionIndex private static
                         static void destroyBuffer_(Buffer *buffer);

@@ -322,10 +322,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 VkResult lunaDestroyInstance()
 {
     using namespace luna;
-    if (Buffer::BufferRegion::BufferRegionIndex::cleanupThread_.joinable())
-    {
-        Buffer::BufferRegion::BufferRegionIndex::cleanupThread_.join();
-    }
+    Buffer::BufferRegion::BufferRegionIndex::waitForCleanupThread();
     CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
 
 
@@ -379,10 +376,7 @@ VkResult lunaDestroyInstance()
     descriptorSets.clear();
 
     bufferRegionIndices.clear();
-    if (Buffer::BufferRegion::BufferRegionIndex::cleanupThread_.joinable())
-    {
-        Buffer::BufferRegion::BufferRegionIndex::cleanupThread_.join();
-    }
+    Buffer::BufferRegion::BufferRegionIndex::waitForCleanupThread();
     buffers.clear();
     stagingBuffer = nullptr;
 
