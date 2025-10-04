@@ -29,7 +29,7 @@ VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo
 VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
                                     LunaDescriptorSet *descriptorSets);
 void lunaWriteDescriptorSets(uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites);
-void lunaDestroyDescriptorSet(LunaDescriptorSet descriptorSet);
+// void lunaDestroyDescriptorSet(LunaDescriptorSet descriptorSet);
 
 VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule);
 
@@ -38,6 +38,7 @@ VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *crea
 
 VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool);
 VkResult lunaResetCommandPool(LunaCommandPool commandPool, VkCommandPoolResetFlagBits flags);
+VkResult lunaResetCommandPoolWithTimeout(LunaCommandPool commandPool, VkCommandPoolResetFlagBits flags, size_t timeout);
 
 #ifdef __cplusplus
 }

@@ -35,7 +35,7 @@ class CommandPool
                                        const void *allocateInfoPNext,
                                        const VkSemaphoreCreateInfo *semaphoreCreateInfo,
                                        uint32_t arraySize = 1);
-        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlagBits flags, uint64_t timeout = UINT64_MAX);
+        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlagBits flags, uint64_t timeout = UINT64_MAX) const;
 
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
         [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index = 0);
@@ -128,55 +128,24 @@ inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
                                                   arraySize));
     return VK_SUCCESS;
 }
-// inline VkResult CommandPool::reset(const VkDevice logicalDevice,
-//                                    const VkCommandPoolResetFlagBits flags,
-//                                    const uint64_t timeout)
-// {
-//     std::vector<VkFence> fences;
-//     fences.reserve(commandBufferArrays_.size());
-//     for (CommandBufferArray<arraySize> &commandBufferArray: commandBufferArrays_)
-//     {
-//         // TODO: This is cursed and could cause bugs.
-//         //  Fences should be reworked so that I can check if the fence needs to be waited upon.
-//         if (commandBufferArray.semaphore_.isSignaled())
-//         {
-//             fences.emplace_back(commandBufferArray.fence_);
-//         }
-//         commandBufferArray.isRecording_ = false;
-//     }
-//     // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
-//     //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
-//     //  all usages of this method currently use the default timeout.
-//     CHECK_RESULT_RETURN(vkWaitForFences(logicalDevice, fences.size(), fences.data(), VK_TRUE, timeout));
-//     CHECK_RESULT_RETURN(vkResetCommandPool(logicalDevice, commandPool_, flags));
-//
-//     return VK_SUCCESS;
-// }
-// inline VkResult CommandPool::reset(const VkDevice logicalDevice,
-//                                    const VkCommandPoolResetFlagBits flags,
-//                                    const uint64_t timeout)
-// {
-//     std::vector<VkFence> fences;
-//     fences.reserve(commandBuffers_.size());
-//     for (std::unique_ptr<CommandBuffer> &commandBuffer: commandBuffers_)
-//     {
-//
-//         // TODO: This is cursed and could cause bugs.
-//         //  Fences should be reworked so that I can check if the fence needs to be waited upon.
-//         if (commandBuffer.semaphore_.isSignaled())
-//         {
-//             fences.emplace_back(commandBuffer.fence_);
-//         }
-//         commandBuffer = false;
-//     }
-//     // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
-//     //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
-//     //  all usages of this method currently use the default timeout.
-//     CHECK_RESULT_RETURN(vkWaitForFences(logicalDevice, fences.size(), fences.data(), VK_TRUE, timeout));
-//     CHECK_RESULT_RETURN(vkResetCommandPool(logicalDevice, commandPool_, flags));
-//
-//     return VK_SUCCESS;
-// }
+inline VkResult CommandPool::reset(const VkDevice logicalDevice,
+                                   const VkCommandPoolResetFlagBits flags,
+                                   const uint64_t timeout) const
+{
+    for (const CommandBuffer &commandBuffer: commandBuffers_)
+    {
+        if (commandBuffer.type() == CommandBuffer::Type::ARRAY)
+        {
+            CHECK_RESULT_RETURN(commandBuffer.commandBufferArray().waitForAllFences(logicalDevice, timeout));
+        } else
+        {
+            CHECK_RESULT_RETURN(commandBuffer.commandBuffer().waitForFence(logicalDevice, timeout));
+        }
+    }
+    CHECK_RESULT_RETURN(vkResetCommandPool(logicalDevice, commandPool_, flags));
+
+    return VK_SUCCESS;
+}
 
 inline const CommandBuffer &CommandPool::commandBuffer(const uint32_t index) const
 {

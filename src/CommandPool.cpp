@@ -3,6 +3,8 @@
 //
 
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <luna/luna.h>
 #include <luna/lunaTypes.h>
 #include <vulkan/vulkan_core.h>
@@ -16,14 +18,28 @@ VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, 
     return VK_SUCCESS;
 }
 
-// VkResult lunaResetCommandPool(const LunaCommandPool commandPool, const VkCommandPoolResetFlagBits flags)
-// {
-//     switch (reinterpret_cast<uintptr_t>(commandPool))
-//     {
-//         case LUNA_INTERNAL_GRAPHICS_COMMAND_POOL:
-//             CHECK_RESULT_RETURN(luna::device.commandPools().graphics.reset(luna::device, flags));
-//             return VK_SUCCESS;
-//         default:
-//             return VK_ERROR_UNKNOWN;
-//     }
-// }
+VkResult lunaResetCommandPool(const LunaCommandPool commandPool, const VkCommandPoolResetFlagBits flags)
+{
+    switch (reinterpret_cast<uintptr_t>(commandPool))
+    {
+        case LUNA_INTERNAL_GRAPHICS_COMMAND_POOL:
+            CHECK_RESULT_RETURN(luna::device.commandPools().graphics.reset(luna::device, flags));
+            return VK_SUCCESS;
+        default:
+            return VK_ERROR_UNKNOWN;
+    }
+}
+
+VkResult lunaResetCommandPoolWithTimeout(const LunaCommandPool commandPool,
+                                         const VkCommandPoolResetFlagBits flags,
+                                         const size_t timeout)
+{
+    switch (reinterpret_cast<uintptr_t>(commandPool))
+    {
+        case LUNA_INTERNAL_GRAPHICS_COMMAND_POOL:
+            CHECK_RESULT_RETURN(luna::device.commandPools().graphics.reset(luna::device, flags, timeout));
+            return VK_SUCCESS;
+        default:
+            return VK_ERROR_UNKNOWN;
+    }
+}

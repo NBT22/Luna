@@ -294,9 +294,3 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
     }
     vkUpdateDescriptorSets(device, writeCount, writes.data(), 0, nullptr);
 }
-void lunaDestroyDescriptorSet(LunaDescriptorSet descriptorSet)
-{
-    (void)descriptorSet;
-    // static_cast<const luna::DescriptorSetIndex *>(descriptorSet);
-    // vkDestroyDescriptorPool();
-}
