@@ -201,8 +201,7 @@ inline VkResult CommandBuffer::resizeArray(const VkDevice logicalDevice,
                                            const uint32_t arraySize,
                                            const uint64_t timeout)
 {
-    if ((type_ == Type::SINGLE && arraySize == 1) ||
-        (type_ == Type::ARRAY && arraySize == commandBufferArray_.commandBuffers_.size()))
+    if ((type_ == Type::SINGLE && arraySize == 1) || (type_ == Type::ARRAY && arraySize == commandBufferArray_.size()))
     {
         return VK_SUCCESS;
     }
@@ -220,10 +219,7 @@ inline VkResult CommandBuffer::resizeArray(const VkDevice logicalDevice,
             type_ = Type::ARRAY;
             break;
         case Type::ARRAY:
-            for ([[maybe_unused]] const uint8_t isRecording: commandBufferArray_.isRecordings_)
-            {
-                assert(!isRecording);
-            }
+            assert(!commandBufferArray_.anyRecording());
             CHECK_RESULT_RETURN(commandBufferArray_.waitForAllFences(logicalDevice, timeout));
             commandBufferArray_.destroy(logicalDevice, commandPool);
             if (arraySize == 1)

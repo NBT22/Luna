@@ -14,6 +14,14 @@ extern "C"
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 
+VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass);
+VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass);
+LunaRenderPassSubpass lunaGetRenderPassSubpassByName(LunaRenderPass renderPass, const char *name);
+
+VkResult lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo);
+void lunaNextSubpass(void);
+void lunaEndRenderPass(void);
+
 void lunaBindVertexBuffers(uint32_t firstBinding,
                            uint32_t bindingCount,
                            const LunaBuffer *buffers,
@@ -76,7 +84,9 @@ VkResult lunaDrawBufferIndexedIndirectCount(LunaBuffer vertexBuffer,
 
 // TODO: This should take a pipeline layout, but those don't exist yet
 void lunaBindDescriptorSets(LunaGraphicsPipeline pipeline, const LunaDescriptorSetBindInfo *bindInfo);
+
 VkResult lunaPushConstants(LunaGraphicsPipeline pipeline);
+
 VkResult lunaResizeSwapchain(uint32_t renderPassResizeInfoCount,
                              const LunaRenderPassResizeInfo *renderPassResizeInfos,
                              const VkExtent2D *targetExtent,

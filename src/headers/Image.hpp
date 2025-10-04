@@ -30,8 +30,9 @@ class Image
     public:
         Image(const LunaSampledImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
 
-        void destroy() const;
-        void erase(std::list<Image>::const_iterator iterator) const;
+        ~Image();
+
+        constexpr bool operator==(const Image &other) const;
 
         [[nodiscard]] VkResult write(const LunaImageWriteInfo &writeInfo) const;
         void updateDescriptorBinding(VkDevice logicalDevice,
@@ -101,6 +102,20 @@ inline VkResult createImageView(const VkDevice logicalDevice,
 
 namespace luna
 {
+constexpr bool Image::operator==(const Image &other) const
+{
+    return image_ == other.image_ &&
+           imageView_ == other.imageView_ &&
+           allocation_ == other.allocation_ &&
+           extent_.width == other.extent_.width &&
+           extent_.height == other.extent_.height &&
+           extent_.depth == other.extent_.depth &&
+           arrayLayers_ == other.arrayLayers_ &&
+           aspectMask_ == other.aspectMask_ &&
+           layout_ == other.layout_ &&
+           sampler_ == other.sampler_;
+}
+
 inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
                                            const LunaDescriptorSet descriptorSet,
                                            const char *descriptorLayoutBindingName) const

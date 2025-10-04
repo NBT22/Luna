@@ -5,7 +5,6 @@
 #pragma once
 
 #include <cstdint>
-#include <luna/lunaRenderPass.h>
 #include <luna/lunaTypes.h>
 #include <string>
 #include <unordered_map>
@@ -30,8 +29,6 @@ class RenderPass
     public:
         static bool isDestroyed(const RenderPass &renderPass);
 
-        friend VkResult(::lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo));
-
         RenderPass() = default;
         explicit RenderPass(const LunaRenderPassCreationInfo &creationInfo);
         explicit RenderPass(const LunaRenderPassCreationInfo2 &creationInfo);
@@ -40,13 +37,18 @@ class RenderPass
 
         void destroy();
 
-        const RenderPassSubpassIndex *getUnnamedSubpass() const;
-        const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
-        VkResult createAttachmentImages(bool createDepthImage);
-        VkResult createFramebuffers(bool createDepthAttachment,
-                                    uint32_t framebufferAttachmentCount,
-                                    const VkImageView *framebufferAttachments);
-        VkResult recreateFramebuffer(const Device &device, const Swapchain &swapchain, uint32_t width, uint32_t height);
+        [[nodiscard]] VkResult createAttachmentImages(bool createDepthImage);
+        [[nodiscard]] VkResult createFramebuffers(bool createDepthAttachment,
+                                                  uint32_t framebufferAttachmentCount,
+                                                  const VkImageView *framebufferAttachments);
+        [[nodiscard]] VkResult recreateFramebuffer(const Device &device,
+                                                   const Swapchain &swapchain,
+                                                   uint32_t width,
+                                                   uint32_t height);
+        [[nodiscard]] VkResult begin(const LunaRenderPassBeginInfo &beginInfo) const;
+
+        [[nodiscard]] const RenderPassSubpassIndex *getUnnamedSubpass() const;
+        [[nodiscard]] const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
 
     private:
         void init_(const LunaRenderPassCreationInfo &creationInfo);

@@ -226,14 +226,13 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    CHECK_RESULT_RETURN(luna::device.commandPools()
-                                .graphics.commandBuffer()
-                                .resizeArray(luna::device,
-                                             luna::device.commandPools().graphics,
-                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                             nullptr,
-                                             &semaphoreCreateInfo,
-                                             luna::swapchain.imageCount));
+    CHECK_RESULT_RETURN(
+            luna::device.commandPools().graphics.commandBuffer().resizeArray(luna::device,
+                                                                             luna::device.commandPools().graphics,
+                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                             nullptr,
+                                                                             &semaphoreCreateInfo,
+                                                                             luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;
     swapchain.safeToUse = true;
@@ -336,10 +335,8 @@ VkResult lunaDestroyInstance()
     {
         vkDestroySampler(device, sampler, nullptr);
     }
-    for (const Image image: images)
-    {
-        image.destroy();
-    }
+    samplers.clear();
+    images.clear();
 
     for (GraphicsPipeline pipeline: graphicsPipelines)
     {
@@ -363,9 +360,6 @@ VkResult lunaDestroyInstance()
     swapchain.images.shrink_to_fit();
     swapchain.imageViews.clear();
     swapchain.imageViews.shrink_to_fit();
-
-    samplers.clear();
-    images.clear();
 
     graphicsPipelines.clear();
     renderPasses.clear();

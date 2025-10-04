@@ -150,7 +150,8 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
     VmaAllocationInfo allocationInfo;
     CHECK_RESULT_THROW(vmaCreateImage(device.allocator(),
                                       &imageCreateInfo,
-                                      &allocationCreateInfo,
+                                      creationInfo.allocationCreateInfo ? creationInfo.allocationCreateInfo
+                                                                        : &allocationCreateInfo,
                                       &image_,
                                       &allocation_,
                                       &allocationInfo));
@@ -176,16 +177,10 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
                                                 &imageView_));
 }
 
-void Image::destroy() const
+Image::~Image()
 {
     vkDestroyImageView(device, imageView_, nullptr);
     vmaDestroyImage(device.allocator(), image_, allocation_);
-}
-void Image::erase(const std::list<Image>::const_iterator iterator) const
-{
-    vkDestroyImageView(device, imageView_, nullptr);
-    vmaDestroyImage(device.allocator(), image_, allocation_);
-    images.erase(iterator);
 }
 
 VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
@@ -208,16 +203,21 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         {
             lunaDestroyBuffer(stagingBuffer);
         }
+        constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO,
+        };
         const LunaBufferCreationInfo bufferCreationInfo = {
             .size = writeInfo.bytes,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            .allocationCreateInfo = &allocationCreateInfo,
         };
         LunaBuffer stagingBufferHandle = stagingBuffer;
         CHECK_RESULT_RETURN(lunaCreateBuffer(&bufferCreationInfo, &stagingBufferHandle));
         stagingBuffer = static_cast<const BufferRegionIndex *>(stagingBufferHandle);
     }
 
-    stagingBuffer->bufferRegion()->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels), writeInfo.bytes);
+    stagingBuffer->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels), writeInfo.bytes);
     const uint32_t mipmapLevels = writeInfo.mipmapLevels == 0 ? 1 : writeInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {
         .aspectMask = aspectMask_,
@@ -504,6 +504,7 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
     }
     return VK_SUCCESS;
 }
+
 VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image)
 {
     assert(creationInfo);
@@ -546,7 +547,8 @@ VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeI
     return VK_SUCCESS;
 }
 
-void lunaDestroyImage(LunaImage image)
+void lunaDestroyImage(const LunaImage image)
 {
-    (void)image;
+    // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
+    luna::images.remove(*static_cast<const luna::Image *>(image));
 }

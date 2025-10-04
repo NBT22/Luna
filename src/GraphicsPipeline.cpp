@@ -4,7 +4,7 @@
 
 #include <cassert>
 #include <cstdint>
-#include <luna/lunaPipeline.h>
+#include <luna/luna.h>
 #include <luna/lunaTypes.h>
 #include <stdexcept>
 #include <vector>
@@ -114,6 +114,26 @@ void GraphicsPipeline::destroy()
     pushConstantsRanges_.shrink_to_fit();
     isDestroyed_ = true;
 }
+VkResult GraphicsPipeline::pushConstants() const
+{
+    const std::vector<LunaPushConstantsRange> &pushConstantsRanges = pushConstantsRanges_;
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device));
+    uint32_t offset = 0;
+    for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
+    {
+        const void *pushConstantsData = static_cast<const uint8_t *>(pushConstantsRange.dataPointer) +
+                                        pushConstantsRange.dataPointerOffset;
+        vkCmdPushConstants(commandBuffer,
+                           layout_,
+                           pushConstantsRange.stageFlags,
+                           offset,
+                           pushConstantsRange.size,
+                           pushConstantsData);
+        offset += pushConstantsRange.size;
+    }
+    return VK_SUCCESS;
+}
 VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) const
 {
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
@@ -198,22 +218,5 @@ void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescr
 
 VkResult lunaPushConstants(const LunaGraphicsPipeline pipeline)
 {
-    const luna::GraphicsPipeline *graphicsPipeline = static_cast<const luna::GraphicsPipeline *>(pipeline);
-    const std::vector<LunaPushConstantsRange> &pushConstantsRanges = graphicsPipeline->pushConstantsRanges_;
-    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device));
-    uint32_t offset = 0;
-    for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
-    {
-        const void *pushConstantsData = static_cast<const uint8_t *>(pushConstantsRange.dataPointer) +
-                                        pushConstantsRange.dataPointerOffset;
-        vkCmdPushConstants(commandBuffer,
-                           graphicsPipeline->layout_,
-                           pushConstantsRange.stageFlags,
-                           offset,
-                           pushConstantsRange.size,
-                           pushConstantsData);
-        offset += pushConstantsRange.size;
-    }
-    return VK_SUCCESS;
+    return static_cast<const luna::GraphicsPipeline *>(pipeline)->pushConstants();
 }

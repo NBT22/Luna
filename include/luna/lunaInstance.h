@@ -11,7 +11,6 @@ extern "C"
 #endif
 
 #include <luna/lunaTypes.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 

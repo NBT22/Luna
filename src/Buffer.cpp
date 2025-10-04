@@ -7,7 +7,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <list>
-#include <luna/luna.h>
 #include <luna/lunaTypes.h>
 #include <vector>
 #include <volk.h>
@@ -21,20 +20,6 @@ static constexpr long double BLOCK_SIZE = 32 * 1024 * 1024;
 
 namespace luna::helpers
 {
-static VkResult allocateBuffer(const LunaBufferCreationInfo &creationInfo)
-{
-    const VkBufferCreateInfo bufferCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .flags = creationInfo.flags,
-        .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::ceil(creationInfo.size / BLOCK_SIZE)),
-        .usage = creationInfo.usage,
-        .sharingMode = device.sharingMode(),
-        .queueFamilyIndexCount = device.familyCount(),
-        .pQueueFamilyIndices = device.queueFamilyIndices(),
-    };
-    TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo));
-    return VK_SUCCESS;
-}
 static bool sortBufferRegionsByOffsetAscending(const Buffer::BufferRegion &a, const Buffer::BufferRegion &b)
 {
     return a.offset() < b.offset();
@@ -177,11 +162,14 @@ VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &
             }
             if (foundBuffer->canBeReused_)
             {
+                uint8_t *regionData = foundBuffer->data_ == nullptr
+                                              ? nullptr
+                                              : static_cast<uint8_t *>(foundBuffer->data_) + baseOffset;
                 if (count > 1)
                 {
                     assert(count > 1 && creationInfos);
                     foundBuffer->regions_.emplace_back(creationInfo.size,
-                                                       static_cast<uint8_t *>(foundBuffer->data_) + baseOffset,
+                                                       regionData,
                                                        baseOffset,
                                                        foundBuffer,
                                                        count,
@@ -190,7 +178,7 @@ VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &
                 } else
                 {
                     foundBuffer->regions_.emplace_back(creationInfo.size,
-                                                       static_cast<uint8_t *>(foundBuffer->data_) + baseOffset,
+                                                       regionData,
                                                        baseOffset,
                                                        foundBuffer,
                                                        *bufferOut);
@@ -204,15 +192,34 @@ VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &
     }
     if (foundBuffer == nullptr)
     {
-        CHECK_RESULT_RETURN(helpers::allocateBuffer(creationInfo));
+        const VkBufferCreateInfo bufferCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .flags = creationInfo.flags,
+            .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::ceil(creationInfo.size / BLOCK_SIZE)),
+            .usage = creationInfo.usage,
+            .sharingMode = device.sharingMode(),
+            .queueFamilyIndexCount = device.familyCount(),
+            .pQueueFamilyIndices = device.queueFamilyIndices(),
+        };
+        constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
+                     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                     VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+        };
+        TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo,
+                                                    creationInfo.allocationCreateInfo
+                                                            ? *creationInfo.allocationCreateInfo
+                                                            : allocationCreateInfo));
         foundBuffer = &buffers.back();
     }
     const size_t offset = foundBuffer->usedBytes_ + foundBuffer->unusedBytes_;
+    uint8_t *regionData = foundBuffer->data_ == nullptr ? nullptr : static_cast<uint8_t *>(foundBuffer->data_) + offset;
     if (count > 1)
     {
         assert(count > 1 && creationInfos);
         foundBuffer->regions_.emplace_back(creationInfo.size,
-                                           static_cast<uint8_t *>(foundBuffer->data_) + offset,
+                                           regionData,
                                            offset,
                                            foundBuffer,
                                            count,
@@ -220,11 +227,7 @@ VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &
                                            bufferOut);
     } else
     {
-        foundBuffer->regions_.emplace_back(creationInfo.size,
-                                           static_cast<uint8_t *>(foundBuffer->data_) + offset,
-                                           offset,
-                                           foundBuffer,
-                                           *bufferOut);
+        foundBuffer->regions_.emplace_back(creationInfo.size, regionData, offset, foundBuffer, *bufferOut);
     }
     foundBuffer->freeBytes_ -= creationInfo.size;
     foundBuffer->usedBytes_ += creationInfo.size;
@@ -232,7 +235,7 @@ VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &
 }
 
 
-Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
+Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo, const VmaAllocationCreateInfo &allocationCreateInfo)
 {
     BufferRegion::BufferRegionIndex::waitForCleanupThread();
 
@@ -240,12 +243,7 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo)
     usageFlags_ = bufferCreateInfo.usage;
     freeBytes_ = bufferCreateInfo.size;
 
-    // TODO: Better memory types and allowing the application to pick based on VMA attributes
     VmaAllocationInfo allocationInfo;
-    constexpr VmaAllocationCreateInfo allocationCreateInfo = {
-        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        .usage = VMA_MEMORY_USAGE_AUTO,
-    };
     CHECK_RESULT_THROW(vmaCreateBuffer(device.allocator(),
                                        &bufferCreateInfo,
                                        &allocationCreateInfo,
@@ -259,19 +257,7 @@ Buffer::~Buffer()
 {
     vmaDestroyBuffer(device.allocator(), buffer_, allocation_);
 }
-
-
-// static VkResult resizeBuffer(const LunaBuffer &lunaBuffer, const VkDeviceSize newSize)
-// {
-//     const Buffer &buffer = *static_cast<const Buffer *>(lunaBuffer);
-// }
 } // namespace luna
-
-VkResult lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo)
-{
-    assert(creationInfo);
-    return luna::helpers::allocateBuffer(*creationInfo);
-}
 
 VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer)
 {
@@ -295,22 +281,18 @@ VkResult lunaCreateBuffers(const uint32_t count, const LunaBufferCreationInfo *c
 
 void lunaDestroyBuffer(const LunaBuffer buffer)
 {
-    using namespace luna;
     assert(buffer);
-    const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(buffer);
-    bufferRegionIndices.remove_if([index](const BufferRegionIndex &regionIndex) -> bool {
+    const luna::BufferRegionIndex *index = static_cast<const luna::BufferRegionIndex *>(buffer);
+    luna::bufferRegionIndices.remove_if([index](const luna::BufferRegionIndex &regionIndex) -> bool {
         return regionIndex.buffer() == index->buffer() &&
                regionIndex.bufferRegion() == index->bufferRegion() &&
                regionIndex.subRegion() == index->subRegion();
     });
 }
 
-VkResult lunaResizeBuffer(const LunaBuffer buffer, const VkDeviceSize newSize)
+VkResult lunaResizeBuffer(LunaBuffer *buffer, const VkDeviceSize newSize)
 {
-    assert(buffer);
-
-    // NOLINTNEXTLINE(*-pro-type-const-cast)
-    return const_cast<luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(buffer))->resize(newSize);
+    return luna::BufferRegionIndex::resize(buffer, newSize);
 }
 
 void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes, const size_t offset)
@@ -320,10 +302,14 @@ void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size
         return;
     }
     assert(buffer && data);
-    const luna::BufferRegionIndex *bufferRegionIndex = static_cast<const luna::BufferRegionIndex *>(buffer);
-    assert(bytes <= bufferRegionIndex->size() - offset);
-    uint8_t *bufferData = bufferRegionIndex->data();
-    std::copy_n(static_cast<const uint8_t *>(data), bytes, bufferData + offset);
+    static_cast<const luna::BufferRegionIndex *>(buffer)->copyToBuffer(static_cast<const uint8_t *>(data),
+                                                                       bytes,
+                                                                       offset);
+}
+
+LunaBufferCreationInfo lunaBufferGetCreationInfo(const LunaBuffer buffer)
+{
+    return static_cast<const luna::BufferRegionIndex *>(buffer)->creationInfo();
 }
 
 void lunaBindVertexBuffers(const uint32_t firstBinding,

@@ -5,13 +5,6 @@
 #include <cglm/cglm.h>
 #include <lodepng.h>
 #include <luna/luna.h>
-#include <luna/lunaDevice.h>
-#include <luna/lunaDrawing.h>
-#include <luna/lunaImage.h>
-#include <luna/lunaInstance.h>
-#include <luna/lunaPipeline.h>
-#include <luna/lunaRenderPass.h>
-#include <luna/lunaTypes.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_scancode.h>

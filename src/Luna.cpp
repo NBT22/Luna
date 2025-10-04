@@ -72,14 +72,13 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    CHECK_RESULT_RETURN(luna::device.commandPools()
-                                .graphics.commandBuffer()
-                                .resizeArray(luna::device,
-                                             luna::device.commandPools().graphics,
-                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                             nullptr,
-                                             &semaphoreCreateInfo,
-                                             luna::swapchain.imageCount));
+    CHECK_RESULT_RETURN(
+            luna::device.commandPools().graphics.commandBuffer().resizeArray(luna::device,
+                                                                             luna::device.commandPools().graphics,
+                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                             nullptr,
+                                                                             &semaphoreCreateInfo,
+                                                                             luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;
     return VK_SUCCESS;
@@ -298,4 +297,6 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
 void lunaDestroyDescriptorSet(LunaDescriptorSet descriptorSet)
 {
     (void)descriptorSet;
+    // static_cast<const luna::DescriptorSetIndex *>(descriptorSet);
+    // vkDestroyDescriptorPool();
 }

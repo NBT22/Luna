@@ -20,7 +20,6 @@ namespace luna::commandBuffer
 class CommandBufferArray
 {
     public:
-        friend class luna::CommandBuffer;
         CommandBufferArray() = default;
         CommandBufferArray(VkDevice logicalDevice,
                            VkCommandPool commandPool,
@@ -50,7 +49,9 @@ class CommandBufferArray
         VkResult resetFence(VkDevice logicalDevice);
         VkResult recreateSemaphores(VkDevice logicalDevice);
 
+        [[nodiscard]] size_t size() const;
         [[nodiscard]] bool isRecording() const;
+        [[nodiscard]] bool anyRecording() const;
         [[nodiscard]] const Semaphore &semaphore() const;
 
     private:
@@ -64,6 +65,7 @@ class CommandBufferArray
 
 #pragma region "Implmentation"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include "Luna.hpp"
@@ -233,9 +235,19 @@ inline VkResult CommandBufferArray::recreateSemaphores(const VkDevice logicalDev
     return VK_SUCCESS;
 }
 
+inline size_t CommandBufferArray::size() const
+{
+    const size_t size = commandBuffers_.size();
+    assert(isRecordings_.size() == size && fences_.size() == size && semaphores_.size() == size);
+    return size;
+}
 inline bool CommandBufferArray::isRecording() const
 {
     return isRecordings_.at(index_) != 0u;
+}
+inline bool CommandBufferArray::anyRecording() const
+{
+    return std::any_of(isRecordings_.begin(), isRecordings_.end(), [](const uint8_t val) -> bool { return val != 0u; });
 }
 inline const Semaphore &CommandBufferArray::semaphore() const
 {

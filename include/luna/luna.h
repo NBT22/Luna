@@ -10,16 +10,17 @@ extern "C"
 {
 #endif
 
-#include <luna/lunaDevice.h> // NOLINT(*-include-cleaner)
-#include <luna/lunaDrawing.h> // NOLINT(*-include-cleaner)
-#include <luna/lunaImage.h> // NOLINT(*-include-cleaner)
-#include <luna/lunaInstance.h> // NOLINT(*-include-cleaner)
-#include <luna/lunaPipeline.h> // NOLINT(*-include-cleaner)
-#include <luna/lunaRenderPass.h> // NOLINT(*-include-cleaner)
+// NOLINTBEGIN(*-include-cleaner)
+#include <luna/lunaBuffer.h>
+#include <luna/lunaDevice.h>
+#include <luna/lunaDrawing.h>
+#include <luna/lunaImage.h>
+#include <luna/lunaInstance.h>
 #include <luna/lunaTypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
+// NOLINTEND(*-include-cleaner)
 
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
                                   LunaDescriptorPool *descriptorPool);
@@ -32,12 +33,8 @@ void lunaDestroyDescriptorSet(LunaDescriptorSet descriptorSet);
 
 VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule);
 
-VkResult lunaAllocateBuffer(const LunaBufferCreationInfo *creationInfo);
-VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);
-VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer **buffers);
-void lunaDestroyBuffer(LunaBuffer buffer);
-VkResult lunaResizeBuffer(LunaBuffer buffer, VkDeviceSize newSize);
-void lunaWriteDataToBuffer(LunaBuffer buffer, const void *data, size_t bytes, size_t offset);
+VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo,
+                                    LunaGraphicsPipeline *pipeline);
 
 VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool);
 VkResult lunaResetCommandPool(LunaCommandPool commandPool, VkCommandPoolResetFlagBits flags);

@@ -16,6 +16,7 @@ extern "C"
 
 #include <stddef.h>
 #include <stdint.h>
+#include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
 #define LUNA_DEFINE_HANDLE(object) typedef const void *object
@@ -326,6 +327,8 @@ typedef struct
         VkDeviceSize size;
         VkBufferCreateFlags flags;
         VkBufferUsageFlags usage;
+
+        const VmaAllocationCreateInfo *allocationCreateInfo;
 } LunaBufferCreationInfo;
 
 typedef struct
@@ -381,6 +384,8 @@ typedef struct
 
         LunaSampler sampler;
         const LunaSamplerCreationInfo *samplerCreationInfo;
+
+        const VmaAllocationCreateInfo *allocationCreateInfo;
 } LunaSampledImageCreationInfo;
 
 typedef struct

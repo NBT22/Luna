@@ -16,13 +16,12 @@ class GraphicsPipeline
     public:
         static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
 
-        friend VkResult(::lunaPushConstants(LunaGraphicsPipeline pipeline));
-
         GraphicsPipeline() = default;
         explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
 
         void destroy();
 
+        [[nodiscard]] VkResult pushConstants() const;
         [[nodiscard]] VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
 
         [[nodiscard]] VkPipelineLayout layout() const;
