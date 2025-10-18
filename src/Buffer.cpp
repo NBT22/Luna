@@ -15,6 +15,7 @@
 #include "CommandBuffer.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "Semaphore.hpp"
 
 static constexpr long double BLOCK_SIZE = 32 * 1024 * 1024;
 
@@ -43,6 +44,56 @@ void BufferRegionIndex::destroyBuffer_(Buffer *buffer)
                region.allocation_ == buffer->allocation_ &&
                region.buffer_ == buffer->buffer_;
     });
+}
+
+VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data, const size_t bytes, const size_t offset) const
+{
+    assert(bytes <= size() - offset);
+    uint8_t *mappedData = BufferRegionIndex::data();
+    if (mappedData != nullptr)
+    {
+        std::copy_n(data, bytes, mappedData + offset);
+    } else
+    {
+        // TODO: Should this use a dedicated transfer command buffer
+        CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
+        CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+        CHECK_RESULT_RETURN(reserve(stagingBuffer, bytes));
+        assert(stagingBuffer->data() != nullptr);
+        // ReSharper disable once CppDFANullDereference
+        std::copy_n(data, bytes, stagingBuffer->data() + offset);
+        const VkBufferCopy copyRegion = {
+            .srcOffset = stagingBuffer->offset(),
+            .dstOffset = BufferRegionIndex::offset() + offset,
+            .size = bytes,
+        };
+        vkCmdCopyBuffer(commandBuffer, stagingBuffer->buffer(), buffer(), 1, &copyRegion);
+        const Semaphore &semaphore = commandBuffer.semaphore();
+        const VkSubmitInfo queueSubmitInfo = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
+            .pWaitSemaphores = semaphore.isSignaled() ? &semaphore : nullptr,
+            .pWaitDstStageMask = &semaphore.stageMask(),
+            .commandBufferCount = 1,
+            .pCommandBuffers = &commandBuffer,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = &semaphore,
+        };
+        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
+                                                              queueSubmitInfo,
+                                                              VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT));
+    }
+    return VK_SUCCESS;
+}
+
+LunaBufferCreationInfo BufferRegionIndex::creationInfo() const
+{
+    return {
+        .size = size(),
+        .flags = buffer_->creationFlags_,
+        .usage = buffer_->usageFlags_,
+        .allocationCreateInfo = &buffer_->allocationCreateInfo_,
+    };
 }
 
 
@@ -90,6 +141,11 @@ Buffer::BufferRegion::BufferRegion(const size_t totalSize,
             *lunaBuffers[i] = &bufferRegionIndices.back();
         }
     }
+}
+
+VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *buffer)
+{
+    return createBufferRegion(creationInfo, &buffer, 1, nullptr);
 }
 
 VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creationInfo,
@@ -196,7 +252,7 @@ VkResult Buffer::BufferRegion::createBufferRegion(const LunaBufferCreationInfo &
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .flags = creationInfo.flags,
             .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::ceil(creationInfo.size / BLOCK_SIZE)),
-            .usage = creationInfo.usage,
+            .usage = creationInfo.usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             .sharingMode = device.sharingMode(),
             .queueFamilyIndexCount = device.familyCount(),
             .pQueueFamilyIndices = device.queueFamilyIndices(),
@@ -242,6 +298,7 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo, const VmaAllocationCr
     creationFlags_ = bufferCreateInfo.flags;
     usageFlags_ = bufferCreateInfo.usage;
     freeBytes_ = bufferCreateInfo.size;
+    allocationCreateInfo_ = allocationCreateInfo;
 
     VmaAllocationInfo allocationInfo;
     CHECK_RESULT_THROW(vmaCreateBuffer(device.allocator(),
@@ -262,7 +319,7 @@ Buffer::~Buffer()
 VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer)
 {
     assert(creationInfo);
-    return luna::Buffer::BufferRegion::createBufferRegion(*creationInfo, &buffer);
+    return luna::Buffer::BufferRegion::createBufferRegion(*creationInfo, buffer);
 }
 
 VkResult lunaCreateBuffers(const uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer **buffers)
@@ -282,17 +339,19 @@ VkResult lunaCreateBuffers(const uint32_t count, const LunaBufferCreationInfo *c
 void lunaDestroyBuffer(const LunaBuffer buffer)
 {
     assert(buffer);
-    const luna::BufferRegionIndex *index = static_cast<const luna::BufferRegionIndex *>(buffer);
-    luna::bufferRegionIndices.remove_if([index](const luna::BufferRegionIndex &regionIndex) -> bool {
-        return regionIndex.buffer() == index->buffer() &&
-               regionIndex.bufferRegion() == index->bufferRegion() &&
-               regionIndex.subRegion() == index->subRegion();
+    const luna::BufferRegionIndex &index = *static_cast<const luna::BufferRegionIndex *>(buffer);
+    luna::bufferRegionIndices.remove_if([&index](const luna::BufferRegionIndex &regionIndex) -> bool {
+        return regionIndex == index;
     });
 }
 
+// TODO (0.3.0): Make buffer const
 VkResult lunaResizeBuffer(LunaBuffer *buffer, const VkDeviceSize newSize)
 {
-    return luna::BufferRegionIndex::resize(buffer, newSize);
+    assert(*buffer);
+    luna::BufferRegionIndex *bufferRegionIndex = const_cast<
+            luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(*buffer));
+    return luna::BufferRegionIndex::resize(bufferRegionIndex, newSize);
 }
 
 void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes, const size_t offset)
@@ -302,9 +361,11 @@ void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size
         return;
     }
     assert(buffer && data);
-    static_cast<const luna::BufferRegionIndex *>(buffer)->copyToBuffer(static_cast<const uint8_t *>(data),
-                                                                       bytes,
-                                                                       offset);
+    // TODO (0.3.0): Return result of this call
+    // TODO (0.3.0): Add LunaBufferWrite struct containing data, bytes, offset, and stage mask
+    (void)static_cast<const luna::BufferRegionIndex *>(buffer)->copyToBuffer(static_cast<const uint8_t *>(data),
+                                                                             bytes,
+                                                                             offset);
 }
 
 LunaBufferCreationInfo lunaBufferGetCreationInfo(const LunaBuffer buffer)
@@ -323,7 +384,7 @@ void lunaBindVertexBuffers(const uint32_t firstBinding,
     for (uint32_t i = 0; i < bindingCount; i++)
     {
         const luna::BufferRegionIndex *bufferRegionIndex = static_cast<const luna::BufferRegionIndex *>(buffers[i]);
-        buffersVector.emplace_back(*bufferRegionIndex->buffer());
+        buffersVector.emplace_back(bufferRegionIndex->buffer());
         offsetsVector[i] += bufferRegionIndex->offset();
     }
     vkCmdBindVertexBuffers(luna::device.commandPools().graphics.commandBuffer(),
@@ -353,7 +414,7 @@ VkResult lunaDrawBuffer(const LunaBuffer vertexBuffer,
             boundVertexBuffer = vertexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundVertexBuffer);
             const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, index->buffer(), &bufferOffset);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
         }
     }
     vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
@@ -380,11 +441,11 @@ VkResult lunaDrawBufferIndirect(const LunaBuffer vertexBuffer,
             boundVertexBuffer = vertexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundVertexBuffer);
             const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, index->buffer(), &bufferOffset);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
         }
     }
     vkCmdDrawIndirect(commandBuffer,
-                      *static_cast<const BufferRegionIndex *>(buffer)->buffer(),
+                      static_cast<const BufferRegionIndex *>(buffer)->buffer(),
                       offset,
                       drawCount,
                       stride);
@@ -415,13 +476,13 @@ VkResult lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
             boundVertexBuffer = vertexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundVertexBuffer);
             const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, index->buffer(), &bufferOffset);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
         }
     }
     vkCmdDrawIndirectCount(commandBuffer,
-                           *drawParameterBufferRegionIndex->buffer(),
+                           drawParameterBufferRegionIndex->buffer(),
                            offset + drawParameterBufferRegionIndex->offset(),
-                           *countBufferRegionIndex->buffer(),
+                           countBufferRegionIndex->buffer(),
                            countBufferOffset + countBufferRegionIndex->offset(),
                            maxDrawCount,
                            stride);
@@ -451,7 +512,7 @@ VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
             boundVertexBuffer = vertexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundVertexBuffer);
             const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, index->buffer(), &bufferOffset);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
         }
     }
     if (indexBuffer != nullptr)
@@ -460,7 +521,7 @@ VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
         {
             boundIndexBuffer = indexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset(), indexType);
+            vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
         }
     }
     vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
@@ -490,7 +551,7 @@ VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
             boundVertexBuffer = vertexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundVertexBuffer);
             const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, index->buffer(), &bufferOffset);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
         }
     }
     if (indexBuffer != nullptr)
@@ -499,11 +560,11 @@ VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
         {
             boundIndexBuffer = indexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset(), indexType);
+            vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
         }
     }
     vkCmdDrawIndexedIndirect(commandBuffer,
-                             *bufferRegionIndex->buffer(),
+                             bufferRegionIndex->buffer(),
                              bufferRegionIndex->offset() + offset,
                              drawCount,
                              stride);
@@ -536,7 +597,7 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
             boundVertexBuffer = vertexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundVertexBuffer);
             const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, index->buffer(), &bufferOffset);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
         }
     }
     if (indexBuffer != nullptr)
@@ -545,13 +606,13 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
         {
             boundIndexBuffer = indexBuffer;
             const BufferRegionIndex *index = static_cast<const BufferRegionIndex *>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, *index->buffer(), index->offset(), indexType);
+            vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
         }
     }
     vkCmdDrawIndexedIndirectCount(commandBuffer,
-                                  *drawParameterBufferRegionIndex->buffer(),
+                                  drawParameterBufferRegionIndex->buffer(),
                                   offset + drawParameterBufferRegionIndex->offset(),
-                                  *countBufferRegionIndex->buffer(),
+                                  countBufferRegionIndex->buffer(),
                                   countBufferOffset + countBufferRegionIndex->offset(),
                                   maxDrawCount,
                                   stride);

@@ -27,7 +27,6 @@ void descriptorSet(LunaDescriptorSet index,
                    VkDescriptorPool *pool,
                    DescriptorSetLayout *layout,
                    VkDescriptorSet *descriptorSet);
-[[nodiscard]] size_t stagingBufferOffset();
 [[nodiscard]] VkSampler sampler(LunaSampler sampler);
 
 extern Swapchain swapchain;
@@ -35,7 +34,7 @@ extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
-extern const BufferRegionIndex *stagingBuffer;
+extern BufferRegionIndex *stagingBuffer;
 extern VkPipeline boundPipeline;
 extern LunaBuffer boundVertexBuffer;
 extern LunaBuffer boundIndexBuffer;
@@ -92,14 +91,6 @@ inline void descriptorSet(const LunaDescriptorSet index,
     }
 }
 
-inline size_t stagingBufferOffset()
-{
-    if (stagingBuffer == nullptr)
-    {
-        return -1ull;
-    }
-    return stagingBuffer->offset();
-}
 inline VkSampler sampler(const LunaSampler sampler)
 {
     return *static_cast<const VkSampler *>(sampler);

@@ -13,6 +13,7 @@
 #include <vk_mem_alloc.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
+#include "Buffer.hpp"
 #include "Device.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
@@ -232,6 +233,18 @@ VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
         .physicalDevicePreferenceDefinition = creationInfo->physicalDevicePreferenceDefinition,
     };
     TRY_CATCH_RESULT(luna::device = luna::Device(creationInfo2));
+    constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+    };
+    const LunaBufferCreationInfo bufferCreationInfo = {
+        .size = 1 << 16,
+        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        .allocationCreateInfo = &allocationCreateInfo,
+    };
+    LunaBuffer stagingBufferHandle = luna::stagingBuffer;
+    CHECK_RESULT_RETURN(luna::Buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
+    luna::stagingBuffer = const_cast<luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
     return VK_SUCCESS;
 }
 
@@ -239,6 +252,18 @@ VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
     assert(creationInfo);
     TRY_CATCH_RESULT(luna::device = luna::Device(*creationInfo));
+    constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO,
+    };
+    const LunaBufferCreationInfo bufferCreationInfo = {
+        .size = 1 << 16,
+        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        .allocationCreateInfo = &allocationCreateInfo,
+    };
+    LunaBuffer stagingBufferHandle = luna::stagingBuffer;
+    CHECK_RESULT_RETURN(luna::Buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
+    luna::stagingBuffer = const_cast<luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
     return VK_SUCCESS;
 }
 

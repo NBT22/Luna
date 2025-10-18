@@ -65,12 +65,12 @@ add_library(Luna STATIC
         src/headers/Semaphore.hpp
 
         include/luna/luna.h
+        include/luna/lunaBuffer.h
         include/luna/lunaDevice.h
         include/luna/lunaDrawing.h
         include/luna/lunaImage.h
         include/luna/lunaInstance.h
         include/luna/lunaTypes.h
-        include/luna/lunaBuffer.h
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
 target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)

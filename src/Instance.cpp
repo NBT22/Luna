@@ -248,7 +248,7 @@ VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
-const BufferRegionIndex *stagingBuffer{};
+BufferRegionIndex *stagingBuffer{};
 VkPipeline boundPipeline{};
 LunaBuffer boundVertexBuffer{};
 LunaBuffer boundIndexBuffer{};
@@ -371,7 +371,6 @@ VkResult lunaDestroyInstance()
 
     bufferRegionIndices.clear();
     Buffer::BufferRegion::BufferRegionIndex::waitForCleanupThread();
-    buffers.clear();
     stagingBuffer = nullptr;
 
     device.destroy();
@@ -426,6 +425,7 @@ void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatP
             return;
         }
     }
+    // TODO (0.3.0): Handling for if none of the formats were found
 }
 VkFormat lunaGetDepthImageFormat()
 {

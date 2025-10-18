@@ -7,7 +7,8 @@
 #include <cassert>
 #include <cstdint>
 #include <list>
-#include <luna/luna.h>
+#include <luna/lunaBuffer.h>
+#include <luna/lunaImage.h>
 #include <luna/lunaTypes.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
@@ -197,27 +198,8 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
 
-    if (stagingBuffer == nullptr || stagingBuffer->size() < writeInfo.bytes)
-    {
-        if (stagingBuffer != nullptr)
-        {
-            lunaDestroyBuffer(stagingBuffer);
-        }
-        constexpr VmaAllocationCreateInfo allocationCreateInfo = {
-            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO,
-        };
-        const LunaBufferCreationInfo bufferCreationInfo = {
-            .size = writeInfo.bytes,
-            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .allocationCreateInfo = &allocationCreateInfo,
-        };
-        LunaBuffer stagingBufferHandle = stagingBuffer;
-        CHECK_RESULT_RETURN(lunaCreateBuffer(&bufferCreationInfo, &stagingBufferHandle));
-        stagingBuffer = static_cast<const BufferRegionIndex *>(stagingBufferHandle);
-    }
-
-    stagingBuffer->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels), writeInfo.bytes);
+    CHECK_RESULT_RETURN(BufferRegionIndex::reserve(stagingBuffer, writeInfo.bytes));
+    CHECK_RESULT_RETURN(stagingBuffer->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels), writeInfo.bytes));
     const uint32_t mipmapLevels = writeInfo.mipmapLevels == 0 ? 1 : writeInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {
         .aspectMask = aspectMask_,
@@ -257,13 +239,13 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         .layerCount = arrayLayers_,
     };
     const VkBufferImageCopy bufferCopyInfo = {
-        .bufferOffset = stagingBufferOffset(),
+        .bufferOffset = stagingBuffer->offset(),
         .imageSubresource = writeInfo.subresourceLayers == nullptr ? subresourceLayers : *writeInfo.subresourceLayers,
         .imageOffset = writeInfo.offset == nullptr ? VkOffset3D{} : *writeInfo.offset,
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           *stagingBuffer->buffer(),
+                           stagingBuffer->buffer(),
                            image_,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,

@@ -101,9 +101,6 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
         default:
             break;
     }
-    const VkAttachmentStoreOp storeOp = colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED
-                                                ? VK_ATTACHMENT_STORE_OP_DONT_CARE
-                                                : VK_ATTACHMENT_STORE_OP_STORE;
 
     attachmentReferences.at(1).attachment = colorAttachmentIndex;
     attachmentReferences.at(1).layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -111,7 +108,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
     attachmentDescriptions.at(colorAttachmentIndex).format = swapchain.format.format;
     attachmentDescriptions.at(colorAttachmentIndex).samples = samples;
     attachmentDescriptions.at(colorAttachmentIndex).loadOp = loadOp;
-    attachmentDescriptions.at(colorAttachmentIndex).storeOp = storeOp;
+    attachmentDescriptions.at(colorAttachmentIndex).storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachmentDescriptions.at(colorAttachmentIndex).stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachmentDescriptions.at(colorAttachmentIndex).stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     if (samples != VK_SAMPLE_COUNT_1_BIT)
@@ -457,12 +454,46 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
                                            &depthImage_,
                                            &depthImageAllocation_,
                                            nullptr));
-        CHECK_RESULT_RETURN(helpers::createImageView(device,
-                                                     depthImage_,
-                                                     depthImageFormat,
-                                                     VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-                                                     1,
-                                                     &depthImageView_));
+        switch (depthImageFormat)
+        {
+            case VK_FORMAT_D16_UNORM:
+            case VK_FORMAT_X8_D24_UNORM_PACK32:
+            case VK_FORMAT_D32_SFLOAT:
+                CHECK_RESULT_RETURN(helpers::createImageView(device,
+                                                             depthImage_,
+                                                             depthImageFormat,
+                                                             VK_IMAGE_ASPECT_DEPTH_BIT,
+                                                             1,
+                                                             &depthImageView_));
+                break;
+            case VK_FORMAT_S8_UINT:
+                CHECK_RESULT_RETURN(helpers::createImageView(device,
+                                                             depthImage_,
+                                                             depthImageFormat,
+                                                             VK_IMAGE_ASPECT_STENCIL_BIT,
+                                                             1,
+                                                             &depthImageView_));
+                break;
+            case VK_FORMAT_D16_UNORM_S8_UINT:
+            case VK_FORMAT_D24_UNORM_S8_UINT:
+            case VK_FORMAT_D32_SFLOAT_S8_UINT:
+                CHECK_RESULT_RETURN(helpers::createImageView(device,
+                                                             depthImage_,
+                                                             depthImageFormat,
+                                                             VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+                                                             1,
+                                                             &depthImageView_));
+                break;
+            default:
+                assert(depthImageFormat == VK_FORMAT_D16_UNORM ||
+                       depthImageFormat == VK_FORMAT_X8_D24_UNORM_PACK32 ||
+                       depthImageFormat == VK_FORMAT_D32_SFLOAT ||
+                       depthImageFormat == VK_FORMAT_S8_UINT ||
+                       depthImageFormat == VK_FORMAT_D16_UNORM_S8_UINT ||
+                       depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT ||
+                       depthImageFormat == VK_FORMAT_D32_SFLOAT_S8_UINT);
+                return VK_ERROR_FORMAT_NOT_SUPPORTED;
+        }
     }
 
     return VK_SUCCESS;
