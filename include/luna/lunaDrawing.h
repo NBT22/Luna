@@ -8,6 +8,8 @@
 #ifdef __cplusplus
 extern "C"
 {
+#else
+#include <stdbool.h>
 #endif
 
 #include <luna/lunaTypes.h>
@@ -91,7 +93,10 @@ VkResult lunaResizeSwapchain(uint32_t renderPassResizeInfoCount,
                              const LunaRenderPassResizeInfo *renderPassResizeInfos,
                              const VkExtent2D *targetExtent,
                              VkExtent2D *newSwapchainExtent);
-VkResult lunaPresentSwapchain(void);
+
+VkResult lunaBeginFrame(bool allowSuboptimalSwapchain);
+void lunaTransitionColorImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
+VkResult lunaEndFrame(void);
 
 #ifdef __cplusplus
 }

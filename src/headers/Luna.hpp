@@ -32,12 +32,14 @@ class VkResultException final: public std::exception
     if (const VkResult result = value; result != VK_SUCCESS) \
     { \
         return result; \
-    }
+    } \
+    (void)0
 #define CHECK_RESULT_THROW(value) \
     if (const VkResult result = value; result != VK_SUCCESS) \
     { \
         throw luna::helpers::VkResultException(result); \
-    }
+    } \
+    (void)0
 #define TRY_CATCH_RESULT(expression) \
     try \
     { \
@@ -45,7 +47,8 @@ class VkResultException final: public std::exception
     } catch (const luna::helpers::VkResultException &exception) \
     { \
         return exception.result; \
-    }
+    } \
+    (void)0
 
 namespace luna
 {

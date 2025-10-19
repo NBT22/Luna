@@ -30,6 +30,7 @@ LUNA_DEFINE_HANDLE(LunaDescriptorSetLayout);
 LUNA_DEFINE_HANDLE(LunaDescriptorSet);
 LUNA_DEFINE_HANDLE(LunaShaderModule);
 LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
+LUNA_DEFINE_HANDLE(LunaComputePipeline);
 LUNA_DEFINE_HANDLE(LunaBuffer);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
@@ -282,6 +283,13 @@ typedef struct
 
 typedef struct
 {
+        VkPipelineCreateFlags flags;
+        LunaPipelineShaderStageCreationInfo shaderStageCreationInfo;
+        LunaPipelineLayoutCreationInfo layoutCreationInfo;
+} LunaComputePipelineCreationInfo;
+
+typedef struct
+{
         uint32_t firstViewport;
         uint32_t viewportCount;
         const VkViewport *viewports;
@@ -321,6 +329,15 @@ typedef struct
         uint32_t dynamicStateCount;
         const LunaDynamicStateBindInfo *dynamicStates;
 } LunaGraphicsPipelineBindInfo;
+
+typedef struct
+{
+    LunaComputePipeline pipeline;
+    LunaDescriptorSetBindInfo descriptorSetBindInfo;
+    uint32_t groupCountX;
+    uint32_t groupCountY;
+    uint32_t groupCountZ;
+} LunaDispatchComputeInfo;
 
 typedef struct
 {
@@ -393,7 +410,6 @@ typedef struct
         VkRect2D renderArea;
         VkClearValue depthAttachmentClearValue;
         VkClearValue colorAttachmentClearValue;
-        bool allowSuboptimalSwapchain;
 } LunaRenderPassBeginInfo;
 
 typedef struct

@@ -413,7 +413,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .arrayLayers = 1,
             .samples = samples_,
             .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+            .usage = swapchain.imageUsage | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = device.queueFamilyIndices(),
@@ -552,41 +552,10 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
 
 VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
 {
-    VkResult acquireImageResult = VK_SUCCESS;
+    assert(swapchain.imageIndex != -1u);
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
 
-    if (swapchain.imageIndex == -1u)
-    {
-        // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
-        CHECK_RESULT_RETURN(commandBuffer.waitForFence(device));
-        CHECK_RESULT_RETURN(commandBuffer.resetFence(device));
-        acquireImageResult = vkAcquireNextImageKHR(device,
-                                                   swapchain.swapchain,
-                                                   UINT64_MAX,
-                                                   commandBuffer.semaphore(),
-                                                   VK_NULL_HANDLE,
-                                                   &swapchain.imageIndex);
-        switch (acquireImageResult)
-        {
-            case VK_SUCCESS:
-                break;
-            case VK_SUBOPTIMAL_KHR:
-                if (beginInfo.allowSuboptimalSwapchain)
-                {
-                    break;
-                }
-                return acquireImageResult;
-            case VK_ERROR_OUT_OF_DATE_KHR:
-                return acquireImageResult;
-            default:
-                assert(acquireImageResult != VK_SUCCESS);
-                return acquireImageResult;
-        }
-        CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
-    } else
-    {
-        CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
-    }
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
 
     uint32_t clearValueCount = 1;
     std::vector<VkClearValue> clearValues;
@@ -612,7 +581,7 @@ VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
     };
     vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    return acquireImageResult;
+    return VK_SUCCESS;
 }
 } // namespace luna
 

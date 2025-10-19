@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <luna/lunaDrawing.h>
 #include <luna/lunaTypes.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>

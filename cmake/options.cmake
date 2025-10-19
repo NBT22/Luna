@@ -8,4 +8,5 @@ option(LUNA_DEFINE_VK_NO_PROTOTYPES "Define the `VK_NO_PROTOTYPES` macro, which 
 option(LUNA_EXAMPLES "Enable building of example projects" ${PROJECT_IS_TOP_LEVEL})
 option(LUNA_EXAMPLE_ALL "Enable all example project targets. Note that this overrides the settings of the individual projects" ON)
 option(LUNA_EXAMPLE_HelloTriangle "Enable the HelloTriangle example project target" OFF)
+option(LUNA_EXAMPLE_HelloTriangleCompute "Enable the HelloTriangleCompute example project target" OFF)
 option(LUNA_EXAMPLE_LunaCube "Enable the LunaCube example project target" OFF)

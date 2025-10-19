@@ -1,0 +1,106 @@
+//
+// Created by NBT22 on 10/18/25.
+//
+
+#include <cassert>
+#include <cstdint>
+#include <luna/luna.h>
+#include <luna/lunaTypes.h>
+#include <vector>
+#include <volk.h>
+#include <vulkan/vulkan_core.h>
+#include "CommandBuffer.hpp"
+#include "ComputePipeline.hpp"
+#include "helpers/Pipeline.hpp"
+#include "Instance.hpp"
+#include "Luna.hpp"
+
+namespace luna
+{
+ComputePipeline::ComputePipeline(const LunaComputePipelineCreationInfo &creationInfo)
+{
+    CHECK_RESULT_THROW(helpers::createPipelineLayout(creationInfo.layoutCreationInfo, pushConstantsRanges_, &layout_));
+
+    const VkPipelineShaderStageCreateInfo shaderStageCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .flags = creationInfo.shaderStageCreationInfo.flags,
+        .stage = creationInfo.shaderStageCreationInfo.stage,
+        .module = device.shaderModule(creationInfo.shaderStageCreationInfo.module),
+        .pName = creationInfo.shaderStageCreationInfo.entrypoint == nullptr
+                         ? "main"
+                         : creationInfo.shaderStageCreationInfo.entrypoint,
+        .pSpecializationInfo = creationInfo.shaderStageCreationInfo.specializationInfo,
+    };
+
+    const VkComputePipelineCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .flags = creationInfo.flags,
+        .stage = shaderStageCreateInfo,
+        .layout = layout_,
+    };
+    vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline_);
+}
+
+ComputePipeline::~ComputePipeline()
+{
+    vkDestroyPipeline(device, pipeline_, nullptr);
+    vkDestroyPipelineLayout(device, layout_, nullptr);
+
+    pushConstantsRanges_.clear();
+    pushConstantsRanges_.shrink_to_fit();
+}
+
+VkResult ComputePipeline::bind(const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const
+{
+    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
+
+    if (pipeline_ != boundPipeline)
+    {
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_);
+    }
+    if (descriptorSetBindInfo.descriptorSetCount > 0)
+    {
+        std::vector<VkDescriptorSet> descriptorSetsVector;
+        descriptorSetsVector.reserve(descriptorSetBindInfo.descriptorSetCount);
+        for (uint32_t i = 0; i < descriptorSetBindInfo.descriptorSetCount; i++)
+        {
+            descriptorSetsVector.emplace_back(*descriptorSet(descriptorSetBindInfo.descriptorSets[i]));
+        }
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_COMPUTE,
+                                layout_,
+                                descriptorSetBindInfo.firstSet,
+                                descriptorSetBindInfo.descriptorSetCount,
+                                descriptorSetsVector.data(),
+                                descriptorSetBindInfo.dynamicOffsetCount,
+                                descriptorSetBindInfo.dynamicOffsets);
+    }
+    boundPipeline = pipeline_;
+    return VK_SUCCESS;
+}
+} // namespace luna
+
+VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creationInfo, LunaComputePipeline *pipeline)
+{
+    assert(creationInfo);
+    TRY_CATCH_RESULT(luna::computePipelines.emplace_back(*creationInfo));
+    if (pipeline != nullptr)
+    {
+        *pipeline = &luna::computePipelines.back();
+    }
+    return VK_SUCCESS;
+}
+
+VkResult lunaDispatchCompute(const LunaDispatchComputeInfo *info)
+{
+    assert(info);
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    assert(commandBuffer.isRecording());
+    CHECK_RESULT_RETURN(static_cast<const luna::ComputePipeline *>(info->pipeline)->bind(info->descriptorSetBindInfo));
+    vkCmdDispatch(commandBuffer,
+                  info->groupCountX == 0 ? 1 : info->groupCountX,
+                  info->groupCountY == 0 ? 1 : info->groupCountY,
+                  info->groupCountZ == 0 ? 1 : info->groupCountZ);
+    return VK_SUCCESS;
+}

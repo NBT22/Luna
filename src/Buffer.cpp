@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <list>
+#include <luna/lunaBuffer.h>
+#include <luna/lunaDrawing.h>
 #include <luna/lunaTypes.h>
 #include <vector>
 #include <volk.h>

@@ -15,6 +15,7 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
+#include "ComputePipeline.hpp"
 #include "DescriptorSetLayout.hpp"
 #include "Device.hpp"
 #include "GraphicsPipeline.hpp"
@@ -259,6 +260,7 @@ std::list<VkDescriptorPool> descriptorPools{};
 std::list<VkDescriptorSet> descriptorSets{};
 std::list<DescriptorSetIndex> descriptorSetIndices{};
 std::list<GraphicsPipeline> graphicsPipelines{};
+std::list<ComputePipeline> computePipelines{};
 std::list<Buffer> buffers{};
 std::list<BufferRegionIndex> bufferRegionIndices{};
 std::list<VkSampler> samplers{};
@@ -346,6 +348,8 @@ VkResult lunaDestroyInstance()
     {
         renderPass.destroy();
     }
+
+    computePipelines.clear();
 
     for (const VkDescriptorPool descriptorPool: descriptorPools)
     {

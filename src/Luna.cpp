@@ -144,7 +144,72 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
 
     return VK_SUCCESS;
 }
-VkResult lunaPresentSwapchain()
+VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
+{
+    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
+    CHECK_RESULT_RETURN(commandBuffer.waitForFence(luna::device));
+    CHECK_RESULT_RETURN(commandBuffer.resetFence(luna::device));
+    const VkResult acquireImageResult = vkAcquireNextImageKHR(luna::device,
+                                                              luna::swapchain.swapchain,
+                                                              UINT64_MAX,
+                                                              commandBuffer.semaphore(),
+                                                              VK_NULL_HANDLE,
+                                                              &luna::swapchain.imageIndex);
+    switch (acquireImageResult)
+    {
+        case VK_SUCCESS:
+            break;
+        case VK_SUBOPTIMAL_KHR:
+            if (allowSuboptimalSwapchain)
+            {
+                break;
+            }
+            return acquireImageResult;
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            return acquireImageResult;
+        default:
+            assert(acquireImageResult != VK_SUCCESS);
+            return acquireImageResult;
+    }
+
+    CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
+
+    return VK_SUCCESS;
+}
+void lunaTransitionColorImageLayout(const VkImageLayout oldLayout, const VkImageLayout newLayout)
+{
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    assert(commandBuffer.isRecording());
+
+    constexpr VkImageSubresourceRange subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .levelCount = 1,
+        .layerCount = 1,
+    };
+    const VkImageMemoryBarrier memoryBarrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+        .oldLayout = oldLayout,
+        .newLayout = newLayout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = luna::swapchain.images.at(luna::swapchain.imageIndex),
+        .subresourceRange = subresourceRange,
+    };
+    vkCmdPipelineBarrier(commandBuffer,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         0,
+                         0,
+                         nullptr,
+                         0,
+                         nullptr,
+                         1,
+                         &memoryBarrier);
+}
+VkResult lunaEndFrame()
 {
     using namespace luna;
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
@@ -293,4 +358,23 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
         }
     }
     vkUpdateDescriptorSets(device, writeCount, writes.data(), 0, nullptr);
+}
+void lunaWriteFramebufferToDescriptor(const LunaDescriptorSet descriptorSet)
+{
+    vkDeviceWaitIdle(luna::device);
+
+    const VkDescriptorImageInfo imageInfo = {
+        .imageView = luna::swapchain.imageViews.at(luna::swapchain.imageIndex),
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+    };
+    const VkWriteDescriptorSet write = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = *static_cast<const luna::DescriptorSetIndex *>(descriptorSet)->set,
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .pImageInfo = &imageInfo,
+    };
+    vkUpdateDescriptorSets(luna::device, 1, &write, 0, nullptr);
 }

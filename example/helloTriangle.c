@@ -351,6 +351,7 @@ int main(void)
 
     while (!shouldQuit())
     {
+        CHECK_RESULT(lunaBeginFrame(false));
         CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
         CHECK_RESULT(lunaDrawBuffer(vertexBuffer,
                                     graphicsPipeline,
@@ -360,7 +361,7 @@ int main(void)
                                     0,
                                     0));
         lunaEndRenderPass();
-        CHECK_RESULT(lunaPresentSwapchain());
+        CHECK_RESULT(lunaEndFrame());
     }
     CHECK_RESULT(lunaDestroyInstance());
     return 0;

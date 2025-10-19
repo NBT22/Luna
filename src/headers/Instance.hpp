@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <list>
 #include <luna/lunaTypes.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
+#include "ComputePipeline.hpp"
 #include "DescriptorSetLayout.hpp"
 #include "Device.hpp"
 #include "GraphicsPipeline.hpp"
@@ -45,6 +45,7 @@ extern std::list<VkDescriptorPool> descriptorPools;
 extern std::list<VkDescriptorSet> descriptorSets;
 extern std::list<DescriptorSetIndex> descriptorSetIndices;
 extern std::list<GraphicsPipeline> graphicsPipelines;
+extern std::list<ComputePipeline> computePipelines;
 extern std::list<Buffer> buffers;
 extern std::list<BufferRegionIndex> bufferRegionIndices;
 extern std::list<VkSampler> samplers;

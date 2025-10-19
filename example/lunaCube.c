@@ -514,6 +514,7 @@ int main(void)
     while (!shouldQuit())
     {
         glm_rotate(transformMatrix, 0.0125f, GLM_ZUP);
+        CHECK_RESULT(lunaBeginFrame(false));
         CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
         CHECK_RESULT(lunaPushConstants(graphicsPipeline));
         CHECK_RESULT(lunaDrawBufferIndexed(vertexBuffer,
@@ -527,7 +528,7 @@ int main(void)
                                            0,
                                            0));
         lunaEndRenderPass();
-        CHECK_RESULT(lunaPresentSwapchain());
+        CHECK_RESULT(lunaEndFrame());
     }
     CHECK_RESULT(lunaDestroyInstance());
     return 0;

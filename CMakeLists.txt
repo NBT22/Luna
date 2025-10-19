@@ -41,6 +41,7 @@ findDependencies()
 add_library(Luna STATIC
         src/Buffer.cpp
         src/CommandPool.cpp
+        src/ComputePipeline.cpp
         src/DescriptorSetLayout.cpp
         src/Device.cpp
         src/GraphicsPipeline.cpp
@@ -51,6 +52,7 @@ add_library(Luna STATIC
 
         src/headers/commandBuffer/CommandBuffer.hpp
         src/headers/commandBuffer/CommandBufferArray.hpp
+        src/headers/ComputePipeline.hpp
         src/headers/Buffer.hpp
         src/headers/CommandBuffer.hpp
         src/headers/CommandPool.hpp
@@ -71,6 +73,7 @@ add_library(Luna STATIC
         include/luna/lunaImage.h
         include/luna/lunaInstance.h
         include/luna/lunaTypes.h
+        src/headers/helpers/Pipeline.hpp
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
 target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)
