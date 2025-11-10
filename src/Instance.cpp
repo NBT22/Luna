@@ -311,7 +311,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .flags = creationInfo->flags,
         .pApplicationInfo = &vulkanApplicationInfo,
-        .enabledLayerCount = creationInfo->enableValidation ? creationInfo->layerCount + 1 : creationInfo->layerCount,
+        .enabledLayerCount = static_cast<uint32_t>(enabledLayers.size()),
         .ppEnabledLayerNames = enabledLayers.data(),
         .enabledExtensionCount = creationInfo->extensionCount,
         .ppEnabledExtensionNames = creationInfo->extensionNames,
