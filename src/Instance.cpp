@@ -249,7 +249,7 @@ VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
-BufferRegionIndex *stagingBuffer{};
+const BufferRegionIndex *stagingBuffer{};
 VkPipeline boundPipeline{};
 LunaBuffer boundVertexBuffer{};
 LunaBuffer boundIndexBuffer{};

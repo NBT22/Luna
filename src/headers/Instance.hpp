@@ -34,7 +34,7 @@ extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
-extern BufferRegionIndex *stagingBuffer;
+extern const BufferRegionIndex *stagingBuffer;
 extern VkPipeline boundPipeline;
 extern LunaBuffer boundVertexBuffer;
 extern LunaBuffer boundIndexBuffer;

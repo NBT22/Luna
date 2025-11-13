@@ -347,27 +347,23 @@ void lunaDestroyBuffer(const LunaBuffer buffer)
     });
 }
 
-// TODO (0.3.0): Make buffer const
-VkResult lunaResizeBuffer(LunaBuffer *buffer, const VkDeviceSize newSize)
+VkResult lunaResizeBuffer(const LunaBuffer *buffer, const VkDeviceSize newSize)
 {
     assert(*buffer);
-    luna::BufferRegionIndex *bufferRegionIndex = const_cast<
-            luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(*buffer));
+    const luna::BufferRegionIndex *bufferRegionIndex = static_cast<const luna::BufferRegionIndex *>(*buffer);
     return luna::BufferRegionIndex::resize(bufferRegionIndex, newSize);
 }
 
-void lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes, const size_t offset)
+VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes, const size_t offset)
 {
-    if (bytes == 0)
+    if (bytes != 0)
     {
-        return;
+        assert(buffer && data);
+        // TODO (0.3.0): Add LunaBufferWrite struct containing data, bytes, offset, and stage mask
+        const luna::BufferRegionIndex *bufferRegionIndex = static_cast<const luna::BufferRegionIndex *>(buffer);
+        CHECK_RESULT_RETURN(bufferRegionIndex->copyToBuffer(static_cast<const uint8_t *>(data), bytes, offset));
     }
-    assert(buffer && data);
-    // TODO (0.3.0): Return result of this call
-    // TODO (0.3.0): Add LunaBufferWrite struct containing data, bytes, offset, and stage mask
-    (void)static_cast<const luna::BufferRegionIndex *>(buffer)->copyToBuffer(static_cast<const uint8_t *>(data),
-                                                                             bytes,
-                                                                             offset);
+    return VK_SUCCESS;
 }
 
 LunaBufferCreationInfo lunaBufferGetCreationInfo(const LunaBuffer buffer)

@@ -35,7 +35,7 @@ class CommandPool
                                        const void *allocateInfoPNext,
                                        const VkSemaphoreCreateInfo *semaphoreCreateInfo,
                                        uint32_t arraySize = 1);
-        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlagBits flags, uint64_t timeout = UINT64_MAX) const;
+        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlags flags, uint64_t timeout = UINT64_MAX) const;
 
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
         [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index = 0);
@@ -129,7 +129,7 @@ inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
     return VK_SUCCESS;
 }
 inline VkResult CommandPool::reset(const VkDevice logicalDevice,
-                                   const VkCommandPoolResetFlagBits flags,
+                                   const VkCommandPoolResetFlags flags,
                                    const uint64_t timeout) const
 {
     for (const CommandBuffer &commandBuffer: commandBuffers_)

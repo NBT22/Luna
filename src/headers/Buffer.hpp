@@ -40,9 +40,10 @@ class Buffer
                 {
                     public:
                         static void waitForCleanupThread();
-                        [[nodiscard]] static VkResult resize(BufferRegionIndex *&bufferRegionIndex,
+                        [[nodiscard]] static VkResult resize(const BufferRegionIndex *&bufferRegionIndex,
                                                              VkDeviceSize newSize);
-                        [[nodiscard]] static VkResult reserve(BufferRegionIndex *&bufferRegionIndex, size_t bytes);
+                        [[nodiscard]] static VkResult reserve(const BufferRegionIndex *&bufferRegionIndex,
+                                                              size_t bytes);
 
                     private: // BufferRegionIndex private static
                         static void destroyBuffer_(Buffer *buffer);
@@ -161,7 +162,7 @@ inline void BufferRegionIndex::waitForCleanupThread()
         cleanupThread_.join();
     }
 }
-inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex, const VkDeviceSize newSize)
+inline VkResult BufferRegionIndex::resize(const BufferRegionIndex *&bufferRegionIndex, const VkDeviceSize newSize)
 {
     // TODO: Improved resizing logic
     LunaBufferCreationInfo newCreationInfo = bufferRegionIndex->creationInfo();
@@ -169,10 +170,10 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
     lunaDestroyBuffer(bufferRegionIndex);
     LunaBuffer lunaBuffer = bufferRegionIndex;
     CHECK_RESULT_RETURN(createBufferRegion(newCreationInfo, &lunaBuffer));
-    bufferRegionIndex = const_cast<BufferRegionIndex *>(static_cast<const BufferRegionIndex *>(lunaBuffer));
+    bufferRegionIndex = static_cast<const BufferRegionIndex *>(lunaBuffer);
     return VK_SUCCESS;
 }
-inline VkResult BufferRegionIndex::reserve(BufferRegionIndex *&bufferRegionIndex, const size_t bytes)
+inline VkResult BufferRegionIndex::reserve(const BufferRegionIndex *&bufferRegionIndex, const size_t bytes)
 {
     if (bufferRegionIndex->size() < bytes)
     {

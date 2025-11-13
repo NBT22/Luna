@@ -18,7 +18,7 @@ VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, 
     return VK_SUCCESS;
 }
 
-VkResult lunaResetCommandPool(const LunaCommandPool commandPool, const VkCommandPoolResetFlagBits flags)
+VkResult lunaResetCommandPool(const LunaCommandPool commandPool, const VkCommandPoolResetFlags flags)
 {
     switch (reinterpret_cast<uintptr_t>(commandPool))
     {
@@ -31,7 +31,7 @@ VkResult lunaResetCommandPool(const LunaCommandPool commandPool, const VkCommand
 }
 
 VkResult lunaResetCommandPoolWithTimeout(const LunaCommandPool commandPool,
-                                         const VkCommandPoolResetFlagBits flags,
+                                         const VkCommandPoolResetFlags flags,
                                          const size_t timeout)
 {
     switch (reinterpret_cast<uintptr_t>(commandPool))

@@ -244,7 +244,8 @@ VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
     };
     LunaBuffer stagingBufferHandle = luna::stagingBuffer;
     CHECK_RESULT_RETURN(luna::Buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-    luna::stagingBuffer = const_cast<luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
+    luna::stagingBuffer = const_cast<
+            luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
     return VK_SUCCESS;
 }
 
@@ -263,22 +264,19 @@ VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
     };
     LunaBuffer stagingBufferHandle = luna::stagingBuffer;
     CHECK_RESULT_RETURN(luna::Buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-    luna::stagingBuffer = const_cast<luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
+    luna::stagingBuffer = const_cast<
+            luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
     return VK_SUCCESS;
 }
 
-VkPhysicalDeviceProperties lunaGetPhysicalDeviceProperties()
+void lunaGetPhysicalDeviceProperties(VkPhysicalDeviceProperties *properties)
 {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(luna::device, &properties);
-    return properties;
+    vkGetPhysicalDeviceProperties(luna::device, properties);
 }
 
-VkPhysicalDeviceProperties2 lunaGetPhysicalDeviceProperties2()
+void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties)
 {
-    VkPhysicalDeviceProperties2 properties;
-    vkGetPhysicalDeviceProperties2(luna::device, &properties);
-    return properties;
+    vkGetPhysicalDeviceProperties2(luna::device, properties);
 }
 
 VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule)
