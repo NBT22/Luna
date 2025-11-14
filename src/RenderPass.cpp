@@ -27,10 +27,10 @@ static void createDepthAttachment(const VkSampleCountFlagBits samples,
     VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     switch (depthAttachmentLoadMode)
     {
-        case LUNA_ATTACHMENT_LOAD_CLEAR:
+        case LUNA_ATTACHMENT_LOAD_MODE_CLEAR:
             loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             break;
-        case LUNA_ATTACHMENT_LOAD_PRESERVE:
+        case LUNA_ATTACHMENT_LOAD_MODE_PRESERVE:
             loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
             break;
         default:
@@ -42,7 +42,7 @@ static void createDepthAttachment(const VkSampleCountFlagBits samples,
     attachmentDescription.format = depthImageFormat;
     attachmentDescription.samples = samples;
     attachmentDescription.loadOp = loadOp;
-    attachmentDescription.storeOp = depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
+    attachmentDescription.storeOp = depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_MODE_PRESERVE
                                             ? VK_ATTACHMENT_STORE_OP_STORE
                                             : VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -58,10 +58,10 @@ static void createDepthAttachment2(const VkSampleCountFlagBits samples,
     VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     switch (depthAttachmentLoadMode)
     {
-        case LUNA_ATTACHMENT_LOAD_CLEAR:
+        case LUNA_ATTACHMENT_LOAD_MODE_CLEAR:
             loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             break;
-        case LUNA_ATTACHMENT_LOAD_PRESERVE:
+        case LUNA_ATTACHMENT_LOAD_MODE_PRESERVE:
             loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
             break;
         default:
@@ -75,7 +75,7 @@ static void createDepthAttachment2(const VkSampleCountFlagBits samples,
     attachmentDescription.format = depthImageFormat;
     attachmentDescription.samples = samples;
     attachmentDescription.loadOp = loadOp;
-    attachmentDescription.storeOp = depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_PRESERVE
+    attachmentDescription.storeOp = depthAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_MODE_PRESERVE
                                             ? VK_ATTACHMENT_STORE_OP_STORE
                                             : VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -92,10 +92,10 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
     VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     switch (colorAttachmentLoadMode)
     {
-        case LUNA_ATTACHMENT_LOAD_CLEAR:
+        case LUNA_ATTACHMENT_LOAD_MODE_CLEAR:
             loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             break;
-        case LUNA_ATTACHMENT_LOAD_PRESERVE:
+        case LUNA_ATTACHMENT_LOAD_MODE_PRESERVE:
             loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
             break;
         default:
@@ -139,16 +139,16 @@ static void createColorAttachment2(const uint32_t colorAttachmentIndex,
     VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     switch (colorAttachmentLoadMode)
     {
-        case LUNA_ATTACHMENT_LOAD_CLEAR:
+        case LUNA_ATTACHMENT_LOAD_MODE_CLEAR:
             loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             break;
-        case LUNA_ATTACHMENT_LOAD_PRESERVE:
+        case LUNA_ATTACHMENT_LOAD_MODE_PRESERVE:
             loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
             break;
         default:
             break;
     }
-    const VkAttachmentStoreOp storeOp = colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_UNDEFINED
+    const VkAttachmentStoreOp storeOp = colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_MODE_UNDEFINED
                                                 ? VK_ATTACHMENT_STORE_OP_DONT_CARE
                                                 : VK_ATTACHMENT_STORE_OP_STORE;
 

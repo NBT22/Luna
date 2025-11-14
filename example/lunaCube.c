@@ -181,9 +181,9 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
     const LunaRenderPassCreationInfo renderPassCreationInfo = {
         .samples = VK_SAMPLE_COUNT_4_BIT,
         .createColorAttachment = true,
-        .colorAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_CLEAR,
+        .colorAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_MODE_CLEAR,
         .createDepthAttachment = true,
-        .depthAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_CLEAR,
+        .depthAttachmentLoadMode = LUNA_ATTACHMENT_LOAD_MODE_CLEAR,
         .subpassCount = 1,
         .subpasses = (const LunaSubpassCreationInfo[]){{
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,

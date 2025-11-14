@@ -469,7 +469,7 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
         .addressModeU = creationInfo->addressModeU,
         .addressModeV = creationInfo->addressModeV,
         .addressModeW = creationInfo->addressModeW,
-        .mipLodBias = creationInfo->mipLodBias,
+        .mipLodBias = creationInfo->mipmapLodBias,
         .anisotropyEnable = static_cast<VkBool32>(creationInfo->anisotropyEnable),
         .maxAnisotropy = creationInfo->maxAnisotropy,
         .compareEnable = static_cast<VkBool32>(creationInfo->compareEnable),

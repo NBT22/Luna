@@ -130,7 +130,6 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
         const uint32_t width = renderPassResizeInfo.width == -1u ? swapchain.extent.width : renderPassResizeInfo.width;
         const uint32_t height = renderPassResizeInfo.height == -1u ? swapchain.extent.height
                                                                    : renderPassResizeInfo.height;
-        // NOLINTNEXTLINE(*-pro-type-const-cast)
         CHECK_RESULT_RETURN(const_cast<RenderPass *>(renderPass(renderPassResizeInfo.renderPass))
                                     ->recreateFramebuffer(device, swapchain, width, height));
     }
@@ -305,13 +304,13 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
     }
     return VK_SUCCESS;
 }
-void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites)
+void lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const LunaWriteDescriptorSet *descriptorWrites)
 {
     using namespace luna;
     VkDescriptorImageInfo descriptorImageInfo;
     std::vector<VkWriteDescriptorSet> writes;
-    writes.reserve(writeCount);
-    for (uint32_t i = 0; i < writeCount; i++)
+    writes.reserve(descriptorWriteCount);
+    for (uint32_t i = 0; i < descriptorWriteCount; i++)
     {
         const LunaWriteDescriptorSet &descriptorWrite = descriptorWrites[i];
         const LunaDescriptorSet descriptorSet = descriptorWrite.descriptorSet;
@@ -357,7 +356,7 @@ void lunaWriteDescriptorSets(const uint32_t writeCount, const LunaWriteDescripto
                                 nullptr);
         }
     }
-    vkUpdateDescriptorSets(device, writeCount, writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device, descriptorWriteCount, writes.data(), 0, nullptr);
 }
 void lunaWriteFramebufferToDescriptor(const LunaDescriptorSet descriptorSet)
 {

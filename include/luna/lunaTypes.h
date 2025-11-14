@@ -19,6 +19,7 @@ extern "C"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
+// TODO (0.3.0): Look into un-consting this
 #define LUNA_DEFINE_HANDLE(object) typedef const void *object
 
 #define LUNA_NULL_HANDLE VK_NULL_HANDLE
@@ -41,9 +42,9 @@ static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
 
 typedef enum
 {
-    LUNA_ATTACHMENT_LOAD_UNDEFINED,
-    LUNA_ATTACHMENT_LOAD_CLEAR,
-    LUNA_ATTACHMENT_LOAD_PRESERVE,
+    LUNA_ATTACHMENT_LOAD_MODE_UNDEFINED,
+    LUNA_ATTACHMENT_LOAD_MODE_CLEAR,
+    LUNA_ATTACHMENT_LOAD_MODE_PRESERVE,
 } LunaAttachmentLoadMode;
 
 typedef enum
@@ -69,6 +70,7 @@ typedef struct
         VkPhysicalDeviceType preferredDeviceType;
 } LunaPhysicalDevicePreferenceDefinition;
 
+// TODO (0.3.0): Remove duplicate structures and prefer the `[...]2` structures
 typedef struct
 {
         uint32_t extensionCount;
@@ -181,6 +183,8 @@ typedef struct
 
 typedef struct
 {
+        VkStructureType sType;
+        void *pNext;
         VkDescriptorPoolCreateFlags flags;
         uint32_t maxSets;
         uint32_t poolSizeCount;
@@ -332,11 +336,11 @@ typedef struct
 
 typedef struct
 {
-    LunaComputePipeline pipeline;
-    LunaDescriptorSetBindInfo descriptorSetBindInfo;
-    uint32_t groupCountX;
-    uint32_t groupCountY;
-    uint32_t groupCountZ;
+        LunaComputePipeline pipeline;
+        LunaDescriptorSetBindInfo descriptorSetBindInfo;
+        uint32_t groupCountX;
+        uint32_t groupCountY;
+        uint32_t groupCountZ;
 } LunaDispatchComputeInfo;
 
 typedef struct
@@ -357,7 +361,7 @@ typedef struct
         VkSamplerAddressMode addressModeU;
         VkSamplerAddressMode addressModeV;
         VkSamplerAddressMode addressModeW;
-        float mipLodBias;
+        float mipmapLodBias;
         bool anisotropyEnable;
         float maxAnisotropy;
         bool compareEnable;

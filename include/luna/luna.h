@@ -48,11 +48,11 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
                                     LunaDescriptorSet *descriptorSets);
 /**
  * @brief Update the contents of a descriptor set.
- * @param[in] writeCount The number of elements in the @c descriptorWrites array.
+ * @param[in] descriptorWriteCount The number of elements in the @c descriptorWrites array.
  * @param[in] descriptorWrites An array of @c LunaWriteDescriptorSet structures containing information about what to write.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkUpdateDescriptorSets.html
  */
-void lunaWriteDescriptorSets(uint32_t writeCount, const LunaWriteDescriptorSet *descriptorWrites);
+void lunaWriteDescriptorSets(uint32_t descriptorWriteCount, const LunaWriteDescriptorSet *descriptorWrites);
 // TODO (0.3.0): Remove me and replace with a better solution
 void lunaWriteFramebufferToDescriptor(LunaDescriptorSet descriptorSet);
 
@@ -83,6 +83,7 @@ VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creati
 /**
  * @brief Dispatch a compute pipeline.
  * @param[in] info A pointer to the @c LunaDispatchCompute structure containing information about what to dispatch.
+ * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdDispatch.html
  */
 VkResult lunaDispatchCompute(const LunaDispatchComputeInfo *info);
 
