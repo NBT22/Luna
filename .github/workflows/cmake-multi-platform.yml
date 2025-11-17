@@ -7,6 +7,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -74,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4.6.2
         with:
           # Artifact name
-          name: libLuna_${{ matrix.build_type }}_${{ matrix.c_compiler }}.a
+          name: libLuna_${{ matrix.architecture }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}.a
           path: build/libLuna.a
           retention-days: 90
 
@@ -83,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4.6.2
         with:
           # Artifact name
-          name: Luna_${{ matrix.build_type }}.lib
+          name: Luna_${{ matrix.architecture }}_${{ matrix.build_type }}.lib
           path: build/${{ matrix.build_type }}/Luna.lib
           retention-days: 90
 
