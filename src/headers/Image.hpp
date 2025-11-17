@@ -5,7 +5,6 @@
 #pragma once
 
 #include <cstdint>
-#include <list>
 #include <luna/lunaTypes.h>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>

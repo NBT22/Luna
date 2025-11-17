@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <concepts>
 #include <luna/lunaTypes.h>
 #include <vulkan/vulkan_core.h>
 

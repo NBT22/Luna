@@ -11,6 +11,7 @@
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
 #include "ComputePipeline.hpp"
+#include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"

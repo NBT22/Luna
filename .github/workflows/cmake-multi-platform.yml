@@ -25,18 +25,16 @@ jobs:
       # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
         os: [ ubuntu-latest, windows-latest ]
+        c_compiler: [ gcc, clang, cl ]
         build_type: [ Debug, Release ]
         architecture: [ x86-64, arm64 ]
-        include:
+        exclude:
           - os: windows-latest
-            c_compiler: cl
-            cpp_compiler: cl
-          - os: ubuntu-latest
             c_compiler: gcc
-            cpp_compiler: g++
-          - os: ubuntu-latest
+          - os: windows-latest
             c_compiler: clang
-            cpp_compiler: clang++
+          - os: ubuntu-latest
+            c_compiler: cl
 
     steps:
       - uses: actions/checkout@v4
@@ -53,6 +51,10 @@ jobs:
         with:
           path: ${{ steps.strings.outputs.build-output-dir }}/_deps
           key: ${{ matrix.build_type }}-${{ matrix.c_compiler }}-deps-${{ hashFiles('**/.git/HEAD') }}
+
+      - name: Install Packages
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: sudo apt-get update && sudo apt install -y cmake gcc g++ clang git
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.

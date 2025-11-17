@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <list>
-#include <luna/lunaBuffer.h>
 #include <luna/lunaTypes.h>
 #include <thread>
 #include <vk_mem_alloc.h>
@@ -145,8 +144,8 @@ class Buffer
 
 #pragma region "Implmentation"
 
-#include <algorithm>
 #include <cassert>
+#include <stdexcept>
 
 namespace luna
 {

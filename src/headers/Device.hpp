@@ -11,6 +11,7 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandPool.hpp"
+#include "helpers/Handle.hpp"
 #include "Semaphore.hpp"
 
 namespace luna
