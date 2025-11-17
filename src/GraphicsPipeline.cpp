@@ -12,6 +12,7 @@
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
 #include "GraphicsPipeline.hpp"
+#include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
@@ -19,7 +20,7 @@
 
 namespace luna
 {
-// TODO: Base pipeline
+// TODO (0.3.0): Base pipeline
 GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
@@ -39,12 +40,12 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
                                   nullptr,
                                   shaderStage.flags,
                                   shaderStage.stage,
-                                  device.shaderModule(shaderStage.module),
+                                  *helpers::fromHandle<VkShaderModule>(shaderStage.module),
                                   shaderStage.entrypoint == nullptr ? "main" : shaderStage.entrypoint,
                                   shaderStage.specializationInfo);
     }
 
-    const RenderPassSubpassIndex *subpassIndex = static_cast<const RenderPassSubpassIndex *>(creationInfo.subpass);
+    const RenderPassSubpassIndex *subpassIndex = helpers::fromHandle<RenderPassSubpassIndex>(creationInfo.subpass);
     const VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .flags = creationInfo.flags,
@@ -60,7 +61,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
         .pColorBlendState = creationInfo.colorBlendState,
         .pDynamicState = creationInfo.dynamicState,
         .layout = layout_,
-        .renderPass = *renderPass(subpassIndex->renderPass),
+        .renderPass = *subpassIndex->renderPass,
         .subpass = subpassIndex->index,
     };
     CHECK_RESULT_THROW(vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline_));
@@ -135,7 +136,8 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
         descriptorSetsVector.reserve(bindInfo.descriptorSetBindInfo.descriptorSetCount);
         for (uint32_t i = 0; i < bindInfo.descriptorSetBindInfo.descriptorSetCount; i++)
         {
-            descriptorSetsVector.emplace_back(*descriptorSet(bindInfo.descriptorSetBindInfo.descriptorSets[i]));
+            descriptorSetsVector.emplace_back(
+                    *helpers::fromHandle<DescriptorSetIndex>(bindInfo.descriptorSetBindInfo.descriptorSets[i])->set);
         }
         vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -169,11 +171,12 @@ void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescr
     descriptorSets.reserve(bindInfo->descriptorSetCount);
     for (uint32_t i = 0; i < bindInfo->descriptorSetCount; i++)
     {
-        descriptorSets.emplace_back(*luna::descriptorSet(bindInfo->descriptorSets[i]));
+        descriptorSets.emplace_back(
+                *luna::helpers::fromHandle<luna::DescriptorSetIndex>(bindInfo->descriptorSets[i])->set);
     }
     vkCmdBindDescriptorSets(luna::device.commandPools().graphics.commandBuffer(),
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            static_cast<const luna::GraphicsPipeline *>(pipeline)->layout(),
+                            luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->layout(),
                             bindInfo->firstSet,
                             bindInfo->descriptorSetCount,
                             descriptorSets.data(),
@@ -183,5 +186,5 @@ void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescr
 
 VkResult lunaPushConstants(const LunaGraphicsPipeline pipeline)
 {
-    return static_cast<const luna::GraphicsPipeline *>(pipeline)->pushConstants();
+    return luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->pushConstants();
 }

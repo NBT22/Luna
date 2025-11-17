@@ -13,28 +13,19 @@
 #include "DescriptorSetLayout.hpp"
 #include "Device.hpp"
 #include "GraphicsPipeline.hpp"
+#include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Luna.hpp"
 #include "RenderPass.hpp"
 
 namespace luna
 {
-[[nodiscard]] const RenderPass *renderPass(LunaRenderPass renderPass);
-[[nodiscard]] const VkDescriptorPool *descriptorPool(LunaDescriptorPool descriptorPool);
-[[nodiscard]] const DescriptorSetLayout *descriptorSetLayout(LunaDescriptorSetLayout layout);
-[[nodiscard]] const VkDescriptorSet *descriptorSet(LunaDescriptorSet descriptorSet);
-void descriptorSet(LunaDescriptorSet index,
-                   VkDescriptorPool *pool,
-                   DescriptorSetLayout *layout,
-                   VkDescriptorSet *descriptorSet);
-[[nodiscard]] VkSampler sampler(LunaSampler sampler);
-
 extern Swapchain swapchain;
 extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
-extern const BufferRegionIndex *stagingBuffer;
+extern BufferRegionIndex *stagingBuffer;
 extern VkPipeline boundPipeline;
 extern LunaBuffer boundVertexBuffer;
 extern LunaBuffer boundIndexBuffer;
@@ -51,51 +42,3 @@ extern std::list<BufferRegionIndex> bufferRegionIndices;
 extern std::list<VkSampler> samplers;
 extern std::list<Image> images;
 } // namespace luna
-
-#pragma region "Implmentation"
-
-namespace luna
-{
-inline const RenderPass *renderPass(const LunaRenderPass renderPass)
-{
-    return static_cast<const RenderPass *>(renderPass);
-}
-inline const VkDescriptorPool *descriptorPool(const LunaDescriptorPool descriptorPool)
-{
-    return static_cast<const VkDescriptorPool *>(descriptorPool);
-}
-inline const DescriptorSetLayout *descriptorSetLayout(const LunaDescriptorSetLayout layout)
-{
-    return static_cast<const DescriptorSetLayout *>(layout);
-}
-inline const VkDescriptorSet *descriptorSet(const LunaDescriptorSet descriptorSet)
-{
-    return static_cast<const DescriptorSetIndex *>(descriptorSet)->set;
-}
-inline void descriptorSet(const LunaDescriptorSet index,
-                          VkDescriptorPool *pool,
-                          DescriptorSetLayout *layout,
-                          VkDescriptorSet *descriptorSet)
-{
-    const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(index);
-    if (pool != VK_NULL_HANDLE)
-    {
-        *pool = *descriptorSetIndex->pool;
-    }
-    if (layout != nullptr)
-    {
-        *layout = *descriptorSetIndex->layout;
-    }
-    if (descriptorSet != VK_NULL_HANDLE)
-    {
-        *descriptorSet = *descriptorSetIndex->set;
-    }
-}
-
-inline VkSampler sampler(const LunaSampler sampler)
-{
-    return *static_cast<const VkSampler *>(sampler);
-}
-} // namespace luna
-
-#pragma endregion "Implmentation"

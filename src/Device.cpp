@@ -15,6 +15,7 @@
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "Device.hpp"
+#include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
 
@@ -243,9 +244,8 @@ VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
         .allocationCreateInfo = &allocationCreateInfo,
     };
     LunaBuffer stagingBufferHandle = luna::stagingBuffer;
-    CHECK_RESULT_RETURN(luna::Buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-    luna::stagingBuffer = const_cast<
-            luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
+    CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
+    luna::stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;
 }
 
@@ -263,9 +263,8 @@ VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
         .allocationCreateInfo = &allocationCreateInfo,
     };
     LunaBuffer stagingBufferHandle = luna::stagingBuffer;
-    CHECK_RESULT_RETURN(luna::Buffer::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-    luna::stagingBuffer = const_cast<
-            luna::BufferRegionIndex *>(static_cast<const luna::BufferRegionIndex *>(stagingBufferHandle));
+    CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
+    luna::stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;
 }
 

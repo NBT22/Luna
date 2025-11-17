@@ -25,7 +25,7 @@ ComputePipeline::ComputePipeline(const LunaComputePipelineCreationInfo &creation
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .flags = creationInfo.shaderStageCreationInfo.flags,
         .stage = creationInfo.shaderStageCreationInfo.stage,
-        .module = device.shaderModule(creationInfo.shaderStageCreationInfo.module),
+        .module = *helpers::fromHandle<VkShaderModule>(creationInfo.shaderStageCreationInfo.module),
         .pName = creationInfo.shaderStageCreationInfo.entrypoint == nullptr
                          ? "main"
                          : creationInfo.shaderStageCreationInfo.entrypoint,
@@ -65,7 +65,8 @@ VkResult ComputePipeline::bind(const LunaDescriptorSetBindInfo &descriptorSetBin
         descriptorSetsVector.reserve(descriptorSetBindInfo.descriptorSetCount);
         for (uint32_t i = 0; i < descriptorSetBindInfo.descriptorSetCount; i++)
         {
-            descriptorSetsVector.emplace_back(*descriptorSet(descriptorSetBindInfo.descriptorSets[i]));
+            descriptorSetsVector.emplace_back(
+                    *helpers::fromHandle<DescriptorSetIndex>(descriptorSetBindInfo.descriptorSets[i])->set);
         }
         vkCmdBindDescriptorSets(commandBuffer,
                                 VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -97,7 +98,8 @@ VkResult lunaDispatchCompute(const LunaDispatchComputeInfo *info)
     assert(info);
     const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
     assert(commandBuffer.isRecording());
-    CHECK_RESULT_RETURN(static_cast<const luna::ComputePipeline *>(info->pipeline)->bind(info->descriptorSetBindInfo));
+    CHECK_RESULT_RETURN(
+            luna::helpers::fromHandle<luna::ComputePipeline>(info->pipeline)->bind(info->descriptorSetBindInfo));
     vkCmdDispatch(commandBuffer,
                   info->groupCountX == 0 ? 1 : info->groupCountX,
                   info->groupCountY == 0 ? 1 : info->groupCountY,

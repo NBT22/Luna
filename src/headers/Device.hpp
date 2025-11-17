@@ -48,7 +48,6 @@ class Device
         [[nodiscard]] FamilyValues<CommandPool> &commandPools();
         [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
         [[nodiscard]] Semaphore &renderFinishedSemaphore(uint32_t imageIndex);
-        [[nodiscard]] VkShaderModule shaderModule(LunaShaderModule shaderModule) const;
         [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const;
 
     private:
@@ -80,8 +79,7 @@ class Device
         std::list<uint32_t> applicationCommandPoolIndices_{};
         std::vector<Semaphore> renderFinishedSemaphores_{};
 
-        std::vector<VkShaderModule> shaderModules_{};
-        std::list<uint32_t> shaderModuleIndices_{};
+        std::list<VkShaderModule> shaderModules_{};
 };
 } // namespace luna
 
@@ -125,7 +123,6 @@ inline void Device::destroy()
     vkDestroyDevice(logicalDevice_, nullptr);
 
     shaderModules_.clear();
-    shaderModules_.shrink_to_fit();
     queueFamilyIndices_.clear();
     queueFamilyIndices_.shrink_to_fit();
     isDestroyed_ = true;
@@ -133,23 +130,11 @@ inline void Device::destroy()
 
 inline VkResult Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo, LunaShaderModule *shaderModule)
 {
-    const std::vector<VkShaderModule>::iterator shaderModuleIterator = std::find(shaderModules_.begin(),
-                                                                                 shaderModules_.end(),
-                                                                                 VK_NULL_HANDLE);
-    if (shaderModuleIterator == shaderModules_.end())
-    {
-        shaderModuleIndices_.emplace_back(shaderModules_.size());
-        shaderModules_.emplace_back();
-        CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back()));
-    } else
-    {
-        const uint32_t index = shaderModuleIterator - shaderModules_.begin();
-        shaderModuleIndices_.emplace_back(index);
-        CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.at(index)));
-    }
+    shaderModules_.emplace_back();
+    CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back()));
     if (shaderModule != nullptr)
     {
-        *shaderModule = &shaderModuleIndices_.back();
+        *shaderModule = helpers::toHandle(&shaderModules_.back());
     }
     return VK_SUCCESS;
 }
@@ -221,10 +206,6 @@ inline const FamilyValues<CommandPool> &Device::commandPools() const
 inline Semaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex)
 {
     return renderFinishedSemaphores_.at(imageIndex);
-}
-inline VkShaderModule Device::shaderModule(const LunaShaderModule shaderModule) const
-{
-    return shaderModules_.at(*static_cast<const uint32_t *>(shaderModule));
 }
 inline VkPhysicalDeviceVulkan13Features Device::vulkan13Features() const
 {

@@ -10,6 +10,7 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
+#include "helpers/Handle.hpp"
 
 namespace luna::helpers
 {
@@ -127,7 +128,7 @@ inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
         .imageView = imageView_,
         .imageLayout = layout_,
     };
-    const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(descriptorSet);
+    const DescriptorSetIndex *descriptorSetIndex = helpers::fromHandle<DescriptorSetIndex>(descriptorSet);
     const char *bindingName = descriptorLayoutBindingName;
     const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(bindingName);
     const VkWriteDescriptorSet writeDescriptor = {

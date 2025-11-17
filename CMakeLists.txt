@@ -50,6 +50,8 @@ add_library(Luna STATIC
         src/Luna.cpp
         src/RenderPass.cpp
 
+        src/headers/helpers/Handle.hpp
+        src/headers/helpers/Pipeline.hpp
         src/headers/commandBuffer/CommandBuffer.hpp
         src/headers/commandBuffer/CommandBufferArray.hpp
         src/headers/ComputePipeline.hpp
@@ -73,7 +75,6 @@ add_library(Luna STATIC
         include/luna/lunaImage.h
         include/luna/lunaInstance.h
         include/luna/lunaTypes.h
-        src/headers/helpers/Pipeline.hpp
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
 target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)

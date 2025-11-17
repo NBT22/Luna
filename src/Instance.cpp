@@ -249,7 +249,7 @@ VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
-const BufferRegionIndex *stagingBuffer{};
+BufferRegionIndex *stagingBuffer{};
 VkPipeline boundPipeline{};
 LunaBuffer boundVertexBuffer{};
 LunaBuffer boundIndexBuffer{};
@@ -323,7 +323,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 VkResult lunaDestroyInstance()
 {
     using namespace luna;
-    Buffer::BufferRegion::BufferRegionIndex::waitForCleanupThread();
+    BufferRegionIndex::waitForCleanupThread();
     CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
 
 
@@ -374,7 +374,7 @@ VkResult lunaDestroyInstance()
     descriptorSets.clear();
 
     bufferRegionIndices.clear();
-    Buffer::BufferRegion::BufferRegionIndex::waitForCleanupThread();
+    BufferRegionIndex::waitForCleanupThread();
     stagingBuffer = nullptr;
 
     device.destroy();

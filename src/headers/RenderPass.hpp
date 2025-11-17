@@ -47,8 +47,8 @@ class RenderPass
                                                    uint32_t height);
         [[nodiscard]] VkResult begin(const LunaRenderPassBeginInfo &beginInfo) const;
 
-        [[nodiscard]] const RenderPassSubpassIndex *getUnnamedSubpass() const;
-        [[nodiscard]] const RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name) const;
+        [[nodiscard]] const RenderPassSubpassIndex &getUnnamedSubpass() const;
+        [[nodiscard]] RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name);
 
     private:
         void init_(const LunaRenderPassCreationInfo &creationInfo);
@@ -91,11 +91,11 @@ inline RenderPass::operator const VkRenderPass &() const
     return renderPass_;
 }
 
-inline const RenderPassSubpassIndex *RenderPass::getUnnamedSubpass() const
+inline const RenderPassSubpassIndex &RenderPass::getUnnamedSubpass() const
 {
-    return &unnamedSubpass_;
+    return unnamedSubpass_;
 }
-inline const RenderPassSubpassIndex *RenderPass::getSubpassIndexByName(const std::string &name) const
+inline RenderPassSubpassIndex *RenderPass::getSubpassIndexByName(const std::string &name)
 {
     assert(!subpassMap_.empty());
     try

@@ -19,8 +19,7 @@ extern "C"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
-// TODO (0.3.0): Look into un-consting this
-#define LUNA_DEFINE_HANDLE(object) typedef const void *object
+#define LUNA_DEFINE_HANDLE(handle) typedef void *handle // NOLINT(*-macro-parentheses)
 
 #define LUNA_NULL_HANDLE VK_NULL_HANDLE
 
@@ -183,8 +182,6 @@ typedef struct
 
 typedef struct
 {
-        VkStructureType sType;
-        void *pNext;
         VkDescriptorPoolCreateFlags flags;
         uint32_t maxSets;
         uint32_t poolSizeCount;

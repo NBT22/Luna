@@ -22,7 +22,8 @@ static inline VkResult createPipelineLayout(const LunaPipelineLayoutCreationInfo
     vkDescriptorSetLayouts.reserve(descriptorSetLayoutCount);
     for (uint32_t i = 0; i < descriptorSetLayoutCount; i++)
     {
-        vkDescriptorSetLayouts.emplace_back(*descriptorSetLayout(layoutCreationInfo.descriptorSetLayouts[i]));
+        vkDescriptorSetLayouts.emplace_back(
+                fromHandle<DescriptorSetLayout>(layoutCreationInfo.descriptorSetLayouts[i])->layout());
     }
     uint32_t pushConstantsOffset = 0;
     std::vector<VkPushConstantRange> pushConstantRanges;

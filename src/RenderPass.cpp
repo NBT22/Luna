@@ -616,17 +616,16 @@ LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass render
 {
     if (name == nullptr)
     {
-        return luna::renderPass(renderPass)->getUnnamedSubpass();
+        return luna::helpers::toHandle(luna::helpers::fromHandle<luna::RenderPass>(renderPass)->getUnnamedSubpass());
     }
-    return luna::renderPass(renderPass)->getSubpassIndexByName(name);
+    return luna::helpers::fromHandle<luna::RenderPass>(renderPass)->getSubpassIndexByName(name);
 }
 
 VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo)
 {
-    using namespace luna;
     assert(renderPass);
     assert(beginInfo);
-    return luna::renderPass(renderPass)->begin(*beginInfo);
+    return luna::helpers::fromHandle<luna::RenderPass>(renderPass)->begin(*beginInfo);
 }
 
 void lunaNextSubpass()

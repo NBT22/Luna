@@ -38,6 +38,7 @@ class DescriptorSetLayout
         void destroy();
 
         [[nodiscard]] const Binding &binding(const std::string &bindingName) const;
+        [[nodiscard]] VkDescriptorSetLayout layout() const;
 
     private:
         bool isDestroyed_{true};
@@ -63,6 +64,10 @@ inline DescriptorSetLayout::operator const VkDescriptorSetLayout &() const
 inline const DescriptorSetLayout::Binding &DescriptorSetLayout::binding(const std::string &bindingName) const
 {
     return bindingMap_.at(bindingName);
+}
+inline VkDescriptorSetLayout DescriptorSetLayout::layout() const
+{
+    return layout_;
 }
 } // namespace luna
 

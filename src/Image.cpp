@@ -7,13 +7,13 @@
 #include <cassert>
 #include <cstdint>
 #include <list>
-#include <luna/lunaBuffer.h>
 #include <luna/lunaImage.h>
 #include <luna/lunaTypes.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "CommandBuffer.hpp"
+#include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
@@ -118,7 +118,7 @@ Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t de
     {
         LunaSampler sampler = LUNA_NULL_HANDLE;
         CHECK_RESULT_THROW(lunaCreateSampler(creationInfo.samplerCreationInfo, &sampler));
-        sampler_ = luna::sampler(sampler);
+        sampler_ = *helpers::fromHandle<VkSampler>(sampler);
     }
     extent_.width = creationInfo.width;
     extent_.height = creationInfo.height;
@@ -304,7 +304,7 @@ VkSampler Image::sampler(const LunaSampler sampler) const
     {
         return sampler_;
     }
-    return luna::sampler(sampler);
+    return *helpers::fromHandle<VkSampler>(sampler);
 }
 
 // TODO: Support filtering with something other than linear
@@ -482,7 +482,7 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
     CHECK_RESULT_RETURN(vkCreateSampler(luna::device, &createInfo, nullptr, &luna::samplers.back()));
     if (sampler != nullptr)
     {
-        *sampler = static_cast<LunaSampler>(&luna::samplers.back());
+        *sampler = luna::helpers::toHandle(&luna::samplers.back());
     }
     return VK_SUCCESS;
 }
@@ -518,7 +518,7 @@ VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeI
     assert(image);
     assert(writeInfo);
 
-    const luna::Image *imageObject = static_cast<const luna::Image *>(image);
+    const luna::Image *imageObject = luna::helpers::fromHandle<luna::Image>(image);
     CHECK_RESULT_RETURN(imageObject->write(*writeInfo));
     if (writeInfo->descriptorSet != nullptr)
     {
@@ -532,5 +532,5 @@ VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeI
 void lunaDestroyImage(const LunaImage image)
 {
     // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
-    luna::images.remove(*static_cast<const luna::Image *>(image));
+    luna::images.remove(*luna::helpers::fromHandle<luna::Image>(image));
 }

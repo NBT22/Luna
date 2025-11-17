@@ -11,6 +11,7 @@
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "DescriptorSetLayout.hpp"
+#include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
@@ -130,7 +131,7 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
         const uint32_t width = renderPassResizeInfo.width == -1u ? swapchain.extent.width : renderPassResizeInfo.width;
         const uint32_t height = renderPassResizeInfo.height == -1u ? swapchain.extent.height
                                                                    : renderPassResizeInfo.height;
-        CHECK_RESULT_RETURN(const_cast<RenderPass *>(renderPass(renderPassResizeInfo.renderPass))
+        CHECK_RESULT_RETURN(helpers::fromHandle<RenderPass>(renderPassResizeInfo.renderPass)
                                     ->recreateFramebuffer(device, swapchain, width, height));
     }
     swapchain.safeToUse = true;
@@ -271,7 +272,7 @@ VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creation
     CHECK_RESULT_RETURN(vkCreateDescriptorPool(device, &createInfo, nullptr, &descriptorPools.back()));
     if (descriptorPool != nullptr)
     {
-        *descriptorPool = static_cast<LunaDescriptorPool>(&descriptorPools.back());
+        *descriptorPool = helpers::toHandle(&descriptorPools.back());
     }
     return VK_SUCCESS;
 }
@@ -283,10 +284,10 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
     if (allocationInfo->descriptorSetCount != 0)
     {
         assert(allocationInfo->setLayouts);
-        const VkDescriptorPool *pool = descriptorPool(allocationInfo->descriptorPool);
+        const VkDescriptorPool *pool = helpers::fromHandle<VkDescriptorPool>(allocationInfo->descriptorPool);
         for (uint32_t i = 0; i < allocationInfo->descriptorSetCount; i++)
         {
-            const DescriptorSetLayout *layout = descriptorSetLayout(allocationInfo->setLayouts[i]);
+            const DescriptorSetLayout *layout = helpers::fromHandle<DescriptorSetLayout>(allocationInfo->setLayouts[i]);
             const VkDescriptorSetLayout vkLayout = *layout;
 
             luna::descriptorSets.emplace_back();
@@ -314,11 +315,11 @@ void lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const LunaWrit
     {
         const LunaWriteDescriptorSet &descriptorWrite = descriptorWrites[i];
         const LunaDescriptorSet descriptorSet = descriptorWrite.descriptorSet;
-        const DescriptorSetIndex *descriptorSetIndex = static_cast<const DescriptorSetIndex *>(descriptorSet);
+        const DescriptorSetIndex *descriptorSetIndex = luna::helpers::fromHandle<DescriptorSetIndex>(descriptorSet);
         const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(descriptorWrite.bindingName);
         if (descriptorWrite.imageInfo != nullptr)
         {
-            const Image *image = static_cast<const Image *>(descriptorWrite.imageInfo->image);
+            const Image *image = luna::helpers::fromHandle<Image>(descriptorWrite.imageInfo->image);
             descriptorImageInfo = {
                 .sampler = image->sampler(descriptorWrite.imageInfo->sampler),
                 .imageView = image->imageView(),
@@ -337,7 +338,7 @@ void lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const LunaWrit
         } else if (descriptorWrite.bufferInfo != nullptr)
         {
             const LunaBuffer buffer = descriptorWrite.bufferInfo->buffer;
-            const BufferRegionIndex *bufferRegionIndex = static_cast<const BufferRegionIndex *>(buffer);
+            const BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(buffer);
             const VkDescriptorBufferInfo descriptorBufferInfo = {
                 .buffer = bufferRegionIndex->buffer(),
                 .offset = descriptorWrite.bufferInfo->offset + bufferRegionIndex->offset(),
@@ -368,7 +369,7 @@ void lunaWriteFramebufferToDescriptor(const LunaDescriptorSet descriptorSet)
     };
     const VkWriteDescriptorSet write = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = *static_cast<const luna::DescriptorSetIndex *>(descriptorSet)->set,
+        .dstSet = *luna::helpers::fromHandle<luna::DescriptorSetIndex>(descriptorSet)->set,
         .dstBinding = 0,
         .dstArrayElement = 0,
         .descriptorCount = 1,
