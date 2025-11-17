@@ -402,7 +402,8 @@ VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const 
 LunaBufferCreationInfo lunaBufferGetCreationInfo(const LunaBuffer buffer)
 {
     (void)buffer;
-    throw std::logic_error("Called broken function!");
+    assert(false);
+    return {};
     // return luna::helpers::handleToType<luna::BufferRegionIndex>(buffer)->creationInfo();
 }
 
