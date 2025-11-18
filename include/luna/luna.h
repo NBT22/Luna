@@ -74,6 +74,15 @@ VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *crea
                                     LunaGraphicsPipeline *pipeline);
 
 /**
+ * @brief Create a new graphics pipeline.
+ * @param[in] creationInfo A pointer to the @c LunaGraphicsPipelineCreationInfo structure containing information about how to create the graphics pipeline.
+ * @param[out] pipeline A pointer to the @c LunaGraphicsPipeline handle in which the resulting graphics pipeline will be returned.
+ */
+VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsingReflectionCreationInfo *creationInfo,
+                                                   LunaGraphicsPipeline *pipeline);
+
+
+/**
  * @brief Create a new compute pipeline.
  * @param[in] creationInfo A pointer to the @c LunaComputePipelineCreationInfo structure containing information about how to create the compute pipeline.
  * @param[out] pipeline A pointer to the @c LunaComputePipeline handle in which the resulting compute pipeline will be returned.

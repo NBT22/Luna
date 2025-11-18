@@ -255,18 +255,24 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .pAttachments = &colorBlendAttachment,
     };
 
-    const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
-        .shaderStageCount = sizeof(shaderStages) / sizeof(*shaderStages),
-        .shaderStages = shaderStages,
-        .vertexInputState = &vertexInputInfo,
-        .inputAssemblyState = &inputAssembly,
-        .viewportState = &viewportState,
-        .rasterizationState = &rasterizer,
-        .multisampleState = &multisampling,
-        .colorBlendState = &colorBlending,
-        .subpass = subpass,
+    // const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
+    //     .shaderStageCount = sizeof(shaderStages) / sizeof(*shaderStages),
+    //     .shaderStages = shaderStages,
+    //     .vertexInputState = &vertexInputInfo,
+    //     .inputAssemblyState = &inputAssembly,
+    //     .viewportState = &viewportState,
+    //     .rasterizationState = &rasterizer,
+    //     .multisampleState = &multisampling,
+    //     .colorBlendState = &colorBlending,
+    //     .subpass = subpass,
+    // };
+    // return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
+
+    const LunaGraphicsPipelineUsingReflectionCreationInfo pipelineCreationInfo = {
+        .creationInfoCount = 1,
+        .creationInfos = &vertexShaderCreationInfo,
     };
-    return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
+    return lunaCreateGraphicsPipelineUsingReflection(&pipelineCreationInfo, pipeline);
 }
 
 int main(void)
@@ -342,7 +348,12 @@ int main(void)
     };
     LunaBuffer vertexBuffer = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer));
-    lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices), 0);
+    LunaBufferWriteInfo vertexBufferWriteInfo = {
+        .bytes = sizeof(vertices),
+        .data = vertices,
+        .stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+    };
+    lunaWriteDataToBuffer(vertexBuffer, &vertexBufferWriteInfo);
 
     const LunaRenderPassBeginInfo beginInfo = {
         .renderArea.extent.width = extent.width,

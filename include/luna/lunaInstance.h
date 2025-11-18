@@ -28,7 +28,7 @@ VkResult lunaCreateSwapchain(const LunaSwapchainCreationInfo *creationInfo);
 VkFormat lunaGetSwapchainFormat(void);
 VkExtent2D lunaGetSwapchainExtent(void);
 
-void lunaSetDepthImageFormat(uint32_t formatCount, const VkFormat *formatPriorityList);
+VkResult lunaSetDepthImageFormat(uint32_t formatCount, const VkFormat *formatPriorityList);
 VkFormat lunaGetDepthImageFormat(void);
 
 #ifdef __cplusplus

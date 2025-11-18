@@ -95,16 +95,18 @@ class BufferRegionIndex
             return subRegion_ == other.subRegion_ && bufferRegion_ == other.bufferRegion_ && buffer_ == other.buffer_;
         }
 
-        [[nodiscard]] VkResult copyToBuffer(const uint8_t *data, size_t bytes, size_t offset = 0) const;
+        [[nodiscard]] VkResult copyToBuffer(const uint8_t *data,
+                                            size_t bytes,
+                                            size_t offset = 0,
+                                            VkPipelineStageFlags stageFlags = 0) const;
 
         [[nodiscard]] size_t offset() const;
         [[nodiscard]] size_t size() const;
         [[nodiscard]] uint8_t *data() const;
-        [[nodiscard]] LunaBufferCreationInfo creationInfo() const = delete; // Currently broken in multiple ways
+        void creationInfo(LunaBufferCreationInfo *creationInfo) const;
         [[nodiscard]] const VkBuffer &buffer() const;
         [[nodiscard]] const BufferRegion &bufferRegion() const;
         [[nodiscard]] const BufferRegion::SubRegion &subRegion() const;
-
 
     private:
         Buffer *buffer_{};
@@ -127,6 +129,8 @@ class Buffer
 
         bool operator==(const Buffer &other) const;
 
+        void creationInfo(LunaBufferCreationInfo *creationInfo) const;
+
     private: // Buffer private members
         std::atomic_bool destroyed_{true};
         VkBuffer buffer_{};
@@ -144,6 +148,7 @@ class Buffer
 
 #pragma region "Implmentation"
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 
@@ -261,6 +266,13 @@ inline Buffer::operator const VkBuffer *() const
 inline bool Buffer::operator==(const Buffer &other) const
 {
     return data_ == other.data_ && allocation_ == other.allocation_ && buffer_ == other.buffer_;
+}
+
+inline void Buffer::creationInfo(LunaBufferCreationInfo *creationInfo) const
+{
+    creationInfo->flags = creationFlags_;
+    creationInfo->usage = usageFlags_;
+    std::copy_n(&allocationCreateInfo_, 1, const_cast<VmaAllocationCreateInfo *>(creationInfo->allocationCreateInfo));
 }
 
 } // namespace luna

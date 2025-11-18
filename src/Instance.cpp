@@ -323,61 +323,66 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 VkResult lunaDestroyInstance()
 {
     using namespace luna;
-    BufferRegionIndex::waitForCleanupThread();
-    CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
 
-
-    for (uint32_t i = 0; i < swapchain.imageCount; i++)
+    if (static_cast<VkPhysicalDevice>(device) != VK_NULL_HANDLE)
     {
-        vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
+        BufferRegionIndex::waitForCleanupThread();
+        CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
+
+
+        for (uint32_t i = 0; i < swapchain.imageCount; i++)
+        {
+            vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
+        }
+        vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
+
+        for (const VkSampler sampler: samplers)
+        {
+            vkDestroySampler(device, sampler, nullptr);
+        }
+        samplers.clear();
+        images.clear();
+
+        for (GraphicsPipeline pipeline: graphicsPipelines)
+        {
+            pipeline.destroy();
+        }
+        for (RenderPass renderPass: renderPasses)
+        {
+            renderPass.destroy();
+        }
+
+        computePipelines.clear();
+
+        for (const VkDescriptorPool descriptorPool: descriptorPools)
+        {
+            vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+        }
+        for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts)
+        {
+            descriptorSetLayout.destroy();
+        }
+
+        swapchain.images.clear();
+        swapchain.images.shrink_to_fit();
+        swapchain.imageViews.clear();
+        swapchain.imageViews.shrink_to_fit();
+
+        graphicsPipelines.clear();
+        renderPasses.clear();
+
+        descriptorSetIndices.clear();
+        descriptorPools.clear();
+        descriptorSetLayouts.clear();
+        descriptorSets.clear();
+
+        bufferRegionIndices.clear();
+        BufferRegionIndex::waitForCleanupThread();
+        stagingBuffer = nullptr;
+
+        device.destroy();
     }
-    vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
 
-    for (const VkSampler sampler: samplers)
-    {
-        vkDestroySampler(device, sampler, nullptr);
-    }
-    samplers.clear();
-    images.clear();
-
-    for (GraphicsPipeline pipeline: graphicsPipelines)
-    {
-        pipeline.destroy();
-    }
-    for (RenderPass renderPass: renderPasses)
-    {
-        renderPass.destroy();
-    }
-
-    computePipelines.clear();
-
-    for (const VkDescriptorPool descriptorPool: descriptorPools)
-    {
-        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-    }
-    for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts)
-    {
-        descriptorSetLayout.destroy();
-    }
-
-    swapchain.images.clear();
-    swapchain.images.shrink_to_fit();
-    swapchain.imageViews.clear();
-    swapchain.imageViews.shrink_to_fit();
-
-    graphicsPipelines.clear();
-    renderPasses.clear();
-
-    descriptorSetIndices.clear();
-    descriptorPools.clear();
-    descriptorSetLayouts.clear();
-    descriptorSets.clear();
-
-    bufferRegionIndices.clear();
-    BufferRegionIndex::waitForCleanupThread();
-    stagingBuffer = nullptr;
-
-    device.destroy();
     vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
     vkDestroyInstance(instance, nullptr);
 
@@ -415,7 +420,7 @@ VkResult lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabil
     capabilities->maxImageCount = capabilities->maxImageCount == 0 ? UINT32_MAX : capabilities->maxImageCount;
     return VK_SUCCESS;
 }
-void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatPriorityList)
+VkResult lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatPriorityList)
 {
     assert(formatPriorityList);
     VkFormatProperties properties;
@@ -426,10 +431,10 @@ void lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatP
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
             luna::depthImageFormat = formatPriorityList[i];
-            return;
+            return VK_SUCCESS;
         }
     }
-    // TODO (0.3.0): Handling for if none of the formats were found
+    return VK_ERROR_FORMAT_NOT_SUPPORTED;
 }
 VkFormat lunaGetDepthImageFormat()
 {

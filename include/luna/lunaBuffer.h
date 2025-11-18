@@ -45,10 +45,9 @@ void lunaDestroyBuffer(LunaBuffer buffer);
  */
 VkResult lunaResizeBuffer(const LunaBuffer *buffer, VkDeviceSize newSize);
 
-VkResult lunaWriteDataToBuffer(LunaBuffer buffer, const void *data, size_t bytes, size_t offset);
+VkResult lunaWriteDataToBuffer(LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo);
 
-// TODO (0.3.0): Take a pointer, copy to that pointer, and return void
-LunaBufferCreationInfo lunaBufferGetCreationInfo(LunaBuffer buffer);
+void lunaBufferGetCreationInfo(LunaBuffer buffer, LunaBufferCreationInfo *creationInfo);
 
 #ifdef __cplusplus
 }

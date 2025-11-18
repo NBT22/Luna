@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <luna/luna.h>
 #include <luna/lunaTypes.h>
+#include <spirv_reflect.h>
 #include <stdexcept>
 #include <vector>
 #include <volk.h>
@@ -20,7 +21,7 @@
 
 namespace luna
 {
-// TODO (0.3.0): Base pipeline
+// TODO (0.3.0): Base pipeline & SPIRV reflection
 GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
@@ -162,6 +163,16 @@ VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *crea
     {
         *pipeline = &luna::graphicsPipelines.back();
     }
+    return VK_SUCCESS;
+}
+VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsingReflectionCreationInfo *creationInfo,
+                                                   LunaGraphicsPipeline *pipeline)
+{
+    (void)pipeline;
+
+    SpvReflectShaderModule module = {};
+    SpvReflectResult result = spvReflectCreateShaderModule(creationInfo->creationInfos->size, creationInfo->creationInfos->spirv, &module);
+
     return VK_SUCCESS;
 }
 

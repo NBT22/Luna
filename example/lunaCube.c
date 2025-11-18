@@ -498,8 +498,18 @@ int main(void)
     CHECK_RESULT(lunaCreateBuffers(sizeof(bufferCreationInfos) / sizeof(*bufferCreationInfos),
                                    bufferCreationInfos,
                                    (LunaBuffer *[]){&vertexBuffer, &indexBuffer}));
-    lunaWriteDataToBuffer(vertexBuffer, vertices, sizeof(vertices), 0);
-    lunaWriteDataToBuffer(indexBuffer, indices, sizeof(indices), 0);
+    LunaBufferWriteInfo vertexBufferWriteInfo = {
+        .bytes = sizeof(vertices),
+        .data = vertices,
+        .stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+    };
+    LunaBufferWriteInfo indexBufferWriteInfo = {
+        .bytes = sizeof(indices),
+        .data = indices,
+        .stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+    };
+    lunaWriteDataToBuffer(vertexBuffer, &vertexBufferWriteInfo);
+    lunaWriteDataToBuffer(indexBuffer, &indexBufferWriteInfo);
 
     const LunaRenderPassBeginInfo beginInfo = {
         .renderArea.extent.width = extent.width,

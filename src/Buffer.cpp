@@ -218,7 +218,10 @@ VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creation
 }
 
 
-VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data, const size_t bytes, const size_t offset) const
+VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
+                                         const size_t bytes,
+                                         const size_t offset,
+                                         const VkPipelineStageFlags stageFlags) const
 {
     assert(bytes <= size() - offset);
     uint8_t *mappedData = BufferRegionIndex::data();
@@ -253,20 +256,16 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data, const size_t bytes
         };
         CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
                                                               queueSubmitInfo,
-                                                              VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT));
+                                                              stageFlags));
     }
     return VK_SUCCESS;
 }
 
-// LunaBufferCreationInfo BufferRegionIndex::creationInfo() const
-// {
-//     return {
-//         .size = size(),
-//         .flags = buffer_->creationFlags_,
-//         .usage = buffer_->usageFlags_,
-//         .allocationCreateInfo = &buffer_->allocationCreateInfo_,
-//     };
-// }
+void BufferRegionIndex::creationInfo(LunaBufferCreationInfo *creationInfo) const
+{
+    creationInfo->size = size();
+    buffer_->creationInfo(creationInfo);
+}
 
 BufferRegionIndex::~BufferRegionIndex()
 {
@@ -387,24 +386,26 @@ VkResult lunaResizeBuffer(const LunaBuffer *buffer, const VkDeviceSize newSize)
     return luna::BufferRegionIndex::resize(bufferRegionIndex, newSize);
 }
 
-VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const void *data, const size_t bytes, const size_t offset)
+VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo)
 {
-    if (bytes != 0)
+    assert(writeInfo != nullptr);
+    if (writeInfo->bytes != 0)
     {
-        assert(buffer && data);
-        // TODO (0.3.0): Add LunaBufferWrite struct containing data, bytes, offset, and stage mask
+        assert(buffer != nullptr);
+        assert(writeInfo->data != nullptr);
+
         const luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
-        CHECK_RESULT_RETURN(bufferRegionIndex->copyToBuffer(static_cast<const uint8_t *>(data), bytes, offset));
+        CHECK_RESULT_RETURN(bufferRegionIndex->copyToBuffer(static_cast<const uint8_t *>(writeInfo->data),
+                                                            writeInfo->bytes,
+                                                            writeInfo->offset,
+                                                            writeInfo->stageFlags));
     }
     return VK_SUCCESS;
 }
 
-LunaBufferCreationInfo lunaBufferGetCreationInfo(const LunaBuffer buffer)
+void lunaBufferGetCreationInfo(const LunaBuffer buffer, LunaBufferCreationInfo *creationInfo)
 {
-    (void)buffer;
-    assert(false);
-    return {};
-    // return luna::helpers::handleToType<luna::BufferRegionIndex>(buffer)->creationInfo();
+    luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->creationInfo(creationInfo);
 }
 
 void lunaBindVertexBuffers(const uint32_t firstBinding,

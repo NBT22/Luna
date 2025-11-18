@@ -234,8 +234,14 @@ typedef struct
         uint32_t descriptorCount;
         const LunaDescriptorImageInfo *imageInfo;
         const LunaDescriptorBufferInfo *bufferInfo;
-        // TODO: const VkBufferView *texelBufferView;
+        const VkBufferView *texelBufferView; // TODO: Currently ignored
 } LunaWriteDescriptorSet;
+
+typedef struct
+{
+    size_t size;
+    const uint32_t *spirv;
+} LunaShaderModuleCreationInfo;
 
 typedef struct
 {
@@ -281,6 +287,31 @@ typedef struct
         LunaPipelineLayoutCreationInfo layoutCreationInfo;
         LunaRenderPassSubpass subpass;
 } LunaGraphicsPipelineCreationInfo;
+
+typedef struct
+{
+    size_t creationInfoCount;
+    const LunaShaderModuleCreationInfo *creationInfos;
+    size_t shaderModuleCount;
+    LunaShaderModule *shaderModules;
+
+
+
+    // VkPipelineCreateFlags flags;
+    // uint32_t shaderCount;
+    // const LunaPipelineShaderStageCreationInfo *shaderStages;
+    // const VkPipelineVertexInputStateCreateInfo *vertexInputState;
+    // const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
+    // const VkPipelineTessellationStateCreateInfo *tessellationState;
+    // const VkPipelineViewportStateCreateInfo *viewportState;
+    // const VkPipelineRasterizationStateCreateInfo *rasterizationState;
+    // const VkPipelineMultisampleStateCreateInfo *multisampleState;
+    // const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
+    // const VkPipelineColorBlendStateCreateInfo *colorBlendState;
+    // const VkPipelineDynamicStateCreateInfo *dynamicState;
+    // LunaPipelineLayoutCreationInfo layoutCreationInfo;
+    // LunaRenderPassSubpass subpass;
+} LunaGraphicsPipelineUsingReflectionCreationInfo; // TODO (0.3.0): Name this better
 
 typedef struct
 {
@@ -348,6 +379,14 @@ typedef struct
 
         const VmaAllocationCreateInfo *allocationCreateInfo;
 } LunaBufferCreationInfo;
+
+typedef struct
+{
+    VkDeviceSize bytes;
+    const void *data;
+    VkDeviceSize offset;
+    VkPipelineStageFlags stageFlags;
+} LunaBufferWriteInfo;
 
 typedef struct
 {
@@ -426,12 +465,6 @@ typedef struct
         uint32_t width;
         uint32_t height;
 } LunaRenderPassResizeInfo;
-
-typedef struct
-{
-        size_t size;
-        const uint32_t *spirv;
-} LunaShaderModuleCreationInfo;
 
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using)
