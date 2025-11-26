@@ -13,6 +13,7 @@
 #include "CommandPool.hpp"
 #include "helpers/Handle.hpp"
 #include "Semaphore.hpp"
+#include "ShaderModule.hpp"
 
 namespace luna
 {
@@ -34,7 +35,7 @@ class Device
 
         void destroy();
 
-        VkResult addShaderModule(const VkShaderModuleCreateInfo *creationInfo, LunaShaderModule *shaderModule);
+        VkResult addShaderModule(const LunaShaderModuleCreationInfo &creationInfo, LunaShaderModule *shaderModule);
         VkResult createSemaphores(uint32_t imageCount);
         VkResult addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
                                            LunaCommandPool *commandPool);
@@ -80,7 +81,7 @@ class Device
         std::list<uint32_t> applicationCommandPoolIndices_{};
         std::vector<Semaphore> renderFinishedSemaphores_{};
 
-        std::list<VkShaderModule> shaderModules_{};
+        std::list<ShaderModule> shaderModules_{};
 };
 } // namespace luna
 
@@ -109,10 +110,7 @@ inline void Device::destroy()
     {
         return;
     }
-    for (const VkShaderModule shaderModule: shaderModules_)
-    {
-        vkDestroyShaderModule(logicalDevice_, shaderModule, nullptr);
-    }
+    shaderModules_.clear();
     internalCommandPools_.graphics.destroy(logicalDevice_);
     internalCommandPools_.transfer.destroy(logicalDevice_);
     internalCommandPools_.presentation.destroy(logicalDevice_);
@@ -123,16 +121,15 @@ inline void Device::destroy()
     vmaDestroyAllocator(allocator_);
     vkDestroyDevice(logicalDevice_, nullptr);
 
-    shaderModules_.clear();
     queueFamilyIndices_.clear();
     queueFamilyIndices_.shrink_to_fit();
     isDestroyed_ = true;
 }
 
-inline VkResult Device::addShaderModule(const VkShaderModuleCreateInfo *creationInfo, LunaShaderModule *shaderModule)
+inline VkResult Device::addShaderModule(const LunaShaderModuleCreationInfo &creationInfo,
+                                        LunaShaderModule *shaderModule)
 {
-    shaderModules_.emplace_back();
-    CHECK_RESULT_RETURN(vkCreateShaderModule(logicalDevice_, creationInfo, nullptr, &shaderModules_.back()));
+    shaderModules_.emplace_back(creationInfo);
     if (shaderModule != nullptr)
     {
         *shaderModule = helpers::toHandle(&shaderModules_.back());

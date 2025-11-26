@@ -3,7 +3,9 @@
 //
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <luna/luna.h>
 #include <luna/lunaTypes.h>
 #include <spirv_reflect.h>
@@ -41,8 +43,8 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
                                   nullptr,
                                   shaderStage.flags,
                                   shaderStage.stage,
-                                  *helpers::fromHandle<VkShaderModule>(shaderStage.module),
-                                  shaderStage.entrypoint == nullptr ? "main" : shaderStage.entrypoint,
+                                  *helpers::fromHandle<ShaderModule>(shaderStage.module),
+                                  shaderStage.entryPoint == nullptr ? "main" : shaderStage.entryPoint,
                                   shaderStage.specializationInfo);
     }
 
@@ -170,9 +172,61 @@ VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsi
 {
     (void)pipeline;
 
-    SpvReflectShaderModule module = {};
-    SpvReflectResult result = spvReflectCreateShaderModule(creationInfo->creationInfos->size, creationInfo->creationInfos->spirv, &module);
+    using namespace luna;
 
+    std::vector<LunaShaderModule> shaderModules;
+    std::vector<const char *> entryPoints;
+    if (creationInfo->shaderModuleCreationInfoCount != 0)
+    {
+        assert(creationInfo->shaderModuleCount <= creationInfo->shaderModuleCreationInfoCount);
+
+        shaderModules.resize(creationInfo->shaderModuleCreationInfoCount);
+        for (uint32_t i = 0; i < creationInfo->shaderModuleCreationInfoCount; i++)
+        {
+            lunaCreateShaderModule(creationInfo->shaderModuleCreationInfos + i, shaderModules.data() + i);
+            entryPoints.emplace_back(creationInfo->entryPoints == nullptr || creationInfo->entryPoints[i] == nullptr
+                                             ? "main"
+                                             : creationInfo->entryPoints[i]);
+        }
+        for (uint32_t i = 0; i < creationInfo->shaderModuleCount; i++)
+        {
+            creationInfo->shaderModules[i] = shaderModules.at(i);
+        }
+    } else
+    {
+        shaderModules.insert(shaderModules.cbegin(),
+                             creationInfo->shaderModules,
+                             creationInfo->shaderModules + creationInfo->shaderModuleCount);
+        for (uint32_t i = 0; i < creationInfo->shaderModuleCount; i++)
+        {
+            entryPoints.emplace_back(creationInfo->entryPoints[i] == nullptr ? "main" : creationInfo->entryPoints[i]);
+        }
+    }
+    std::vector<LunaPipelineShaderStageCreationInfo> shaderStages;
+    shaderStages.reserve(shaderModules.size());
+    for (uint32_t shaderModuleIndex = 0; shaderModuleIndex < shaderModules.size(); shaderModuleIndex++)
+    {
+        const ShaderModule &lunaShaderModule = *helpers::fromHandle<ShaderModule>(shaderModules.at(shaderModuleIndex));
+        SpvReflectShaderModule module = {};
+        spvReflectCreateShaderModule(lunaShaderModule.size(),
+                                     lunaShaderModule.spirv().data(),
+                                     &module); // TODO (0.3.0): Handle return value
+        SpvReflectEntryPoint entryPoint;
+        for (uint32_t entryPointIndex = 0; entryPointIndex < module.entry_point_count; entryPointIndex++)
+        {
+            if (std::strcmp(module.entry_points[entryPointIndex].name, entryPoints.at(shaderModuleIndex)) == 0)
+            {
+                entryPoint = module.entry_points[entryPointIndex];
+                shaderStages.emplace_back(0,
+                                          static_cast<VkShaderStageFlagBits>(entryPoint.shader_stage),
+                                          lunaShaderModule.module(),
+                                          entryPoint.name,
+                                          nullptr);
+                break;
+            }
+        }
+        asm("nop");
+    }
     return VK_SUCCESS;
 }
 

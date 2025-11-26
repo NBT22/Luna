@@ -280,11 +280,8 @@ void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties)
 
 VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule)
 {
-    const VkShaderModuleCreateInfo shaderModuleCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = creationInfo->size,
-        .pCode = creationInfo->spirv,
-    };
-    CHECK_RESULT_RETURN(luna::device.addShaderModule(&shaderModuleCreateInfo, shaderModule));
+    assert(creationInfo);
+
+    CHECK_RESULT_RETURN(luna::device.addShaderModule(*creationInfo, shaderModule));
     return VK_SUCCESS;
 }

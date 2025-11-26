@@ -26,10 +26,10 @@ ComputePipeline::ComputePipeline(const LunaComputePipelineCreationInfo &creation
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .flags = creationInfo.shaderStageCreationInfo.flags,
         .stage = creationInfo.shaderStageCreationInfo.stage,
-        .module = *helpers::fromHandle<VkShaderModule>(creationInfo.shaderStageCreationInfo.module),
-        .pName = creationInfo.shaderStageCreationInfo.entrypoint == nullptr
+        .module = *helpers::fromHandle<ShaderModule>(creationInfo.shaderStageCreationInfo.module),
+        .pName = creationInfo.shaderStageCreationInfo.entryPoint == nullptr
                          ? "main"
-                         : creationInfo.shaderStageCreationInfo.entrypoint,
+                         : creationInfo.shaderStageCreationInfo.entryPoint,
         .pSpecializationInfo = creationInfo.shaderStageCreationInfo.specializationInfo,
     };
 

@@ -418,8 +418,8 @@ void lunaBindVertexBuffers(const uint32_t firstBinding,
     std::vector<VkDeviceSize> offsetsVector(offsets, offsets + bindingCount);
     for (uint32_t i = 0; i < bindingCount; i++)
     {
-        const luna::BufferRegionIndex
-                *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffers[i]);
+        const luna::BufferRegionIndex *bufferRegionIndex =
+                luna::helpers::fromHandle<luna::BufferRegionIndex>(buffers[i]);
         buffersVector.emplace_back(bufferRegionIndex->buffer());
         offsetsVector[i] += bufferRegionIndex->offset();
     }

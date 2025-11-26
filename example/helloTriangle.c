@@ -269,8 +269,8 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
     // return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
 
     const LunaGraphicsPipelineUsingReflectionCreationInfo pipelineCreationInfo = {
-        .creationInfoCount = 1,
-        .creationInfos = &vertexShaderCreationInfo,
+        .shaderModuleCreationInfoCount = 1,
+        .shaderModuleCreationInfos = &vertexShaderCreationInfo,
     };
     return lunaCreateGraphicsPipelineUsingReflection(&pipelineCreationInfo, pipeline);
 }

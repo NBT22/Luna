@@ -239,8 +239,8 @@ typedef struct
 
 typedef struct
 {
-    size_t size;
-    const uint32_t *spirv;
+        size_t size;
+        const uint32_t *spirv;
 } LunaShaderModuleCreationInfo;
 
 typedef struct
@@ -248,7 +248,7 @@ typedef struct
         VkPipelineShaderStageCreateFlags flags;
         VkShaderStageFlagBits stage;
         LunaShaderModule module;
-        const char *entrypoint;
+        const char *entryPoint;
         const VkSpecializationInfo *specializationInfo;
 } LunaPipelineShaderStageCreationInfo;
 
@@ -290,27 +290,27 @@ typedef struct
 
 typedef struct
 {
-    size_t creationInfoCount;
-    const LunaShaderModuleCreationInfo *creationInfos;
-    size_t shaderModuleCount;
-    LunaShaderModule *shaderModules;
+        uint32_t shaderModuleCreationInfoCount;
+        const LunaShaderModuleCreationInfo *shaderModuleCreationInfos;
+        uint32_t shaderModuleCount;
+        LunaShaderModule *shaderModules;
+        const char *const *entryPoints;
 
 
-
-    // VkPipelineCreateFlags flags;
-    // uint32_t shaderCount;
-    // const LunaPipelineShaderStageCreationInfo *shaderStages;
-    // const VkPipelineVertexInputStateCreateInfo *vertexInputState;
-    // const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
-    // const VkPipelineTessellationStateCreateInfo *tessellationState;
-    // const VkPipelineViewportStateCreateInfo *viewportState;
-    // const VkPipelineRasterizationStateCreateInfo *rasterizationState;
-    // const VkPipelineMultisampleStateCreateInfo *multisampleState;
-    // const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
-    // const VkPipelineColorBlendStateCreateInfo *colorBlendState;
-    // const VkPipelineDynamicStateCreateInfo *dynamicState;
-    // LunaPipelineLayoutCreationInfo layoutCreationInfo;
-    // LunaRenderPassSubpass subpass;
+        // VkPipelineCreateFlags flags;
+        // uint32_t shaderCount;
+        // const LunaPipelineShaderStageCreationInfo *shaderStages;
+        // const VkPipelineVertexInputStateCreateInfo *vertexInputState;
+        // const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
+        // const VkPipelineTessellationStateCreateInfo *tessellationState;
+        // const VkPipelineViewportStateCreateInfo *viewportState;
+        // const VkPipelineRasterizationStateCreateInfo *rasterizationState;
+        // const VkPipelineMultisampleStateCreateInfo *multisampleState;
+        // const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
+        // const VkPipelineColorBlendStateCreateInfo *colorBlendState;
+        // const VkPipelineDynamicStateCreateInfo *dynamicState;
+        // LunaPipelineLayoutCreationInfo layoutCreationInfo;
+        // LunaRenderPassSubpass subpass;
 } LunaGraphicsPipelineUsingReflectionCreationInfo; // TODO (0.3.0): Name this better
 
 typedef struct
@@ -382,10 +382,10 @@ typedef struct
 
 typedef struct
 {
-    VkDeviceSize bytes;
-    const void *data;
-    VkDeviceSize offset;
-    VkPipelineStageFlags stageFlags;
+        VkDeviceSize bytes;
+        const void *data;
+        VkDeviceSize offset;
+        VkPipelineStageFlags stageFlags;
 } LunaBufferWriteInfo;
 
 typedef struct

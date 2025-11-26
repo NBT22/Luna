@@ -16,6 +16,7 @@ class RenderPass;
 struct RenderPassSubpassIndex;
 class DescriptorSetLayout;
 struct DescriptorSetIndex;
+class ShaderModule;
 class GraphicsPipeline;
 class ComputePipeline;
 class BufferRegionIndex;
@@ -24,7 +25,7 @@ class CommandPool;
 } // namespace luna
 namespace luna::helpers
 {
-template<typename ReturnType> constexpr ReturnType *fromHandle(std::same_as<HandleType> auto) = delete;
+template<typename ReturnType> [[nodiscard]] constexpr ReturnType *fromHandle(std::same_as<HandleType> auto) = delete;
 template<> constexpr RenderPass *fromHandle(const LunaRenderPass renderPass)
 {
     return static_cast<RenderPass *>(renderPass);
@@ -45,9 +46,9 @@ template<> constexpr DescriptorSetIndex *fromHandle(const LunaDescriptorSet desc
 {
     return static_cast<DescriptorSetIndex *>(descriptorSet);
 }
-template<> constexpr VkShaderModule *fromHandle(const LunaShaderModule shaderModule)
+template<> constexpr ShaderModule *fromHandle(const LunaShaderModule shaderModule)
 {
-    return static_cast<VkShaderModule *>(shaderModule);
+    return static_cast<ShaderModule *>(shaderModule);
 }
 template<> constexpr GraphicsPipeline *fromHandle(const LunaGraphicsPipeline graphicsPipeline)
 {
@@ -75,19 +76,19 @@ template<> constexpr CommandPool *fromHandle(const LunaCommandPool commandPool)
 }
 
 
-template<typename T> constexpr HandleType toHandle(T *value)
+template<typename T> [[nodiscard]] constexpr HandleType toHandle(T *value)
 {
     return static_cast<HandleType>(value);
 }
-template<typename T> constexpr HandleType toHandle(const T *value)
+template<typename T> [[nodiscard]] constexpr HandleType toHandle(const T *value)
 {
     return toHandle(const_cast<T *>(value));
 }
-template<typename T> constexpr HandleType toHandle(T &value)
+template<typename T> [[nodiscard]] constexpr HandleType toHandle(T &value)
 {
     return toHandle(&value);
 }
-template<typename T> constexpr HandleType toHandle(const T &value)
+template<typename T> [[nodiscard]] constexpr HandleType toHandle(const T &value)
 {
     return toHandle(&value);
 }
