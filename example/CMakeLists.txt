@@ -13,6 +13,13 @@ if (LUNA_EXAMPLE_ALL OR LUNA_EXAMPLE_HelloTriangle)
     target_link_libraries(HelloTriangle PRIVATE SDL3::SDL3 Luna)
 endif ()
 
+if (LUNA_EXAMPLE_ALL OR LUNA_EXAMPLE_HelloTriangleGeneratedPipeline)
+    add_executable(HelloTriangleGeneratedPipeline PipelineGeneration/helloTriangle.c)
+    set_target_properties(HelloTriangleGeneratedPipeline PROPERTIES LINKER_LANGUAGE CXX)
+    target_compile_options(HelloTriangleGeneratedPipeline PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
+    target_link_libraries(HelloTriangleGeneratedPipeline PRIVATE SDL3::SDL3 Luna)
+endif ()
+
 if (LUNA_EXAMPLE_ALL OR LUNA_EXAMPLE_HelloTriangleCompute)
     add_executable(HelloTriangleCompute helloTriangleCompute.c)
     set_target_properties(HelloTriangleCompute PROPERTIES LINKER_LANGUAGE CXX)

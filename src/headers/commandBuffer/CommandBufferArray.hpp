@@ -63,7 +63,7 @@ class CommandBufferArray
 };
 } // namespace luna::commandBuffer
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <algorithm>
 #include <cassert>
@@ -256,4 +256,4 @@ inline const Semaphore &CommandBufferArray::semaphore() const
 }
 } // namespace luna::commandBuffer
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

@@ -50,7 +50,7 @@ class CommandBuffer
 };
 } // namespace luna::commandBuffer
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <cassert>
 #include "Luna.hpp"
@@ -178,4 +178,4 @@ inline const Semaphore &CommandBuffer::semaphore() const
 }
 } // namespace luna::commandBuffer
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

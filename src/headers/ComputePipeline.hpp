@@ -31,7 +31,7 @@ class ComputePipeline
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 namespace luna
 {
@@ -41,4 +41,4 @@ inline VkPipelineLayout ComputePipeline::layout() const
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

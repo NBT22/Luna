@@ -146,10 +146,11 @@ class Buffer
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <algorithm>
 #include <cassert>
+#include <luna/lunaBuffer.h>
 #include <stdexcept>
 
 namespace luna
@@ -165,16 +166,17 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
 {
     (void)bufferRegionIndex;
     (void)newSize;
-    throw std::logic_error("Called broken function!");
+    // throw std::logic_error("Called broken function!");
 
     // TODO: Improved resizing logic
-    // LunaBufferCreationInfo newCreationInfo = bufferRegionIndex->creationInfo();
-    // newCreationInfo.size = newSize;
+    LunaBufferCreationInfo newCreationInfo;
+    bufferRegionIndex->creationInfo(&newCreationInfo);
+    newCreationInfo.size = newSize;
     // lunaDestroyBuffer(bufferRegionIndex);
-    // LunaBuffer lunaBuffer = bufferRegionIndex;
-    // CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
-    // bufferRegionIndex = helpers::getHandle<BufferRegionIndex>(lunaBuffer);
-    // return VK_SUCCESS;
+    LunaBuffer lunaBuffer = bufferRegionIndex;
+    CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
+    bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
+    return VK_SUCCESS;
 }
 inline VkResult BufferRegionIndex::reserve(BufferRegionIndex *&bufferRegionIndex, const size_t bytes)
 {
@@ -272,9 +274,10 @@ inline void Buffer::creationInfo(LunaBufferCreationInfo *creationInfo) const
 {
     creationInfo->flags = creationFlags_;
     creationInfo->usage = usageFlags_;
-    std::copy_n(&allocationCreateInfo_, 1, const_cast<VmaAllocationCreateInfo *>(creationInfo->allocationCreateInfo));
+    creationInfo->allocationCreateInfo = nullptr; // TODO (0.3.0): guh
+    // std::copy_n(&allocationCreateInfo_, 1, const_cast<VmaAllocationCreateInfo *>(creationInfo->allocationCreateInfo));
 }
 
 } // namespace luna
 
-#pragma endregion "Implementation"
+#pragma endregion Implementation

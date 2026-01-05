@@ -230,6 +230,7 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
         std::copy_n(data, bytes, mappedData + offset);
     } else
     {
+        assert(this != stagingBuffer);
         // TODO: Should this use a dedicated transfer command buffer
         CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
         CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));

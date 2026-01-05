@@ -13,8 +13,8 @@ extern "C"
 #include <luna/lunaTypes.h>
 #include <vulkan/vulkan_core.h>
 
-VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo);
-VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo);
+VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo);
+VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo);
 
 void lunaGetPhysicalDeviceProperties(VkPhysicalDeviceProperties *properties);
 void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties);

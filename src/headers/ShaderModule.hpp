@@ -7,13 +7,25 @@
 #include <cstddef>
 #include <cstdint>
 #include <luna/lunaTypes.h>
+#include <string>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#ifdef LUNA_SLANG_SHADERS
+#include <shader-slang/slang-com-helper.h>
+#include <shader-slang/slang-com-ptr.h>
+#endif
 
 namespace luna
 {
 class ShaderModule
 {
+#ifdef LUNA_SLANG_SHADERS
+        using SlangProgram = slang::IComponentType *;
+#else
+        using SlangProgram = char *;
+#endif
+
     public:
         explicit ShaderModule(const LunaShaderModuleCreationInfo &creationInfo);
 
@@ -24,15 +36,19 @@ class ShaderModule
         [[nodiscard]] size_t size() const;
         [[nodiscard]] const std::vector<uint32_t> &spirv() const;
         [[nodiscard]] VkShaderModule module() const;
+        [[nodiscard]] const std::string &entryPoint() const;
+        [[nodiscard]] SlangProgram slangProgram() const;
 
     private:
         size_t size_{};
         std::vector<uint32_t> spirv_{};
         VkShaderModule module_{};
+        std::string entryPoint_{};
+        SlangProgram slangProgram_{};
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 namespace luna
 {
@@ -48,6 +64,14 @@ inline VkShaderModule ShaderModule::module() const
 {
     return module_;
 }
+inline const std::string &ShaderModule::entryPoint() const
+{
+    return entryPoint_;
+}
+inline ShaderModule::SlangProgram ShaderModule::slangProgram() const
+{
+    return slangProgram_;
+}
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

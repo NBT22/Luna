@@ -85,7 +85,7 @@ class Device
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <algorithm>
 #include <cassert>
@@ -129,7 +129,7 @@ inline void Device::destroy()
 inline VkResult Device::addShaderModule(const LunaShaderModuleCreationInfo &creationInfo,
                                         LunaShaderModule *shaderModule)
 {
-    shaderModules_.emplace_back(creationInfo);
+    TRY_CATCH_RESULT(shaderModules_.emplace_back(creationInfo));
     if (shaderModule != nullptr)
     {
         *shaderModule = helpers::toHandle(&shaderModules_.back());
@@ -484,4 +484,4 @@ inline VkResult Device::createCommandPools()
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

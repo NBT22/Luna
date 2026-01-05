@@ -219,7 +219,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 }
 } // namespace luna
 
-VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
+VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo)
 {
     assert(creationInfo);
     const VkPhysicalDeviceFeatures2 requiredFeatures2 = {
@@ -249,7 +249,7 @@ VkResult lunaAddNewDevice(const LunaDeviceCreationInfo *creationInfo)
     return VK_SUCCESS;
 }
 
-VkResult lunaAddNewDevice2(const LunaDeviceCreationInfo2 *creationInfo)
+VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
     assert(creationInfo);
     TRY_CATCH_RESULT(luna::device = luna::Device(*creationInfo));

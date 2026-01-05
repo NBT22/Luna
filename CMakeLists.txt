@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.21)
+# TODO: Test version
+#  Slang requires 3.22
+#  EXCLUDE_FROM_ALL requires 3.28
+cmake_minimum_required(VERSION 3.22)
 project(Luna C CXX)
 
 set(LUNA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "The root directory of the project")
@@ -38,6 +41,13 @@ endif ()
 
 findDependencies()
 
+# TODO: The scripts to generate the header should probably live elsewhere
+if (WIN32)
+    add_custom_target(GenerateShaderHeader ALL BYPRODUCTS COMMAND powershell -ExecutionPolicy RemoteSigned -NoProfile -NonInteractive ${LUNA_SOURCE_DIR}/src/shaders/GenerateHeader.ps1 WORKING_DIRECTORY ${LUNA_SOURCE_DIR}/src/shaders)
+else ()
+    add_custom_target(GenerateShaderHeader ALL BYPRODUCTS COMMAND sh ${LUNA_SOURCE_DIR}/src/shaders/GenerateHeader.sh WORKING_DIRECTORY ${LUNA_SOURCE_DIR}/src/shaders)
+endif ()
+
 add_library(Luna STATIC
         src/Buffer.cpp
         src/CommandPool.cpp
@@ -49,6 +59,7 @@ add_library(Luna STATIC
         src/Instance.cpp
         src/Luna.cpp
         src/RenderPass.cpp
+        src/ShaderModule.cpp
 
         src/headers/helpers/Handle.hpp
         src/headers/helpers/Pipeline.hpp
@@ -67,6 +78,8 @@ add_library(Luna STATIC
         src/headers/Luna.hpp
         src/headers/RenderPass.hpp
         src/headers/Semaphore.hpp
+        src/headers/ShaderModule.hpp
+        src/headers/SlangSession.hpp
 
         include/luna/luna.h
         include/luna/lunaBuffer.h
@@ -75,14 +88,13 @@ add_library(Luna STATIC
         include/luna/lunaImage.h
         include/luna/lunaInstance.h
         include/luna/lunaTypes.h
-        src/headers/ShaderModule.hpp
-        src/ShaderModule.cpp
 )
+add_dependencies(Luna GenerateShaderHeader)
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
 target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)
-target_link_libraries(Luna PRIVATE _LunaInternal_PrivateDependencies)
+target_link_libraries(Luna PRIVATE _LunaInternal_PrivateDependencies _LunaInternal_compileOptions)
 target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include)
-target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src/headers)
+target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src/headers ${LUNA_SOURCE_DIR}/src/shaders)
 
 if (LUNA_EXAMPLES)
     add_subdirectory(example)

@@ -47,7 +47,7 @@ class CommandPool
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <cassert>
 #include <volk.h>
@@ -157,4 +157,4 @@ inline CommandBuffer &CommandPool::commandBuffer(const uint32_t index)
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

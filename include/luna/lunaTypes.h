@@ -35,16 +35,10 @@ LUNA_DEFINE_HANDLE(LunaBuffer);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
 LUNA_DEFINE_HANDLE(LunaCommandPool);
+LUNA_DEFINE_HANDLE(LunaSlangSession);
 
 static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
 static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
-
-typedef enum
-{
-    LUNA_ATTACHMENT_LOAD_MODE_UNDEFINED,
-    LUNA_ATTACHMENT_LOAD_MODE_CLEAR,
-    LUNA_ATTACHMENT_LOAD_MODE_PRESERVE,
-} LunaAttachmentLoadMode;
 
 typedef enum
 {
@@ -103,6 +97,13 @@ typedef struct
         const VkPresentModeKHR *presentModePriorityList;
         bool clipped;
 } LunaSwapchainCreationInfo;
+
+typedef enum
+{
+    LUNA_ATTACHMENT_LOAD_MODE_UNDEFINED,
+    LUNA_ATTACHMENT_LOAD_MODE_CLEAR,
+    LUNA_ATTACHMENT_LOAD_MODE_PRESERVE,
+} LunaAttachmentLoadMode;
 
 typedef struct
 {
@@ -241,6 +242,78 @@ typedef struct
 {
         size_t size;
         const uint32_t *spirv;
+} LunaSpirvShaderModuleCreationInfo;
+
+typedef struct
+{
+        const char *name;
+        const char *value;
+} LunaSlangPreprocessorMacroDescription;
+
+typedef enum
+{
+    LUNA_SLANG_COMPILER_OPTION_VALUE_TYPE_INT,
+    LUNA_SLANG_COMPILER_OPTION_VALUE_TYPE_STRING,
+} LunaSlangCompilerOptionValueType;
+
+typedef struct
+{
+        LunaSlangCompilerOptionValueType type;
+        int32_t intValue0;
+        int32_t intValue1;
+        const char *stringValue0;
+        const char *stringValue1;
+} LunaSlangCompilerOptionValue;
+
+typedef struct
+{
+        int name;
+        LunaSlangCompilerOptionValue value;
+} LunaSlangCompilerOption;
+
+typedef struct
+{
+        const char *spirvProfile;
+        LunaSlangCompilerOption *targetCompilerOptions;
+        uint32_t targetCompilerOptionCount;
+        const char *const *searchPaths;
+        uint32_t searchPathCount;
+        LunaSlangPreprocessorMacroDescription *preprocessorMacros;
+        uint32_t preprocessorMacroCount;
+        LunaSlangCompilerOption *compilerOptions;
+        uint32_t compilerOptionCount;
+        bool useColumnMajorMatrices;
+        bool enableEffectAnnotations;
+        bool allowGlslSyntax;
+        bool skipSpirvValidation;
+} LunaSlangSessionCreationInfo;
+
+typedef struct
+{
+        const char *moduleName;
+        const char *modulePath;
+        const char *sourceString;
+        const char *entryPoint;
+        LunaSlangSessionCreationInfo *sessionCreationInfo;
+        LunaSlangSession *session;
+} LunaSlangShaderModuleCreationInfo;
+
+typedef enum
+{
+    LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SPIRV,
+    LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SLANG,
+} LunaShaderModuleCreationInfoType;
+
+typedef union
+{
+        LunaSpirvShaderModuleCreationInfo spirv;
+        LunaSlangShaderModuleCreationInfo slang;
+} LunaShaderModuleCreationInfoTypeUnion;
+
+typedef struct
+{
+        LunaShaderModuleCreationInfoType creationInfoType;
+        LunaShaderModuleCreationInfoTypeUnion creationInfoUnion;
 } LunaShaderModuleCreationInfo;
 
 typedef struct
@@ -301,16 +374,16 @@ typedef struct
         // uint32_t shaderCount;
         // const LunaPipelineShaderStageCreationInfo *shaderStages;
         // const VkPipelineVertexInputStateCreateInfo *vertexInputState;
-        // const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
-        // const VkPipelineTessellationStateCreateInfo *tessellationState;
-        // const VkPipelineViewportStateCreateInfo *viewportState;
-        // const VkPipelineRasterizationStateCreateInfo *rasterizationState;
-        // const VkPipelineMultisampleStateCreateInfo *multisampleState;
-        // const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
-        // const VkPipelineColorBlendStateCreateInfo *colorBlendState;
-        // const VkPipelineDynamicStateCreateInfo *dynamicState;
-        // LunaPipelineLayoutCreationInfo layoutCreationInfo;
-        // LunaRenderPassSubpass subpass;
+        const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
+        const VkPipelineTessellationStateCreateInfo *tessellationState;
+        const VkPipelineViewportStateCreateInfo *viewportState;
+        const VkPipelineRasterizationStateCreateInfo *rasterizationState;
+        const VkPipelineMultisampleStateCreateInfo *multisampleState;
+        const VkPipelineDepthStencilStateCreateInfo *depthStencilState;
+        const VkPipelineColorBlendStateCreateInfo *colorBlendState;
+        const VkPipelineDynamicStateCreateInfo *dynamicState;
+        LunaPipelineLayoutCreationInfo layoutCreationInfo;
+        LunaRenderPassSubpass subpass;
 } LunaGraphicsPipelineUsingReflectionCreationInfo; // TODO (0.3.0): Name this better
 
 typedef struct

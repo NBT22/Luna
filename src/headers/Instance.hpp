@@ -18,6 +18,10 @@
 #include "Luna.hpp"
 #include "RenderPass.hpp"
 
+#ifdef LUNA_SLANG_SHADERS
+#include <shader-slang/slang.h>
+#endif
+
 namespace luna
 {
 extern Swapchain swapchain;

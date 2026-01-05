@@ -200,7 +200,7 @@ ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: false
 #OneLineFormatOffRegex: ''
 PackConstructorInitializers: CurrentLine
-PenaltyBreakAssignment: 10000
+PenaltyBreakAssignment: 150
 PenaltyBreakBeforeFirstCallParameter: 5000
 PenaltyBreakBeforeMemberAccess: 1000
 #PenaltyBreakComment:

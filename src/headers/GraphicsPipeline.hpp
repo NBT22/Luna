@@ -5,6 +5,7 @@
 #pragma once
 
 #include <luna/lunaTypes.h>
+#include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -17,6 +18,7 @@ class GraphicsPipeline
 
         GraphicsPipeline() = default;
         explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
+        explicit GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCreationInfo &creationInfo);
 
         void destroy();
 
@@ -30,10 +32,13 @@ class GraphicsPipeline
         VkPipeline pipeline_{};
         VkPipelineLayout layout_{};
         std::vector<LunaPushConstantsRange> pushConstantsRanges_{};
+        std::unordered_map<std::string, uint32_t> namedBindingsMap_{};
+        uint32_t inputRateVertexBindingIndex_{-1u};
+        uint32_t inputRateInstanceBindingIndex_{-1u};
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 namespace luna
 {
@@ -48,4 +53,4 @@ inline VkPipelineLayout GraphicsPipeline::layout() const
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

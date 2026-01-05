@@ -255,24 +255,18 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .pAttachments = &colorBlendAttachment,
     };
 
-    // const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
-    //     .shaderStageCount = sizeof(shaderStages) / sizeof(*shaderStages),
-    //     .shaderStages = shaderStages,
-    //     .vertexInputState = &vertexInputInfo,
-    //     .inputAssemblyState = &inputAssembly,
-    //     .viewportState = &viewportState,
-    //     .rasterizationState = &rasterizer,
-    //     .multisampleState = &multisampling,
-    //     .colorBlendState = &colorBlending,
-    //     .subpass = subpass,
-    // };
-    // return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
-
-    const LunaGraphicsPipelineUsingReflectionCreationInfo pipelineCreationInfo = {
-        .shaderModuleCreationInfoCount = 1,
-        .shaderModuleCreationInfos = &vertexShaderCreationInfo,
+    const LunaGraphicsPipelineCreationInfo pipelineCreationInfo = {
+        .shaderStageCount = sizeof(shaderStages) / sizeof(*shaderStages),
+        .shaderStages = shaderStages,
+        .vertexInputState = &vertexInputInfo,
+        .inputAssemblyState = &inputAssembly,
+        .viewportState = &viewportState,
+        .rasterizationState = &rasterizer,
+        .multisampleState = &multisampling,
+        .colorBlendState = &colorBlending,
+        .subpass = subpass,
     };
-    return lunaCreateGraphicsPipelineUsingReflection(&pipelineCreationInfo, pipeline);
+    return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
 }
 
 int main(void)

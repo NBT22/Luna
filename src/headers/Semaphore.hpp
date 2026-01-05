@@ -36,7 +36,7 @@ class Semaphore
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <volk.h>
 #include "Luna.hpp"
@@ -94,4 +94,4 @@ inline const VkPipelineStageFlags &Semaphore::stageMask() const
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

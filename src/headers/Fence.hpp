@@ -30,7 +30,7 @@ class Fence
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <volk.h>
 #include "Luna.hpp"
@@ -71,4 +71,4 @@ inline bool Fence::willBeSignaled() const
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

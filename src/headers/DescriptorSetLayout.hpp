@@ -47,7 +47,7 @@ class DescriptorSetLayout
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 namespace luna
 {
@@ -71,4 +71,4 @@ inline VkDescriptorSetLayout DescriptorSetLayout::layout() const
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

@@ -2,27 +2,138 @@
 // Created by NBT22 on 11/25/25.
 //
 
+#include <array>
 #include <cassert>
+#include <fstream>
+#include <sstream>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
+#include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "luna/lunaTypes.h"
 #include "ShaderModule.hpp"
+#include "SlangSession.hpp"
+
+#ifdef LUNA_SLANG_SHADERS
+#include <shader-slang/slang-com-helper.h>
+#include <shader-slang/slang-com-ptr.h>
+#include <shader-slang/slang.h>
+#endif
 
 namespace luna
 {
-ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo):
+ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo) /*:
     size_(creationInfo.size),
-    spirv_(creationInfo.spirv, creationInfo.spirv + creationInfo.size / 4)
+    spirv_(creationInfo.spirv, creationInfo.spirv + creationInfo.size / 4)*/
 {
-    assert(creationInfo.size % 4 == 0);
+    if (creationInfo.creationInfoType == LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SPIRV)
+    {
+        const VkShaderModuleCreateInfo shaderModuleCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = creationInfo.creationInfoUnion.spirv.size,
+            .pCode = creationInfo.creationInfoUnion.spirv.spirv,
+        };
+        CHECK_RESULT_THROW(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &module_));
+        return;
+    }
+#ifdef LUNA_SLANG_SHADERS
+    const LunaSlangShaderModuleCreationInfo &slangShaderModuleCreationInfo = creationInfo.creationInfoUnion.slang;
+
+    SlangSession *slangSession = slangShaderModuleCreationInfo.session == nullptr
+                                         ? nullptr
+                                         : helpers::fromHandle<SlangSession>(*slangShaderModuleCreationInfo.session);
+    if (slangSession == nullptr)
+    {
+        if (slangShaderModuleCreationInfo.sessionCreationInfo != nullptr)
+        {
+            slangSessions.emplace_back(*slangShaderModuleCreationInfo.sessionCreationInfo);
+            slangSession = &slangSessions.back();
+        } else
+        {
+            if (globalSlangSession == nullptr)
+            {
+                constexpr SlangGlobalSessionDesc globalSessionDescription{};
+                slang::createGlobalSession(&globalSessionDescription, &globalSlangSession);
+                assert(globalSlangSession);
+            }
+
+            slang::TargetDesc targetDescription{};
+            targetDescription.format = SLANG_SPIRV;
+            switch (apiVersion)
+            {
+                default:
+                case 0:
+                    targetDescription.profile = globalSlangSession->findProfile("spirv_1_0");
+                    break;
+                case 1:
+                    targetDescription.profile = globalSlangSession->findProfile("spirv_1_3");
+                    break;
+                case 2:
+                    targetDescription.profile = globalSlangSession->findProfile("spirv_1_5");
+                    break;
+                case 3:
+                case 4:
+                    targetDescription.profile = globalSlangSession->findProfile("spirv_1_6");
+                    break;
+            }
+
+            slang::SessionDesc sessionDescription{};
+            sessionDescription.targets = &targetDescription;
+            sessionDescription.targetCount = 1;
+            slang::CompilerOptionEntry useEntryPointNameCompilerOptionEntry{
+                .name = slang::CompilerOptionName::VulkanUseEntryPointName,
+            };
+            sessionDescription.compilerOptionEntries = &useEntryPointNameCompilerOptionEntry;
+            sessionDescription.compilerOptionEntryCount = 1;
+
+            slangSessions.emplace_back(sessionDescription);
+            slangSession = &slangSessions.back();
+        }
+    }
+
+    entryPoint_ = slangShaderModuleCreationInfo.entryPoint == nullptr ? "main"
+                                                                      : slangShaderModuleCreationInfo.entryPoint;
+
+    slang::IBlob *blob{};
+    slang::IModule *module = slangSession->addComponent(
+            slangSession->session()->loadModuleFromSourceString(slangShaderModuleCreationInfo.moduleName,
+                                                                slangShaderModuleCreationInfo.modulePath,
+                                                                slangShaderModuleCreationInfo.sourceString,
+                                                                &blob));
+    slang::IEntryPoint *entryPoint{};
+
+    slangSession->addComponent<slang::IModule, slang::IEntryPoint>(module,
+                                                                   &slang::IModule::findEntryPointByName,
+                                                                   entryPoint_.c_str(),
+                                                                   &entryPoint);
+    const std::array<slang::IComponentType *, 2> componentTypes = {module, entryPoint};
+    slang::IComponentType *composedProgram{};
+    slangSession->addComponent<slang::ISession, slang::IComponentType>(slangSession->session(),
+                                                                       &slang::ISession::createCompositeComponentType,
+                                                                       componentTypes.data(),
+                                                                       static_cast<SlangInt>(componentTypes.size()),
+                                                                       &composedProgram,
+                                                                       static_cast<slang::IBlob **>(nullptr));
+    composedProgram->link(&slangProgram_);
+    Slang::ComPtr<slang::IBlob> spirvCode{};
+    slangProgram_->getEntryPointCode(0, 0, spirvCode.writeRef());
+
+    size_ = spirvCode->getBufferSize();
+    assert(size_ % 4 == 0);
+    spirv_.insert(spirv_.begin(),
+                  static_cast<const uint32_t *>(spirvCode->getBufferPointer()),
+                  static_cast<const uint32_t *>(spirvCode->getBufferPointer()) + size_ / 4);
+
     const VkShaderModuleCreateInfo shaderModuleCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = creationInfo.size,
-        .pCode = creationInfo.spirv,
+        .codeSize = size_,
+        .pCode = spirv_.data(),
     };
     CHECK_RESULT_THROW(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &module_));
+#else
+    // TODO (0.3.0): Handling for slang shaders being disabled
+#endif
 }
 
 ShaderModule::~ShaderModule()

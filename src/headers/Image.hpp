@@ -60,7 +60,7 @@ class Image
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <cassert>
 #include <volk.h>
@@ -151,4 +151,4 @@ inline VkSampler Image::sampler() const
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

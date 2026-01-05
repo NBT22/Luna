@@ -73,7 +73,7 @@ class RenderPass
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <cassert>
 #include <stdexcept>
@@ -195,4 +195,4 @@ inline void RenderPass::init_(const LunaRenderPassCreationInfo2 &creationInfo)
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation

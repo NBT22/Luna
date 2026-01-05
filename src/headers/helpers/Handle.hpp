@@ -22,6 +22,7 @@ class ComputePipeline;
 class BufferRegionIndex;
 class Image;
 class CommandPool;
+class SlangSession;
 } // namespace luna
 namespace luna::helpers
 {
@@ -73,6 +74,10 @@ template<> constexpr Image *fromHandle(const LunaImage image)
 template<> constexpr CommandPool *fromHandle(const LunaCommandPool commandPool)
 {
     return static_cast<CommandPool *>(commandPool);
+}
+template<> constexpr SlangSession *fromHandle(const LunaSlangSession slangSession)
+{
+    return static_cast<SlangSession *>(slangSession);
 }
 
 

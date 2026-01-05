@@ -23,6 +23,7 @@
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "RenderPass.hpp"
+#include "SlangSession.hpp"
 
 namespace
 {
@@ -254,6 +255,11 @@ VkPipeline boundPipeline{};
 LunaBuffer boundVertexBuffer{};
 LunaBuffer boundIndexBuffer{};
 
+#ifdef LUNA_SLANG_SHADERS
+slang::IGlobalSession *globalSlangSession{};
+std::list<SlangSession> slangSessions{};
+#endif
+
 std::list<RenderPass> renderPasses{};
 std::list<DescriptorSetLayout> descriptorSetLayouts{};
 std::list<VkDescriptorPool> descriptorPools{};
@@ -279,7 +285,7 @@ VkResult lunaInitializeVolk()
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 {
     assert(creationInfo);
-    luna::apiVersion = creationInfo->apiVersion;
+    luna::apiVersion = creationInfo->apiVersion == 0 ? VK_API_VERSION_1_0 : creationInfo->apiVersion;
 
     CHECK_RESULT_RETURN(lunaInitializeVolk());
 
@@ -292,7 +298,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
         std::vector<VkLayerProperties> properties(propertyCount);
         vkEnumerateInstanceLayerProperties(&propertyCount, properties.data());
         constexpr const char *validationLayerName = "VK_LAYER_KHRONOS_validation";
-        constexpr size_t validationLayerNameLength = std::size("VK_LAYER_KHRONOS_validation") - 1;
+        constexpr size_t validationLayerNameLength = std::char_traits<char>::length(validationLayerName);
         for (const VkLayerProperties &layerProperties: properties)
         {
             if (std::strncmp(layerProperties.layerName, validationLayerName, validationLayerNameLength) == 0)
@@ -305,7 +311,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 
     const VkApplicationInfo vulkanApplicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .apiVersion = creationInfo->apiVersion,
+        .apiVersion = luna::apiVersion,
     };
     const VkInstanceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,

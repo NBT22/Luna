@@ -73,7 +73,7 @@ class CommandBuffer
 };
 } // namespace luna
 
-#pragma region "Implmentation"
+#pragma region Implementation
 
 #include <cassert>
 #include <stdexcept>
@@ -413,4 +413,4 @@ inline const commandBuffer::CommandBufferArray &CommandBuffer::commandBufferArra
 }
 } // namespace luna
 
-#pragma endregion "Implmentation"
+#pragma endregion Implementation
