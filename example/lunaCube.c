@@ -205,12 +205,14 @@ static bool createGraphicsPipeline(LunaRenderPassSubpass subpass,
     LunaShaderModule vertexShaderModule = LUNA_NULL_HANDLE;
     LunaShaderModule fragmentShaderModule = LUNA_NULL_HANDLE;
     const LunaShaderModuleCreationInfo vertexShaderModuleCreationInfo = {
-        .size = sizeof(VERTEX_SHADER_SPIRV),
-        .spirv = VERTEX_SHADER_SPIRV,
+        .creationInfoType = LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SPIRV,
+        .creationInfoUnion.spirv.size = sizeof(VERTEX_SHADER_SPIRV),
+        .creationInfoUnion.spirv.spirv = VERTEX_SHADER_SPIRV,
     };
     const LunaShaderModuleCreationInfo fragmentShaderModuleCreationInfo = {
-        .size = sizeof(FRAGMENT_SHADER_SPIRV),
-        .spirv = FRAGMENT_SHADER_SPIRV,
+        .creationInfoType = LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SPIRV,
+        .creationInfoUnion.spirv.size = sizeof(FRAGMENT_SHADER_SPIRV),
+        .creationInfoUnion.spirv.spirv = FRAGMENT_SHADER_SPIRV,
     };
     if (lunaCreateShaderModule(&vertexShaderModuleCreationInfo, &vertexShaderModule) != VK_SUCCESS)
     {
@@ -445,7 +447,7 @@ int main(void)
         .surface = surface,
         .physicalDevicePreferenceDefinition = &physicalDevicePreferenceDefinition,
     };
-    CHECK_RESULT(lunaAddNewDevice(&deviceCreationInfo));
+    CHECK_RESULT(lunaCreateDevice(&deviceCreationInfo));
 
     const VkExtent3D extent = {
         .width = 720,

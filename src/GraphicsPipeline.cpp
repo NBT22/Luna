@@ -3,17 +3,10 @@
 //
 
 #include <cassert>
-#include <cmath>
-#include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <luna/luna.h>
 #include <luna/lunaTypes.h>
-#include <ranges>
-#include <set>
-#include <slang.h>
 #include <stdexcept>
-#include <unordered_map>
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
@@ -24,10 +17,21 @@
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "RenderPass.hpp"
+
+#ifdef LUNA_SLANG_SHADERS
+#include <cmath>
+#include <cstddef>
+#include <cstring>
+#include <ranges>
+#include <set>
+#include <slang.h>
+#include <unordered_map>
 #include "SlangSession.hpp"
+#endif
 
 namespace luna::helpers
 {
+#ifdef LUNA_SLANG_SHADERS
 struct InputBindingAttributes
 {
         VkVertexInputBindingDescription bindingDescription{};
@@ -447,6 +451,7 @@ static inline bool parameterIsInput(slang::VariableLayoutReflection *variableLay
     }
     return false;
 }
+#endif
 } // namespace luna::helpers
 
 namespace luna
@@ -786,7 +791,8 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCrea
     };
     CHECK_RESULT_THROW(vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline_));
 #else
-    // TODO (0.3.0): Handling for slang shaders being disabled
+    (void)creationInfo;
+    throw std::runtime_error("Unable to create shader using reflection without source shader!");
 #endif
 }
 void GraphicsPipeline::destroy()

@@ -130,7 +130,6 @@ static VkResult createGraphicsPipeline(const LunaRenderPassSubpass subpass, Luna
 
 int main(void)
 {
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11,wayland");
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         return 1;

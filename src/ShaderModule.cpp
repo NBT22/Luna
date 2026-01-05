@@ -23,16 +23,19 @@
 
 namespace luna
 {
-ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo) /*:
-    size_(creationInfo.size),
-    spirv_(creationInfo.spirv, creationInfo.spirv + creationInfo.size / 4)*/
+ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo)
 {
     if (creationInfo.creationInfoType == LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SPIRV)
     {
+        size_ = creationInfo.creationInfoUnion.spirv.size;
+        spirv_.insert(spirv_.begin(),
+                      creationInfo.creationInfoUnion.spirv.spirv,
+                      creationInfo.creationInfoUnion.spirv.spirv + creationInfo.creationInfoUnion.spirv.size / 4);
+
         const VkShaderModuleCreateInfo shaderModuleCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = creationInfo.creationInfoUnion.spirv.size,
-            .pCode = creationInfo.creationInfoUnion.spirv.spirv,
+            .codeSize = size_,
+            .pCode = spirv_.data(),
         };
         CHECK_RESULT_THROW(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &module_));
         return;
@@ -132,7 +135,7 @@ ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo) /*:
     };
     CHECK_RESULT_THROW(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &module_));
 #else
-    // TODO (0.3.0): Handling for slang shaders being disabled
+    assert(creationInfo.creationInfoType == LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SPIRV);
 #endif
 }
 
