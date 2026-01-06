@@ -27,6 +27,9 @@ void lunaBindVertexBuffers(uint32_t firstBinding,
                            const LunaBuffer *buffers,
                            const VkDeviceSize *offsets);
 
+// TODO (0.3.0): Should there be functions for drawing that are not tied to a buffer?
+//  Example signature: VkResult lunaDraw(LunaGraphicsPipeline pipeline, const LunaGraphicsPipelineBindInfo *pipelineBindInfo, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+
 VkResult lunaDrawBuffer(LunaBuffer vertexBuffer,
                         LunaGraphicsPipeline pipeline,
                         const LunaGraphicsPipelineBindInfo *pipelineBindInfo,

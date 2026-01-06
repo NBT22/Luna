@@ -4,7 +4,7 @@ endif ()
 
 function(compileOption variable helpText value)
     option(${variable} ${helpText} ${value})
-    if (${value})
+    if (${${variable}})
         target_compile_definitions(_LunaInternal_compileOptions INTERFACE ${variable})
     endif ()
 endfunction()

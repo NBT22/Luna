@@ -113,6 +113,7 @@ class BufferRegionIndex
         BufferRegion *bufferRegion_{};
         BufferRegion::SubRegion *subRegion_{};
 };
+// TODO (0.3.0): Buffer writes need synchronization using vkCmdPipelineBarrier
 class Buffer
 {
         friend class BufferRegion;
@@ -172,7 +173,7 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
     LunaBufferCreationInfo newCreationInfo;
     bufferRegionIndex->creationInfo(&newCreationInfo);
     newCreationInfo.size = newSize;
-    // lunaDestroyBuffer(bufferRegionIndex);
+    // lunaDestroyBuffer(bufferRegionIndex); // TODO (0.3.0): This is fairly important
     LunaBuffer lunaBuffer = bufferRegionIndex;
     CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
     bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);

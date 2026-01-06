@@ -60,6 +60,7 @@ typedef struct
 
 typedef struct
 {
+        // TODO (0.3.0): Allow a priority list for preferredDeviceType and potentially add more options
         VkPhysicalDeviceType preferredDeviceType;
 } LunaPhysicalDevicePreferenceDefinition;
 
@@ -92,6 +93,7 @@ typedef struct
         uint32_t formatCount;
         const VkSurfaceFormatKHR *formatPriorityList;
         VkImageUsageFlags imageUsage;
+        // TODO (0.3.0): Clang-Tidy: Enum value of type 'VkCompositeAlphaFlagBitsKHR' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
         VkCompositeAlphaFlagBitsKHR compositeAlpha;
         uint32_t presentModeCount;
         const VkPresentModeKHR *presentModePriorityList;
@@ -330,7 +332,7 @@ typedef struct
         VkShaderStageFlags stageFlags;
         uint32_t size;
 
-        void *dataPointer;
+        const void *dataPointer;
         uint32_t dataPointerOffset;
 } LunaPushConstantsRange;
 
@@ -369,11 +371,8 @@ typedef struct
         LunaShaderModule *shaderModules;
         const char *const *entryPoints;
 
-
-        // VkPipelineCreateFlags flags;
-        // uint32_t shaderCount;
-        // const LunaPipelineShaderStageCreationInfo *shaderStages;
-        // const VkPipelineVertexInputStateCreateInfo *vertexInputState;
+        VkPipelineCreateFlags flags;
+        // TODO (0.3.0): There needs to be a way to null these pointers
         const VkPipelineInputAssemblyStateCreateInfo *inputAssemblyState;
         const VkPipelineTessellationStateCreateInfo *tessellationState;
         const VkPipelineViewportStateCreateInfo *viewportState;
@@ -506,6 +505,7 @@ typedef struct
         VkFormat format;
         uint32_t width;
         uint32_t height;
+        // TODO (0.3.0): Clang-Tidy: Enum value of type 'VkSampleCountFlagBits' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
         VkSampleCountFlagBits samples;
         VkImageUsageFlags usage;
         VkImageLayout layout;

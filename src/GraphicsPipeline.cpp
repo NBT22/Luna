@@ -444,7 +444,7 @@ static inline bool parameterIsInput(slang::VariableLayoutReflection *variableLay
 {
     for (uint32_t i = 0; i < variableLayoutReflection->getCategoryCount(); i++)
     {
-        if (variableLayoutReflection->getCategoryByIndex(i) != slang::ParameterCategory::VaryingInput)
+        if (variableLayoutReflection->getCategoryByIndex(i) == slang::ParameterCategory::VaryingInput)
         {
             return true;
         }
@@ -507,6 +507,8 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCreationInfo &creationInfo)
 {
 #ifdef LUNA_SLANG_SHADERS
+    // TODO (0.3.0): Support for using a binding name to refer to a descriptor set in the shader
+
     VkPhysicalDeviceProperties physicalDeviceProperties;
     vkGetPhysicalDeviceProperties(device, &physicalDeviceProperties);
     const uint32_t maxVertexInputBindings = physicalDeviceProperties.limits.maxVertexInputBindings;
@@ -646,7 +648,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCrea
         for (uint32_t i = 0; i < parameterCount; i++)
         {
             slang::VariableLayoutReflection *variableLayoutReflection = entryPointReflection->getParameterByIndex(i);
-            if (helpers::parameterIsInput(variableLayoutReflection))
+            if (!helpers::parameterIsInput(variableLayoutReflection))
             {
                 continue;
             }
@@ -770,6 +772,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCrea
     const RenderPassSubpassIndex *subpassIndex = helpers::fromHandle<RenderPassSubpassIndex>(creationInfo.subpass);
     const VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .flags = creationInfo.flags,
         .stageCount = static_cast<uint32_t>(shaderStages.size()),
         .pStages = shaderStages.data(),
         .pVertexInputState = &vertexInputInfo,

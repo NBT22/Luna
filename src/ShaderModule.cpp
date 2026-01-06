@@ -84,11 +84,18 @@ ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo)
             slang::SessionDesc sessionDescription{};
             sessionDescription.targets = &targetDescription;
             sessionDescription.targetCount = 1;
-            slang::CompilerOptionEntry useEntryPointNameCompilerOptionEntry{
-                .name = slang::CompilerOptionName::VulkanUseEntryPointName,
+            // TODO (0.3.0): The VulkanUseEntryPointName compiler option should be automatically added to user-defined compiler options
+            std::array<slang::CompilerOptionEntry, 2> compilerOptionEntries{
+                slang::CompilerOptionEntry{
+                    .name = slang::CompilerOptionName::VulkanUseEntryPointName,
+                },
+                slang::CompilerOptionEntry{
+                    .name = slang::CompilerOptionName::Optimization,
+                    .value = {.intValue0 = 3},
+                },
             };
-            sessionDescription.compilerOptionEntries = &useEntryPointNameCompilerOptionEntry;
-            sessionDescription.compilerOptionEntryCount = 1;
+            sessionDescription.compilerOptionEntries = compilerOptionEntries.data();
+            sessionDescription.compilerOptionEntryCount = compilerOptionEntries.size();
 
             slangSessions.emplace_back(sessionDescription);
             slangSession = &slangSessions.back();
@@ -104,20 +111,29 @@ ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo)
                                                                 slangShaderModuleCreationInfo.modulePath,
                                                                 slangShaderModuleCreationInfo.sourceString,
                                                                 &blob));
-    slang::IEntryPoint *entryPoint{};
+    if (module == nullptr)
+    {
+        throw std::runtime_error(std::string{"Failed to compile shader! Compiler log:\n"} +
+                                 static_cast<const char *>(blob->getBufferPointer()));
+    }
 
+    slang::IEntryPoint *entryPoint{};
     slangSession->addComponent<slang::IModule, slang::IEntryPoint>(module,
                                                                    &slang::IModule::findEntryPointByName,
                                                                    entryPoint_.c_str(),
                                                                    &entryPoint);
     const std::array<slang::IComponentType *, 2> componentTypes = {module, entryPoint};
     slang::IComponentType *composedProgram{};
-    slangSession->addComponent<slang::ISession, slang::IComponentType>(slangSession->session(),
+    if (slangSession->addComponent<slang::ISession, slang::IComponentType>(slangSession->session(),
                                                                        &slang::ISession::createCompositeComponentType,
                                                                        componentTypes.data(),
                                                                        static_cast<SlangInt>(componentTypes.size()),
                                                                        &composedProgram,
-                                                                       static_cast<slang::IBlob **>(nullptr));
+                                                                       &blob) != 0)
+    {
+        throw std::runtime_error(std::string{"Failed to compose program! Compiler log:\n"} +
+                                 static_cast<const char *>(blob->getBufferPointer()));
+    }
     composedProgram->link(&slangProgram_);
     Slang::ComPtr<slang::IBlob> spirvCode{};
     slangProgram_->getEntryPointCode(0, 0, spirvCode.writeRef());
