@@ -300,7 +300,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
             };
             CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device, &allocateInfo, descriptorSet));
             descriptorSetIndices.emplace_back(pool, layout, descriptorSet);
-            descriptorSets[i] = &descriptorSetIndices.back();
+            descriptorSets[i] = helpers::toHandle(&descriptorSetIndices.back());
         }
     }
     return VK_SUCCESS;

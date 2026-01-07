@@ -9,7 +9,7 @@
 extern "C"
 {
 // ReSharper disable CppVariableCanBeMadeConstexpr
-// NOLINTBEGIN(*-macro-usage, *-enum-size, *-use-using)
+// NOLINTBEGIN(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)
 #else
 #include <stdbool.h>
 #endif
@@ -19,9 +19,9 @@ extern "C"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
-#define LUNA_DEFINE_HANDLE(handle) typedef void *handle // NOLINT(*-macro-parentheses)
+#define LUNA_DEFINE_HANDLE(handle) typedef uint64_t handle
 
-#define LUNA_NULL_HANDLE VK_NULL_HANDLE
+#define LUNA_NULL_HANDLE 0LL
 
 LUNA_DEFINE_HANDLE(LunaRenderPass);
 LUNA_DEFINE_HANDLE(LunaRenderPassSubpass);
@@ -540,7 +540,7 @@ typedef struct
 } LunaRenderPassResizeInfo;
 
 #ifdef __cplusplus
-// NOLINTEND(*-macro-usage, *-enum-size, *-use-using)
+// NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)
 }
 #endif
 

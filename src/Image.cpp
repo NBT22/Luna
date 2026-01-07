@@ -91,7 +91,7 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
 {
     TRY_CATCH_RESULT(luna::images.emplace_back(creationInfo, depth, arrayLayers));
     const Image &image = images.back();
-    if (creationInfo.writeInfo.descriptorSet != nullptr)
+    if (creationInfo.writeInfo.descriptorSet != LUNA_NULL_HANDLE)
     {
         image.updateDescriptorBinding(device,
                                       creationInfo.writeInfo.descriptorSet,
@@ -100,7 +100,7 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
 
     if (imageIndex != nullptr)
     {
-        *imageIndex = &images.back();
+        *imageIndex = toHandle(&images.back());
     }
     return VK_SUCCESS;
 }
@@ -300,7 +300,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
 
 VkSampler Image::sampler(const LunaSampler sampler) const
 {
-    if (sampler == nullptr)
+    if (sampler == LUNA_NULL_HANDLE)
     {
         return sampler_;
     }
@@ -520,7 +520,7 @@ VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeI
 
     const luna::Image *imageObject = luna::helpers::fromHandle<luna::Image>(image);
     CHECK_RESULT_RETURN(imageObject->write(*writeInfo));
-    if (writeInfo->descriptorSet != nullptr)
+    if (writeInfo->descriptorSet != LUNA_NULL_HANDLE)
     {
         imageObject->updateDescriptorBinding(luna::device,
                                              writeInfo->descriptorSet,

@@ -243,7 +243,7 @@ VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo)
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         .allocationCreateInfo = &allocationCreateInfo,
     };
-    LunaBuffer stagingBufferHandle = luna::stagingBuffer;
+    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(luna::stagingBuffer);
     CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
     luna::stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;
@@ -262,7 +262,7 @@ VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo)
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         .allocationCreateInfo = &allocationCreateInfo,
     };
-    LunaBuffer stagingBufferHandle = luna::stagingBuffer;
+    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(luna::stagingBuffer);
     CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
     luna::stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;

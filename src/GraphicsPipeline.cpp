@@ -890,7 +890,7 @@ VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *crea
     TRY_CATCH_RESULT(luna::graphicsPipelines.emplace_back(*creationInfo));
     if (pipeline != nullptr)
     {
-        *pipeline = &luna::graphicsPipelines.back();
+        *pipeline = luna::helpers::toHandle(&luna::graphicsPipelines.back());
     }
     return VK_SUCCESS;
 }
@@ -901,7 +901,7 @@ VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsi
     TRY_CATCH_RESULT(luna::graphicsPipelines.emplace_back(*creationInfo));
     if (pipeline != nullptr)
     {
-        *pipeline = &luna::graphicsPipelines.back();
+        *pipeline = luna::helpers::toHandle(&luna::graphicsPipelines.back());
     }
     return VK_SUCCESS;
 }

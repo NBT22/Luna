@@ -168,7 +168,7 @@ inline VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationI
     }
     if (commandPool != nullptr)
     {
-        *commandPool = &applicationCommandPoolIndices_.back();
+        *commandPool = helpers::toHandle(&applicationCommandPoolIndices_.back());
     }
     return VK_SUCCESS;
 }

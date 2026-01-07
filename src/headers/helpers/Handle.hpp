@@ -10,7 +10,7 @@
 
 namespace luna
 {
-using HandleType = void *;
+using HandleType = uint64_t;
 
 class RenderPass;
 struct RenderPassSubpassIndex;
@@ -26,74 +26,89 @@ class SlangSession;
 } // namespace luna
 namespace luna::helpers
 {
-template<typename ReturnType> [[nodiscard]] constexpr ReturnType *fromHandle(std::same_as<HandleType> auto) = delete;
-template<> constexpr RenderPass *fromHandle(const LunaRenderPass renderPass)
+// static_assert(std::same_as<RenderPass , CommandPool>);
+
+template<typename ReturnType> [[nodiscard]] ReturnType *fromHandle(std::same_as<HandleType> auto, ReturnType * = nullptr) = delete;
+template<typename ReturnType> requires(std::same_as<ReturnType, RenderPass>)
+RenderPass *fromHandle(const LunaRenderPass renderPass, RenderPass * = nullptr)
 {
-    return static_cast<RenderPass *>(renderPass);
+    return reinterpret_cast<RenderPass *>(renderPass);
 }
-template<> constexpr RenderPassSubpassIndex *fromHandle(const LunaRenderPassSubpass renderPassSubpass)
+template<typename ReturnType> requires(std::same_as<ReturnType, RenderPassSubpassIndex>)
+RenderPassSubpassIndex *fromHandle(const LunaRenderPassSubpass renderPassSubpass, RenderPassSubpassIndex * = nullptr)
 {
-    return static_cast<RenderPassSubpassIndex *>(renderPassSubpass);
+    return reinterpret_cast<RenderPassSubpassIndex *>(renderPassSubpass);
 }
-template<> constexpr VkDescriptorPool *fromHandle(const LunaDescriptorPool descriptorPool)
+template<typename ReturnType> requires(std::same_as<ReturnType, VkDescriptorPool>)
+VkDescriptorPool *fromHandle(const LunaDescriptorPool descriptorPool, VkDescriptorPool * = nullptr)
 {
-    return static_cast<VkDescriptorPool *>(descriptorPool);
+    return reinterpret_cast<VkDescriptorPool *>(descriptorPool);
 }
-template<> constexpr DescriptorSetLayout *fromHandle(const LunaDescriptorSetLayout descriptorSetLayout)
+template<typename ReturnType> requires(std::same_as<ReturnType, DescriptorSetLayout>)
+DescriptorSetLayout *fromHandle(const LunaDescriptorSetLayout descriptorSetLayout, DescriptorSetLayout * = nullptr)
 {
-    return static_cast<DescriptorSetLayout *>(descriptorSetLayout);
+    return reinterpret_cast<DescriptorSetLayout *>(descriptorSetLayout);
 }
-template<> constexpr DescriptorSetIndex *fromHandle(const LunaDescriptorSet descriptorSet)
+template<typename ReturnType> requires(std::same_as<ReturnType, DescriptorSetIndex>)
+DescriptorSetIndex *fromHandle(const LunaDescriptorSet descriptorSet, DescriptorSetIndex * = nullptr)
 {
-    return static_cast<DescriptorSetIndex *>(descriptorSet);
+    return reinterpret_cast<DescriptorSetIndex *>(descriptorSet);
 }
-template<> constexpr ShaderModule *fromHandle(const LunaShaderModule shaderModule)
+template<typename ReturnType> requires(std::same_as<ReturnType, ShaderModule>)
+ShaderModule *fromHandle(const LunaShaderModule shaderModule, ShaderModule * = nullptr)
 {
-    return static_cast<ShaderModule *>(shaderModule);
+    return reinterpret_cast<ShaderModule *>(shaderModule);
 }
-template<> constexpr GraphicsPipeline *fromHandle(const LunaGraphicsPipeline graphicsPipeline)
+template<typename ReturnType> requires(std::same_as<ReturnType, GraphicsPipeline>)
+GraphicsPipeline *fromHandle(const LunaGraphicsPipeline graphicsPipeline, GraphicsPipeline * = nullptr)
 {
-    return static_cast<GraphicsPipeline *>(graphicsPipeline);
+    return reinterpret_cast<GraphicsPipeline *>(graphicsPipeline);
 }
-template<> constexpr ComputePipeline *fromHandle(const LunaComputePipeline computePipeline)
+template<typename ReturnType> requires(std::same_as<ReturnType, ComputePipeline>)
+ComputePipeline *fromHandle(const LunaComputePipeline computePipeline, ComputePipeline * = nullptr)
 {
-    return static_cast<ComputePipeline *>(computePipeline);
+    return reinterpret_cast<ComputePipeline *>(computePipeline);
 }
-template<> constexpr BufferRegionIndex *fromHandle(const LunaBuffer buffer)
+template<typename ReturnType> requires(std::same_as<ReturnType, BufferRegionIndex>)
+BufferRegionIndex *fromHandle(const LunaBuffer buffer, BufferRegionIndex * = nullptr)
 {
-    return static_cast<BufferRegionIndex *>(buffer);
+    return reinterpret_cast<BufferRegionIndex *>(buffer);
 }
-template<> constexpr VkSampler *fromHandle(const LunaSampler sampler)
+template<typename ReturnType> requires(std::same_as<ReturnType, VkSampler>)
+VkSampler *fromHandle(const LunaSampler sampler, VkSampler * = nullptr)
 {
-    return static_cast<VkSampler *>(sampler);
+    return reinterpret_cast<VkSampler *>(sampler);
 }
-template<> constexpr Image *fromHandle(const LunaImage image)
+template<typename ReturnType> requires(std::same_as<ReturnType, Image>)
+Image *fromHandle(const LunaImage image, Image * = nullptr)
 {
-    return static_cast<Image *>(image);
+    return reinterpret_cast<Image *>(image);
 }
-template<> constexpr CommandPool *fromHandle(const LunaCommandPool commandPool)
+template<typename ReturnType> requires(std::same_as<ReturnType, CommandPool>)
+CommandPool *fromHandle(const LunaCommandPool commandPool, CommandPool * = nullptr)
 {
-    return static_cast<CommandPool *>(commandPool);
+    return reinterpret_cast<CommandPool *>(commandPool);
 }
-template<> constexpr SlangSession *fromHandle(const LunaSlangSession slangSession)
+template<typename ReturnType> requires(std::same_as<ReturnType, SlangSession>)
+SlangSession *fromHandle(const LunaSlangSession slangSession, SlangSession * = nullptr)
 {
-    return static_cast<SlangSession *>(slangSession);
+    return reinterpret_cast<SlangSession *>(slangSession);
 }
 
 
-template<typename T> [[nodiscard]] constexpr HandleType toHandle(T *value)
+template<typename T> [[nodiscard]] HandleType toHandle(T *value)
 {
-    return static_cast<HandleType>(value);
+    return reinterpret_cast<HandleType>(value);
 }
-template<typename T> [[nodiscard]] constexpr HandleType toHandle(const T *value)
+template<typename T> [[nodiscard]] HandleType toHandle(const T *value)
 {
     return toHandle(const_cast<T *>(value));
 }
-template<typename T> [[nodiscard]] constexpr HandleType toHandle(T &value)
+template<typename T> [[nodiscard]] HandleType toHandle(T &value)
 {
     return toHandle(&value);
 }
-template<typename T> [[nodiscard]] constexpr HandleType toHandle(const T &value)
+template<typename T> [[nodiscard]] HandleType toHandle(const T &value)
 {
     return toHandle(&value);
 }

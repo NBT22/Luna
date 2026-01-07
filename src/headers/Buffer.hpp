@@ -174,7 +174,7 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
     bufferRegionIndex->creationInfo(&newCreationInfo);
     newCreationInfo.size = newSize;
     // lunaDestroyBuffer(bufferRegionIndex); // TODO (0.3.0): This is fairly important
-    LunaBuffer lunaBuffer = bufferRegionIndex;
+    LunaBuffer lunaBuffer = helpers::toHandle(bufferRegionIndex);
     CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
     bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
     return VK_SUCCESS;

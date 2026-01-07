@@ -89,7 +89,7 @@ VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creati
     TRY_CATCH_RESULT(luna::computePipelines.emplace_back(*creationInfo));
     if (pipeline != nullptr)
     {
-        *pipeline = &luna::computePipelines.back();
+        *pipeline = luna::helpers::toHandle(&luna::computePipelines.back());
     }
     return VK_SUCCESS;
 }

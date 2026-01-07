@@ -595,7 +595,7 @@ VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, Lu
     TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
     if (renderPass != nullptr)
     {
-        *renderPass = &renderPasses.back();
+        *renderPass = helpers::toHandle(&renderPasses.back());
     }
     return VK_SUCCESS;
 }
@@ -608,7 +608,7 @@ VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, 
     TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
     if (renderPass != nullptr)
     {
-        *renderPass = &renderPasses.back();
+        *renderPass = helpers::toHandle(&renderPasses.back());
     }
     return VK_SUCCESS;
 }
@@ -619,7 +619,8 @@ LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass render
     {
         return luna::helpers::toHandle(luna::helpers::fromHandle<luna::RenderPass>(renderPass)->getUnnamedSubpass());
     }
-    return luna::helpers::fromHandle<luna::RenderPass>(renderPass)->getSubpassIndexByName(name);
+    return luna::helpers::toHandle(
+            luna::helpers::fromHandle<luna::RenderPass>(renderPass)->getSubpassIndexByName(name));
 }
 
 VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo)

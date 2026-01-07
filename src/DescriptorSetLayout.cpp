@@ -12,6 +12,7 @@
 #include "DescriptorSetLayout.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "helpers/Handle.hpp"
 
 namespace luna
 {
@@ -71,7 +72,7 @@ VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo
     TRY_CATCH_RESULT(descriptorSetLayouts.emplace_back(*creationInfo));
     if (descriptorSetLayout != nullptr)
     {
-        *descriptorSetLayout = &descriptorSetLayouts.back();
+        *descriptorSetLayout = helpers::toHandle(&descriptorSetLayouts.back());
     }
     return VK_SUCCESS;
 }
