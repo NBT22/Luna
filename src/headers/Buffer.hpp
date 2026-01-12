@@ -41,6 +41,14 @@ class BufferRegion
                                            uint32_t count = 1,
                                            const LunaBufferCreationInfo *creationInfos = nullptr);
 
+    private: // BufferRegion private static members
+        static void createBufferRegion(Buffer &buffer,
+                                       size_t offset,
+                                       uint32_t count,
+                                       VkDeviceSize size,
+                                       const LunaBufferCreationInfo *creationInfos,
+                                       LunaBuffer **bufferOut);
+
     public: // BufferRegion public members
         BufferRegion(size_t size, uint8_t *data, Buffer *buffer);
         BufferRegion(size_t size, uint8_t *data, size_t offset, Buffer *buffer, LunaBuffer *index);
@@ -78,7 +86,6 @@ class BufferRegionIndex
     public:
         static void waitForCleanupThread();
         [[nodiscard]] static VkResult resize(BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize);
-        [[nodiscard]] static VkResult reserve(BufferRegionIndex *&bufferRegionIndex, size_t bytes);
 
     private:
         static inline std::thread cleanupThread_{};
@@ -140,7 +147,6 @@ class Buffer
         VkBufferUsageFlags usageFlags_{};
         VmaAllocationCreateInfo allocationCreateInfo_{};
         size_t usedBytes_{};
-        size_t unusedBytes_{};
         size_t freeBytes_{};
         void *data_{};
         std::list<BufferRegion> regions_{};
@@ -165,25 +171,20 @@ inline void BufferRegionIndex::waitForCleanupThread()
 }
 inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex, const VkDeviceSize newSize)
 {
-    (void)bufferRegionIndex;
-    (void)newSize;
-    // throw std::logic_error("Called broken function!");
-
-    // TODO: Improved resizing logic
-    LunaBufferCreationInfo newCreationInfo;
-    bufferRegionIndex->creationInfo(&newCreationInfo);
-    newCreationInfo.size = newSize;
-    // lunaDestroyBuffer(bufferRegionIndex); // TODO (0.3.0): This is fairly important
-    LunaBuffer lunaBuffer = helpers::toHandle(bufferRegionIndex);
-    CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
-    bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
-    return VK_SUCCESS;
-}
-inline VkResult BufferRegionIndex::reserve(BufferRegionIndex *&bufferRegionIndex, const size_t bytes)
-{
-    if (bufferRegionIndex->size() < bytes)
+    if (bufferRegionIndex->size() < newSize)
     {
-        CHECK_RESULT_RETURN(resize(bufferRegionIndex, bytes));
+        (void)bufferRegionIndex;
+        (void)newSize;
+        // throw std::logic_error("Called broken function!");
+
+        // TODO: Improved resizing logic
+        LunaBufferCreationInfo newCreationInfo;
+        bufferRegionIndex->creationInfo(&newCreationInfo);
+        newCreationInfo.size = newSize;
+        // lunaDestroyBuffer(bufferRegionIndex); // TODO (0.3.0): This is fairly important
+        LunaBuffer lunaBuffer = helpers::toHandle(bufferRegionIndex);
+        CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
+        bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
     }
     return VK_SUCCESS;
 }

@@ -198,7 +198,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
     CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
 
-    CHECK_RESULT_RETURN(BufferRegionIndex::reserve(stagingBuffer, writeInfo.bytes));
+    CHECK_RESULT_RETURN(BufferRegionIndex::resize(stagingBuffer, writeInfo.bytes));
     CHECK_RESULT_RETURN(stagingBuffer->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels), writeInfo.bytes));
     const uint32_t mipmapLevels = writeInfo.mipmapLevels == 0 ? 1 : writeInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {

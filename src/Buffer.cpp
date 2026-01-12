@@ -81,140 +81,94 @@ VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creation
 
 VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creationInfo,
                                           LunaBuffer **bufferOut,
-                                          uint32_t count,
+                                          const uint32_t count,
                                           const LunaBufferCreationInfo *creationInfos)
-
 {
-    Buffer *foundBuffer = nullptr;
-    std::vector<Buffer *> fallbackBuffers;
+    const VkBufferUsageFlags usageFlags = creationInfo.usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     for (Buffer &buffer: buffers)
     {
-        if ((buffer.usageFlags_ & creationInfo.usage) != creationInfo.usage ||
-            (buffer.creationFlags_ & creationInfo.flags) != creationInfo.flags)
+        if (buffer.destroyed_ ||
+            (buffer.usageFlags_ & usageFlags) != usageFlags ||
+            (buffer.creationFlags_ & creationInfo.flags) != creationInfo.flags ||
+            buffer.regions_.empty())
         {
             continue;
         }
-        if (creationInfo.size <= buffer.unusedBytes_)
-        {
-            fallbackBuffers.clear();
-            foundBuffer = &buffer;
-            break;
-        }
         if (creationInfo.size <= buffer.freeBytes_)
         {
-            fallbackBuffers.emplace_back(&buffer);
-        }
-    }
-    if (!fallbackBuffers.empty())
-    {
-        size_t baseOffset = 0;
-        const auto hasFreeSpace = [&creationInfo, &baseOffset](Buffer *&buffer) -> bool {
-            if (buffer->regions_.empty() || buffer->destroyed_)
+            if (buffer.regions_.size() == 1)
             {
-                return false;
-            }
-            if (buffer->regions_.size() == 1)
-            {
-                return creationInfo.size <= buffer->regions_.front().offset_;
-            }
-            if (!std::is_sorted(buffer->regions_.begin(),
-                                buffer->regions_.end(),
-                                helpers::sortBufferRegionsByOffsetAscending))
-            {
-                buffer->regions_.sort(helpers::sortBufferRegionsByOffsetAscending);
-            }
-            const auto hasLargeEnoughGap = [&creationInfo](const BufferRegion &a, const BufferRegion &b) -> bool {
-                return a.offset() + a.size() < b.offset() - creationInfo.size;
-            };
-            const std::list<BufferRegion>::iterator regionIterator = std::adjacent_find(buffer->regions_.begin(),
-                                                                                        buffer->regions_.end(),
-                                                                                        hasLargeEnoughGap);
-            if (regionIterator == buffer->regions_.end())
-            {
-                return false;
-            }
-            baseOffset = regionIterator->offset();
-            return true;
-        };
-        const std::vector<Buffer *>::iterator bufferIterator = std::find_if(fallbackBuffers.begin(),
-                                                                            fallbackBuffers.end(),
-                                                                            hasFreeSpace);
-
-        if (bufferIterator != fallbackBuffers.end())
-        {
-            foundBuffer = *bufferIterator;
-            if (!foundBuffer->destroyed_)
-            {
-                uint8_t *regionData = foundBuffer->data_ == nullptr
-                                              ? nullptr
-                                              : static_cast<uint8_t *>(foundBuffer->data_) + baseOffset;
-                if (count > 1)
+                if (creationInfo.size <= buffer.regions_.front().offset_)
                 {
-                    assert(count > 1 && creationInfos);
-                    foundBuffer->regions_.emplace_back(creationInfo.size,
-                                                       regionData,
-                                                       baseOffset,
-                                                       foundBuffer,
-                                                       count,
-                                                       creationInfos,
-                                                       bufferOut);
-                } else
-                {
-                    foundBuffer->regions_.emplace_back(creationInfo.size,
-                                                       regionData,
-                                                       baseOffset,
-                                                       foundBuffer,
-                                                       *bufferOut);
+                    createBufferRegion(buffer, 0, count, creationInfo.size, creationInfos, bufferOut);
+                    return VK_SUCCESS;
                 }
-                foundBuffer->unusedBytes_ -= creationInfo.size;
-                foundBuffer->usedBytes_ += creationInfo.size;
-                return VK_SUCCESS;
+            } else
+            {
+                if (!std::is_sorted(buffer.regions_.begin(),
+                                    buffer.regions_.end(),
+                                    helpers::sortBufferRegionsByOffsetAscending))
+                {
+                    buffer.regions_.sort(helpers::sortBufferRegionsByOffsetAscending);
+                }
+                const auto hasLargeEnoughGap = [&creationInfo](const BufferRegion &a, const BufferRegion &b) -> bool {
+                    return a.offset() + a.size() < b.offset() - creationInfo.size;
+                };
+                const std::list<BufferRegion>::iterator regionIterator = std::adjacent_find(buffer.regions_.begin(),
+                                                                                            buffer.regions_.end(),
+                                                                                            hasLargeEnoughGap);
+                if (regionIterator != buffer.regions_.end())
+                {
+                    const size_t offset = regionIterator->offset() + regionIterator->size();
+                    createBufferRegion(buffer, offset, count, creationInfo.size, creationInfos, bufferOut);
+                    return VK_SUCCESS;
+                }
             }
+            const size_t offset = buffer.regions_.back().offset() + buffer.regions_.back().size();
+            createBufferRegion(buffer, offset, count, creationInfo.size, creationInfos, bufferOut);
+            return VK_SUCCESS;
         }
-        foundBuffer = nullptr;
     }
-    if (foundBuffer == nullptr)
-    {
-        const VkBufferCreateInfo bufferCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .flags = creationInfo.flags,
-            .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::ceil(creationInfo.size / BLOCK_SIZE)),
-            .usage = creationInfo.usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .sharingMode = device.sharingMode(),
-            .queueFamilyIndexCount = device.familyCount(),
-            .pQueueFamilyIndices = device.queueFamilyIndices(),
-        };
-        constexpr VmaAllocationCreateInfo allocationCreateInfo = {
-            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                     VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-        };
-        TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo,
-                                                    creationInfo.allocationCreateInfo
-                                                            ? *creationInfo.allocationCreateInfo
-                                                            : allocationCreateInfo));
-        foundBuffer = &buffers.back();
-    }
-    const size_t offset = foundBuffer->usedBytes_ + foundBuffer->unusedBytes_;
-    uint8_t *regionData = foundBuffer->data_ == nullptr ? nullptr : static_cast<uint8_t *>(foundBuffer->data_) + offset;
+    const VkBufferCreateInfo bufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .flags = creationInfo.flags,
+        .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::ceil(creationInfo.size / BLOCK_SIZE)),
+        .usage = usageFlags,
+        .sharingMode = device.sharingMode(),
+        .queueFamilyIndexCount = device.familyCount(),
+        .pQueueFamilyIndices = device.queueFamilyIndices(),
+    };
+    constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
+                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                 VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+    };
+    TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo,
+                                                creationInfo.allocationCreateInfo ? *creationInfo.allocationCreateInfo
+                                                                                  : allocationCreateInfo));
+    createBufferRegion(buffers.back(), 0, count, creationInfo.size, creationInfos, bufferOut);
+    return VK_SUCCESS;
+}
+
+void BufferRegion::createBufferRegion(Buffer &buffer,
+                                      const size_t offset,
+                                      const uint32_t count,
+                                      const VkDeviceSize size,
+                                      const LunaBufferCreationInfo *creationInfos,
+                                      LunaBuffer **bufferOut)
+{
+    uint8_t *regionData = buffer.data_ == nullptr ? nullptr : static_cast<uint8_t *>(buffer.data_) + offset;
     if (count > 1)
     {
         assert(count > 1 && creationInfos);
-        foundBuffer->regions_.emplace_back(creationInfo.size,
-                                           regionData,
-                                           offset,
-                                           foundBuffer,
-                                           count,
-                                           creationInfos,
-                                           bufferOut);
+        buffer.regions_.emplace_back(size, regionData, offset, &buffer, count, creationInfos, bufferOut);
     } else
     {
-        foundBuffer->regions_.emplace_back(creationInfo.size, regionData, offset, foundBuffer, *bufferOut);
+        buffer.regions_.emplace_back(size, regionData, offset, &buffer, *bufferOut);
     }
-    foundBuffer->freeBytes_ -= creationInfo.size;
-    foundBuffer->usedBytes_ += creationInfo.size;
-    return VK_SUCCESS;
+    buffer.freeBytes_ -= size;
+    buffer.usedBytes_ += size;
 }
 
 
@@ -234,7 +188,7 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
         // TODO: Should this use a dedicated transfer command buffer
         CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
         CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
-        CHECK_RESULT_RETURN(reserve(stagingBuffer, bytes));
+        CHECK_RESULT_RETURN(resize(stagingBuffer, bytes));
         assert(stagingBuffer->data() != nullptr);
         // ReSharper disable once CppDFANullDereference
         std::copy_n(data, bytes, stagingBuffer->data() + offset);
