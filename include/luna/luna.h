@@ -22,6 +22,8 @@ extern "C"
 #include <vulkan/vulkan_core.h>
 // NOLINTEND(*-include-cleaner)
 
+// TODO (0.3.0): Rename functions so that they are lunaObjectAction instead of lunaActionObject
+
 /**
  * @brief Create a new descriptor pool.
  * @param[in] creationInfo A pointer to the @c LunaDescriptorPoolCreationInfo structure containing information about how to create the descriptor pool.

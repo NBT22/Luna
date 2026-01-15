@@ -39,6 +39,13 @@ VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creatio
 void lunaDestroyBuffer(LunaBuffer buffer);
 
 /**
+ * @brief Ensure a buffer is at least @c size bytes, resizing if it is not.
+ * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
+ * @param[in] size The new size to make the buffer.
+ */
+VkResult lunaReserveBuffer(LunaBuffer *buffer, VkDeviceSize size);
+
+/**
  * @brief Resize a buffer, keeping the contents intact.
  * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
  * @param[in] newSize The new size to make the buffer.
@@ -47,7 +54,9 @@ VkResult lunaResizeBuffer(LunaBuffer *buffer, VkDeviceSize newSize);
 
 VkResult lunaWriteDataToBuffer(LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo);
 
-void lunaBufferGetCreationInfo(LunaBuffer buffer, LunaBufferCreationInfo *creationInfo);
+void lunaBufferGetCreationInfo(LunaBuffer buffer,
+                               LunaBufferCreationInfo *creationInfo,
+                               VmaAllocationCreateInfo *allocationCreateInfo);
 
 #ifdef __cplusplus
 }

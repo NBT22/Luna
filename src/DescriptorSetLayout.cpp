@@ -43,6 +43,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
     };
     const VkDescriptorSetLayoutCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        // TODO: This is not a good way to handle it. It does not account for extension usage, and it will silently not apply the flags if the API version isn't set
         .pNext = VK_API_VERSION_MINOR(apiVersion) >= 2 ? &bindingFlagsCreateInfo : nullptr,
         .flags = creationInfo.flags,
         .bindingCount = creationInfo.bindingCount,

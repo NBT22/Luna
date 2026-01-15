@@ -29,6 +29,7 @@ extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
+// TODO: Resizing
 extern BufferRegionIndex *stagingBuffer;
 extern VkPipeline boundPipeline;
 extern LunaBuffer boundVertexBuffer;
