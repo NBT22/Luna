@@ -22,68 +22,33 @@ VkResult lunaBeginRenderPass(LunaRenderPass renderPass, const LunaRenderPassBegi
 void lunaNextSubpass(void);
 void lunaEndRenderPass(void);
 
-void lunaBindVertexBuffers(uint32_t firstBinding,
-                           uint32_t bindingCount,
-                           const LunaBuffer *buffers,
-                           const VkDeviceSize *offsets);
+void lunaBindVertexBuffers(const LunaBuffer *buffers, uint32_t firstBinding, uint32_t bindingCount);
+void lunaBindIndexBuffer(LunaBuffer buffer, VkIndexType indexType);
 
-// TODO (0.3.0): Should there be functions for drawing that are not tied to a buffer?
-//  Example signature: VkResult lunaDraw(LunaGraphicsPipeline pipeline, const LunaGraphicsPipelineBindInfo *pipelineBindInfo, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+VkResult lunaDraw(const LunaDrawInfo *drawInfo);
+VkResult lunaDrawIndirect(const LunaDrawIndirectInfo *drawInfo);
+VkResult lunaDrawIndirectCount(const LunaDrawIndirectCountInfo *drawInfo);
 
-VkResult lunaDrawBuffer(LunaBuffer vertexBuffer,
-                        LunaGraphicsPipeline pipeline,
-                        const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-                        uint32_t vertexCount,
-                        uint32_t instanceCount,
-                        uint32_t firstVertex,
-                        uint32_t firstInstance);
-VkResult lunaDrawBufferIndirect(LunaBuffer vertexBuffer,
-                                LunaGraphicsPipeline pipeline,
-                                const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-                                LunaBuffer buffer,
-                                VkDeviceSize offset,
-                                uint32_t drawCount,
-                                uint32_t stride);
-VkResult lunaDrawBufferIndirectCount(LunaBuffer vertexBuffer,
-                                     LunaGraphicsPipeline pipeline,
-                                     const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-                                     LunaBuffer buffer,
-                                     VkDeviceSize offset,
-                                     LunaBuffer countBuffer,
-                                     VkDeviceSize countBufferOffset,
-                                     uint32_t maxDrawCount,
-                                     uint32_t stride);
+VkResult lunaDrawIndexed(const LunaDrawIndexedInfo *drawInfo);
+VkResult lunaDrawIndexedIndirect(const LunaDrawIndexedIndirectInfo *drawInfo);
+VkResult lunaDrawIndexedIndirectCount(const LunaDrawIndexedIndirectCountInfo *drawInfo);
+
+VkResult lunaDrawBuffer(LunaBuffer vertexBuffer, const LunaDrawInfo *drawInfo);
+VkResult lunaDrawBufferIndirect(LunaBuffer vertexBuffer, const LunaDrawIndirectInfo *drawInfo);
+VkResult lunaDrawBufferIndirectCount(LunaBuffer vertexBuffer, const LunaDrawIndirectCountInfo *drawInfo);
 
 VkResult lunaDrawBufferIndexed(LunaBuffer vertexBuffer,
                                LunaBuffer indexBuffer,
                                VkIndexType indexType,
-                               LunaGraphicsPipeline pipeline,
-                               const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-                               uint32_t indexCount,
-                               uint32_t instanceCount,
-                               uint32_t firstIndex,
-                               int32_t vertexOffset,
-                               uint32_t firstInstance);
+                               const LunaDrawIndexedInfo *drawInfo);
 VkResult lunaDrawBufferIndexedIndirect(LunaBuffer vertexBuffer,
                                        LunaBuffer indexBuffer,
                                        VkIndexType indexType,
-                                       LunaGraphicsPipeline pipeline,
-                                       const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-                                       LunaBuffer buffer,
-                                       VkDeviceSize offset,
-                                       uint32_t drawCount,
-                                       uint32_t stride);
+                                       const LunaDrawIndexedIndirectInfo *drawInfo);
 VkResult lunaDrawBufferIndexedIndirectCount(LunaBuffer vertexBuffer,
                                             LunaBuffer indexBuffer,
                                             VkIndexType indexType,
-                                            LunaGraphicsPipeline pipeline,
-                                            const LunaGraphicsPipelineBindInfo *pipelineBindInfo,
-                                            LunaBuffer buffer,
-                                            VkDeviceSize offset,
-                                            LunaBuffer countBuffer,
-                                            VkDeviceSize countBufferOffset,
-                                            uint32_t maxDrawCount,
-                                            uint32_t stride);
+                                            const LunaDrawIndexedIndirectCountInfo *drawInfo);
 
 // TODO: This should take a pipeline layout, but those don't exist yet
 void lunaBindDescriptorSets(LunaGraphicsPipeline pipeline, const LunaDescriptorSetBindInfo *bindInfo);

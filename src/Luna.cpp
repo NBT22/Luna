@@ -75,11 +75,11 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     };
     CHECK_RESULT_RETURN(
             luna::device.commandPools().graphics->commandBuffer().resizeArray(luna::device,
-                                                                             *luna::device.commandPools().graphics,
-                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                             nullptr,
-                                                                             &semaphoreCreateInfo,
-                                                                             luna::swapchain.imageCount));
+                                                                              *luna::device.commandPools().graphics,
+                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                              nullptr,
+                                                                              &semaphoreCreateInfo,
+                                                                              luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;
     return VK_SUCCESS;
@@ -147,6 +147,7 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
 
     return VK_SUCCESS;
 }
+
 VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
 {
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
@@ -180,6 +181,7 @@ VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
 
     return VK_SUCCESS;
 }
+
 void lunaTransitionColorImageLayout(const VkImageLayout oldLayout, const VkImageLayout newLayout)
 {
     const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
@@ -212,6 +214,7 @@ void lunaTransitionColorImageLayout(const VkImageLayout oldLayout, const VkImage
                          1,
                          &memoryBarrier);
 }
+
 VkResult lunaEndFrame()
 {
     using namespace luna;
@@ -259,6 +262,7 @@ VkResult lunaEndFrame()
     boundIndexBuffer = LUNA_NULL_HANDLE;
     return presentationResult;
 }
+
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
                                   LunaDescriptorPool *descriptorPool)
 {
@@ -279,6 +283,7 @@ VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creation
     }
     return VK_SUCCESS;
 }
+
 VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
                                     LunaDescriptorSet *descriptorSets)
 {
@@ -308,6 +313,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
     }
     return VK_SUCCESS;
 }
+
 void lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const LunaWriteDescriptorSet *descriptorWrites)
 {
     using namespace luna;
@@ -360,6 +366,7 @@ void lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const LunaWrit
     }
     vkUpdateDescriptorSets(device, descriptorWriteCount, writes.data(), 0, nullptr);
 }
+
 void lunaWriteFramebufferToDescriptor(const LunaDescriptorSet descriptorSet)
 {
     vkDeviceWaitIdle(luna::device);
@@ -378,4 +385,117 @@ void lunaWriteFramebufferToDescriptor(const LunaDescriptorSet descriptorSet)
         .pImageInfo = &imageInfo,
     };
     vkUpdateDescriptorSets(luna::device, 1, &write, 0, nullptr);
+}
+
+VkResult lunaDraw(const LunaDrawInfo *drawInfo)
+{
+    assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
+                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
+                                                                             : *drawInfo->pipelineBindInfo));
+    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    vkCmdDraw(luna::device.commandPools().graphics->commandBuffer(),
+              drawInfo->vertexCount,
+              drawInfo->instanceCount,
+              drawInfo->firstVertex,
+              drawInfo->firstInstance);
+    return VK_SUCCESS;
+}
+
+VkResult lunaDrawIndirect(const LunaDrawIndirectInfo *drawInfo)
+{
+    assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE && drawInfo->buffer != LUNA_NULL_HANDLE);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
+                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
+                                                                             : *drawInfo->pipelineBindInfo));
+    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    const luna::BufferRegionIndex *bufferRegionIndex =
+            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    vkCmdDrawIndirect(luna::device.commandPools().graphics->commandBuffer(),
+                      bufferRegionIndex->buffer(),
+                      bufferRegionIndex->offset(),
+                      drawInfo->drawCount,
+                      drawInfo->stride == 0 ? sizeof(VkDrawIndirectCommand) : drawInfo->stride);
+    return VK_SUCCESS;
+}
+
+VkResult lunaDrawIndirectCount(const LunaDrawIndirectCountInfo *drawInfo)
+{
+    assert(drawInfo &&
+           drawInfo->pipeline != LUNA_NULL_HANDLE &&
+           drawInfo->buffer != LUNA_NULL_HANDLE &&
+           drawInfo->countBuffer != LUNA_NULL_HANDLE);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
+                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
+                                                                             : *drawInfo->pipelineBindInfo));
+    const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
+            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    const luna::BufferRegionIndex *countBufferRegionIndex =
+            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->countBuffer);
+    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    vkCmdDrawIndirectCount(luna::device.commandPools().graphics->commandBuffer(),
+                           drawParameterBufferRegionIndex->buffer(),
+                           drawParameterBufferRegionIndex->offset(),
+                           countBufferRegionIndex->buffer(),
+                           countBufferRegionIndex->offset(),
+                           drawInfo->maxDrawCount,
+                           drawInfo->stride == 0 ? sizeof(VkDrawIndirectCommand) : drawInfo->stride);
+    return VK_SUCCESS;
+}
+
+VkResult lunaDrawIndexed(const LunaDrawIndexedInfo *drawInfo)
+{
+    assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
+                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
+                                                                             : *drawInfo->pipelineBindInfo));
+    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    vkCmdDrawIndexed(luna::device.commandPools().graphics->commandBuffer(),
+                     drawInfo->indexCount,
+                     drawInfo->instanceCount,
+                     drawInfo->firstIndex,
+                     drawInfo->vertexOffset,
+                     drawInfo->firstInstance);
+    return VK_SUCCESS;
+}
+
+VkResult lunaDrawIndexedIndirect(const LunaDrawIndexedIndirectInfo *drawInfo)
+{
+    assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE && drawInfo->buffer != LUNA_NULL_HANDLE);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
+                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
+                                                                             : *drawInfo->pipelineBindInfo));
+    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    const luna::BufferRegionIndex *bufferRegionIndex =
+            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    vkCmdDrawIndexedIndirect(luna::device.commandPools().graphics->commandBuffer(),
+                             bufferRegionIndex->buffer(),
+                             bufferRegionIndex->offset(),
+                             drawInfo->drawCount,
+                             drawInfo->stride == 0 ? sizeof(VkDrawIndexedIndirectCommand) : drawInfo->stride);
+    return VK_SUCCESS;
+}
+
+VkResult lunaDrawIndexedIndirectCount(const LunaDrawIndexedIndirectCountInfo *drawInfo)
+{
+    assert(drawInfo &&
+           drawInfo->pipeline != LUNA_NULL_HANDLE &&
+           drawInfo->buffer != LUNA_NULL_HANDLE &&
+           drawInfo->countBuffer != LUNA_NULL_HANDLE);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
+                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
+                                                                             : *drawInfo->pipelineBindInfo));
+    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
+            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    const luna::BufferRegionIndex *countBufferRegionIndex =
+            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->countBuffer);
+    vkCmdDrawIndexedIndirectCount(luna::device.commandPools().graphics->commandBuffer(),
+                                  drawParameterBufferRegionIndex->buffer(),
+                                  drawParameterBufferRegionIndex->offset(),
+                                  countBufferRegionIndex->buffer(),
+                                  countBufferRegionIndex->offset(),
+                                  drawInfo->maxDrawCount,
+                                  drawInfo->stride == 0 ? sizeof(VkDrawIndexedIndirectCommand) : drawInfo->stride);
+    return VK_SUCCESS;
 }

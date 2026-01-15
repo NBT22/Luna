@@ -331,6 +331,7 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
                     }
                 }
                 assert(index != std::numeric_limits<size_t>::max()); // Internal state check
+                (void)index;
 
                 // TODO (0.3.0): Fix this!!
                 throw std::runtime_error("You hit the branch that doesn't work yet :(");

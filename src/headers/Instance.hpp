@@ -29,7 +29,8 @@ extern VkFormat depthImageFormat;
 extern uint32_t apiVersion;
 extern VkInstance instance;
 extern Device device;
-// TODO: Resizing
+// TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
+//  that way it can shrink if it grows to an absurd size
 extern BufferRegionIndex *stagingBuffer;
 extern VkPipeline boundPipeline;
 extern LunaBuffer boundVertexBuffer;

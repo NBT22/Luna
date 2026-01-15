@@ -536,6 +536,65 @@ typedef struct
         uint32_t height;
 } LunaRenderPassResizeInfo;
 
+typedef struct
+{
+        LunaGraphicsPipeline pipeline;
+        const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
+        uint32_t vertexCount;
+        uint32_t instanceCount;
+        uint32_t firstVertex;
+        uint32_t firstInstance;
+} LunaDrawInfo;
+
+typedef struct
+{
+        LunaGraphicsPipeline pipeline;
+        const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
+        LunaBuffer buffer;
+        uint32_t drawCount;
+        uint32_t stride;
+} LunaDrawIndirectInfo;
+
+typedef struct
+{
+        LunaGraphicsPipeline pipeline;
+        const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
+        LunaBuffer buffer;
+        LunaBuffer countBuffer;
+        uint32_t maxDrawCount;
+        uint32_t stride;
+} LunaDrawIndirectCountInfo;
+
+typedef struct
+{
+        LunaGraphicsPipeline pipeline;
+        const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
+        uint32_t indexCount;
+        uint32_t instanceCount;
+        uint32_t firstIndex;
+        int32_t vertexOffset;
+        uint32_t firstInstance;
+} LunaDrawIndexedInfo;
+
+typedef struct
+{
+        LunaGraphicsPipeline pipeline;
+        const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
+        LunaBuffer buffer;
+        uint32_t drawCount;
+        uint32_t stride;
+} LunaDrawIndexedIndirectInfo;
+
+typedef struct
+{
+        LunaGraphicsPipeline pipeline;
+        const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
+        LunaBuffer buffer;
+        LunaBuffer countBuffer;
+        uint32_t maxDrawCount;
+        uint32_t stride;
+} LunaDrawIndexedIndirectCountInfo;
+
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)
 }
