@@ -186,7 +186,7 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
     {
         assert(this != stagingBuffer);
         // TODO: Should this use a dedicated transfer command buffer
-        CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
+        CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer(1);
         CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
         CHECK_RESULT_RETURN(resize(stagingBuffer, bytes));
         assert(stagingBuffer->data() != nullptr);
@@ -387,7 +387,7 @@ void lunaBindVertexBuffers(const uint32_t firstBinding,
         buffersVector.emplace_back(bufferRegionIndex->buffer());
         offsetsVector.at(i) += bufferRegionIndex->offset();
     }
-    vkCmdBindVertexBuffers(luna::device.commandPools().graphics.commandBuffer(),
+    vkCmdBindVertexBuffers(luna::device.commandPools().graphics->commandBuffer(),
                            firstBinding,
                            bindingCount,
                            buffersVector.data(),
@@ -404,7 +404,7 @@ VkResult lunaDrawBuffer(const LunaBuffer vertexBuffer,
 {
     using namespace luna;
     assert(pipeline);
-    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    const CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<GraphicsPipeline>(pipeline)->bind(
             pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *pipelineBindInfo));
     assert(commandBuffer.isRecording());
@@ -432,7 +432,7 @@ VkResult lunaDrawBufferIndirect(const LunaBuffer vertexBuffer,
 {
     using namespace luna;
     assert(pipeline && buffer);
-    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    const CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<GraphicsPipeline>(pipeline)->bind(
             pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *pipelineBindInfo));
     assert(commandBuffer.isRecording());
@@ -468,7 +468,7 @@ VkResult lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer,
     assert(pipeline && buffer && countBuffer);
     const BufferRegionIndex *drawParameterBufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(buffer);
     const BufferRegionIndex *countBufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(countBuffer);
-    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    const CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<GraphicsPipeline>(pipeline)->bind(
             pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *pipelineBindInfo));
     assert(commandBuffer.isRecording());
@@ -505,7 +505,7 @@ VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
 {
     using namespace luna;
     assert(pipeline);
-    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    const CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<GraphicsPipeline>(pipeline)->bind(
             pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *pipelineBindInfo));
     assert(commandBuffer.isRecording());
@@ -545,7 +545,7 @@ VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
     using namespace luna;
     assert(pipeline && buffer);
     const BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(buffer);
-    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    const CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<GraphicsPipeline>(pipeline)->bind(
             pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *pipelineBindInfo));
     assert(commandBuffer.isRecording());
@@ -592,7 +592,7 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
     assert(pipeline && buffer && countBuffer);
     const BufferRegionIndex *drawParameterBufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(buffer);
     const BufferRegionIndex *countBufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(countBuffer);
-    const CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    const CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<GraphicsPipeline>(pipeline)->bind(
             pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *pipelineBindInfo));
     assert(commandBuffer.isRecording());

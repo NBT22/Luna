@@ -229,12 +229,12 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     CHECK_RESULT_RETURN(
-            luna::device.commandPools().graphics.commandBuffer().resizeArray(luna::device,
-                                                                             luna::device.commandPools().graphics,
-                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                             nullptr,
-                                                                             &semaphoreCreateInfo,
-                                                                             luna::swapchain.imageCount));
+            luna::device.commandPools().graphics->commandBuffer().resizeArray(luna::device,
+                                                                              *luna::device.commandPools().graphics,
+                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                              nullptr,
+                                                                              &semaphoreCreateInfo,
+                                                                              luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;
     swapchain.safeToUse = true;
@@ -272,6 +272,9 @@ std::list<BufferRegionIndex> bufferRegionIndices{};
 std::list<VkSampler> samplers{};
 std::list<Image> images{};
 } // namespace luna
+
+const LunaCommandPool LUNA_INTERNAL_GRAPHICS_COMMAND_POOL =
+        luna::helpers::toHandle(luna::device.commandPools().graphics);
 
 VkResult lunaInitializeVolk()
 {

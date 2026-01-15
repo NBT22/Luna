@@ -40,10 +40,7 @@ LUNA_DEFINE_HANDLE(LunaSlangSession);
 static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
 static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
 
-typedef enum
-{
-    LUNA_INTERNAL_GRAPHICS_COMMAND_POOL,
-} LunaInternalCommandPools;
+extern const LunaCommandPool LUNA_INTERNAL_GRAPHICS_COMMAND_POOL;
 
 typedef struct
 {

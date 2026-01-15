@@ -195,7 +195,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
     {
         extent.depth = 1;
     }
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer(1);
+    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer(1);
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
 
     CHECK_RESULT_RETURN(BufferRegionIndex::resize(stagingBuffer, writeInfo.bytes));

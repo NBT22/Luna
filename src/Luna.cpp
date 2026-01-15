@@ -74,8 +74,8 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     CHECK_RESULT_RETURN(
-            luna::device.commandPools().graphics.commandBuffer().resizeArray(luna::device,
-                                                                             luna::device.commandPools().graphics,
+            luna::device.commandPools().graphics->commandBuffer().resizeArray(luna::device,
+                                                                             *luna::device.commandPools().graphics,
                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                                                              nullptr,
                                                                              &semaphoreCreateInfo,
@@ -115,7 +115,7 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
     assert(capabilities.minImageExtent.height <= swapchain.extent.height &&
            swapchain.extent.height <= capabilities.maxImageExtent.height);
 
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.waitForAllFences(device));
     CHECK_RESULT_RETURN(commandBuffer.recreateSemaphores(device));
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
@@ -128,9 +128,12 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
     for (uint32_t i = 0; i < renderPassResizeInfoCount; i++)
     {
         const LunaRenderPassResizeInfo &renderPassResizeInfo = renderPassResizeInfos[i];
-        const uint32_t width = renderPassResizeInfo.width == -1u ? swapchain.extent.width : renderPassResizeInfo.width;
-        const uint32_t height = renderPassResizeInfo.height == -1u ? swapchain.extent.height
-                                                                   : renderPassResizeInfo.height;
+        const uint32_t width = renderPassResizeInfo.width == LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH
+                                       ? swapchain.extent.width
+                                       : renderPassResizeInfo.width;
+        const uint32_t height = renderPassResizeInfo.height == LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT
+                                        ? swapchain.extent.height
+                                        : renderPassResizeInfo.height;
         CHECK_RESULT_RETURN(helpers::fromHandle<RenderPass>(renderPassResizeInfo.renderPass)
                                     ->recreateFramebuffer(device, swapchain, width, height));
     }
@@ -146,7 +149,7 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
 }
 VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
 {
-    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
     // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
     CHECK_RESULT_RETURN(commandBuffer.waitForFence(luna::device));
     CHECK_RESULT_RETURN(commandBuffer.resetFence(luna::device));
@@ -179,7 +182,7 @@ VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
 }
 void lunaTransitionColorImageLayout(const VkImageLayout oldLayout, const VkImageLayout newLayout)
 {
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
     assert(commandBuffer.isRecording());
 
     constexpr VkImageSubresourceRange subresourceRange = {
@@ -212,16 +215,16 @@ void lunaTransitionColorImageLayout(const VkImageLayout oldLayout, const VkImage
 VkResult lunaEndFrame()
 {
     using namespace luna;
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     assert(commandBuffer.isRecording());
 
-    const Semaphore &secondaryGraphicsSemaphore = device.commandPools().graphics.commandBuffer(1).semaphore();
+    const Semaphore &secondaryGraphicsSemaphore = device.commandPools().graphics->commandBuffer(1).semaphore();
     const std::array<VkSemaphore, 2> waitSemaphores = {commandBuffer.semaphore(), secondaryGraphicsSemaphore};
     const std::array<VkPipelineStageFlags, 2> waitStageMasks = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                                                 secondaryGraphicsSemaphore.stageMask()};
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = device.commandPools().graphics.commandBuffer(1).getAndSetIsSignaled(false) ? 2u : 1u,
+        .waitSemaphoreCount = device.commandPools().graphics->commandBuffer(1).getAndSetIsSignaled(false) ? 2u : 1u,
         .pWaitSemaphores = waitSemaphores.data(),
         .pWaitDstStageMask = waitStageMasks.data(),
         .commandBufferCount = 1,

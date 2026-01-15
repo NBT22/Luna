@@ -814,7 +814,7 @@ void GraphicsPipeline::destroy()
 VkResult GraphicsPipeline::pushConstants() const
 {
     const std::vector<LunaPushConstantsRange> &pushConstantsRanges = pushConstantsRanges_;
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device));
     uint32_t offset = 0;
     for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
@@ -833,7 +833,7 @@ VkResult GraphicsPipeline::pushConstants() const
 }
 VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) const
 {
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
     for (uint32_t i = 0; i < bindInfo.dynamicStateCount; i++)
     {
@@ -915,7 +915,7 @@ void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescr
         descriptorSets.emplace_back(
                 *luna::helpers::fromHandle<luna::DescriptorSetIndex>(bindInfo->descriptorSets[i])->set);
     }
-    vkCmdBindDescriptorSets(luna::device.commandPools().graphics.commandBuffer(),
+    vkCmdBindDescriptorSets(luna::device.commandPools().graphics->commandBuffer(),
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
                             luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->layout(),
                             bindInfo->firstSet,

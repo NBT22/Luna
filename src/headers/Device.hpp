@@ -40,17 +40,17 @@ class Device
         VkResult addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
                                            LunaCommandPool *commandPool);
 
-        [[nodiscard]] VkSharingMode sharingMode() const;
+        [[nodiscard]] VkSharingMode sharingMode() const noexcept;
         /// A getter for the @c familyCount_ value
         /// @return The total count of unique families
-        [[nodiscard]] uint32_t familyCount() const;
-        [[nodiscard]] const uint32_t *queueFamilyIndices() const;
-        [[nodiscard]] VmaAllocator allocator() const;
-        [[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const;
-        [[nodiscard]] FamilyValues<CommandPool> &commandPools();
-        [[nodiscard]] const FamilyValues<CommandPool> &commandPools() const;
+        [[nodiscard]] uint32_t familyCount() const noexcept;
+        [[nodiscard]] const uint32_t *queueFamilyIndices() const noexcept;
+        [[nodiscard]] VmaAllocator allocator() const noexcept;
+        [[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const noexcept;
+        [[nodiscard]] FamilyValues<CommandPool *> &commandPools() noexcept;
+        [[nodiscard]] const FamilyValues<CommandPool *> &commandPools() const noexcept;
         [[nodiscard]] Semaphore &renderFinishedSemaphore(uint32_t imageIndex);
-        [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const;
+        [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const noexcept;
 
     private:
         VkResult findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -76,9 +76,8 @@ class Device
         FamilyValues<bool> hasFamily_{};
         FamilyValues<VkQueue> familyQueues_{};
         FamilyValues<uint32_t> familyIndices_{};
-        FamilyValues<CommandPool> internalCommandPools_{};
-        std::vector<CommandPool> applicationCommandPools_{};
-        std::list<uint32_t> applicationCommandPoolIndices_{};
+        std::list<CommandPool> commandPools_{};
+        FamilyValues<CommandPool *> internalCommandPools_{};
         std::vector<Semaphore> renderFinishedSemaphores_{};
 
         std::list<ShaderModule> shaderModules_{};
@@ -111,9 +110,18 @@ inline void Device::destroy()
         return;
     }
     shaderModules_.clear();
-    internalCommandPools_.graphics.destroy(logicalDevice_);
-    internalCommandPools_.transfer.destroy(logicalDevice_);
-    internalCommandPools_.presentation.destroy(logicalDevice_);
+    if (internalCommandPools_.graphics != nullptr)
+    {
+        internalCommandPools_.graphics->destroy();
+    }
+    if (internalCommandPools_.transfer != nullptr)
+    {
+        internalCommandPools_.transfer->destroy();
+    }
+    if (internalCommandPools_.presentation != nullptr)
+    {
+        internalCommandPools_.presentation->destroy();
+    }
     for (const Semaphore &renderFinishedSemaphore: renderFinishedSemaphores_)
     {
         vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore, nullptr);
@@ -153,51 +161,39 @@ inline VkResult Device::createSemaphores(const uint32_t imageCount)
 inline VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
                                                   LunaCommandPool *commandPool)
 {
-    const std::vector<CommandPool>::iterator &commandPoolIterator = std::find_if(applicationCommandPools_.begin(),
-                                                                                 applicationCommandPools_.end(),
-                                                                                 CommandPool::isDestroyed);
-    if (commandPoolIterator == applicationCommandPools_.end())
-    {
-        applicationCommandPoolIndices_.emplace_back(applicationCommandPools_.size());
-        TRY_CATCH_RESULT(applicationCommandPools_.emplace_back(logicalDevice_, creationInfo));
-    } else
-    {
-        const uint32_t index = commandPoolIterator - applicationCommandPools_.begin();
-        applicationCommandPoolIndices_.emplace_back(index);
-        CHECK_RESULT_RETURN(applicationCommandPools_.at(index).allocate(logicalDevice_, creationInfo));
-    }
+    TRY_CATCH_RESULT(commandPools_.emplace_back(creationInfo));
     if (commandPool != nullptr)
     {
-        *commandPool = helpers::toHandle(&applicationCommandPoolIndices_.back());
+        *commandPool = helpers::toHandle(&commandPools_.back());
     }
     return VK_SUCCESS;
 }
 
-inline VkSharingMode Device::sharingMode() const
+inline VkSharingMode Device::sharingMode() const noexcept
 {
     return familyCount_ == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 }
-inline uint32_t Device::familyCount() const
+inline uint32_t Device::familyCount() const noexcept
 {
     return familyCount_;
 }
-inline const uint32_t *Device::queueFamilyIndices() const
+inline const uint32_t *Device::queueFamilyIndices() const noexcept
 {
     return queueFamilyIndices_.data();
 }
-inline VmaAllocator Device::allocator() const
+inline VmaAllocator Device::allocator() const noexcept
 {
     return allocator_;
 }
-inline const FamilyValues<VkQueue> &Device::familyQueues() const
+inline const FamilyValues<VkQueue> &Device::familyQueues() const noexcept
 {
     return familyQueues_;
 }
-inline FamilyValues<CommandPool> &Device::commandPools()
+inline FamilyValues<CommandPool *> &Device::commandPools() noexcept
 {
     return internalCommandPools_;
 }
-inline const FamilyValues<CommandPool> &Device::commandPools() const
+inline const FamilyValues<CommandPool *> &Device::commandPools() const noexcept
 {
     return internalCommandPools_;
 }
@@ -205,7 +201,7 @@ inline Semaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex)
 {
     return renderFinishedSemaphores_.at(imageIndex);
 }
-inline VkPhysicalDeviceVulkan13Features Device::vulkan13Features() const
+inline VkPhysicalDeviceVulkan13Features Device::vulkan13Features() const noexcept
 {
     return vulkan13Features_;
 }
@@ -443,19 +439,20 @@ inline VkResult Device::createCommandPools()
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = familyIndices_.graphics,
     };
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocate(logicalDevice_, graphicsCommandPoolCreateInfo));
+    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &graphicsCommandPoolCreateInfo));
+    internalCommandPools_.graphics = &commandPools_.back();
 
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer(logicalDevice_,
-                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                             nullptr,
-                                                                             &semaphoreCreateInfo));
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics.allocateCommandBuffer(logicalDevice_,
-                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                             nullptr,
-                                                                             &semaphoreCreateInfo));
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(logicalDevice_,
+                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                              nullptr,
+                                                                              &semaphoreCreateInfo));
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(logicalDevice_,
+                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                              nullptr,
+                                                                              &semaphoreCreateInfo));
 
     // TODO: Both the transfer and presentation families are currently unused
     // const VkCommandPoolCreateInfo transferCommandPoolCreateInfo = {

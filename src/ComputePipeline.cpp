@@ -53,7 +53,7 @@ ComputePipeline::~ComputePipeline()
 
 VkResult ComputePipeline::bind(const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const
 {
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
 
     if (pipeline_ != boundPipeline)
@@ -97,7 +97,7 @@ VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creati
 VkResult lunaDispatchCompute(const LunaDispatchComputeInfo *info)
 {
     assert(info);
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
     assert(commandBuffer.isRecording());
     CHECK_RESULT_RETURN(
             luna::helpers::fromHandle<luna::ComputePipeline>(info->pipeline)->bind(info->descriptorSetBindInfo));

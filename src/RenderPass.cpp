@@ -554,7 +554,7 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
 VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
 {
     assert(swapchain.imageIndex != -1u);
-    CommandBuffer &commandBuffer = device.commandPools().graphics.commandBuffer();
+    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
 
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
 
@@ -632,14 +632,14 @@ VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPa
 
 void lunaNextSubpass()
 {
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
     assert(commandBuffer.isRecording());
     vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void lunaEndRenderPass()
 {
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics.commandBuffer();
+    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
     assert(commandBuffer.isRecording());
     vkCmdEndRenderPass(commandBuffer);
 }

@@ -15,27 +15,24 @@ namespace luna
 class CommandPool
 {
     public:
-        static bool isDestroyed(const CommandPool &commandPool);
+        CommandPool() = default;
+        explicit CommandPool(VkDevice logicalDevice, const VkCommandPoolCreateInfo *poolCreateInfo);
+        explicit CommandPool(const LunaCommandPoolCreationInfo &creationInfo);
 
         operator const VkCommandPool &() const;
 
-        CommandPool() = default;
-        CommandPool(VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo);
+        void destroy();
 
-        void destroy(VkDevice logicalDevice);
-
-        VkResult allocate(VkDevice logicalDevice, const VkCommandPoolCreateInfo &poolCreateInfo);
-        VkResult allocate(VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo);
-        VkResult allocateCommandBuffer(VkDevice logicalDevice,
-                                       VkCommandBufferLevel commandBufferLevel,
-                                       const void *allocateInfoPNext,
-                                       uint32_t arraySize = 1);
-        VkResult allocateCommandBuffer(VkDevice logicalDevice,
-                                       VkCommandBufferLevel commandBufferLevel,
-                                       const void *allocateInfoPNext,
-                                       const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                                       uint32_t arraySize = 1);
-        VkResult reset(VkDevice logicalDevice, VkCommandPoolResetFlags flags, uint64_t timeout = UINT64_MAX) const;
+        [[nodiscard]] VkResult allocateCommandBuffer(VkDevice logicalDevice,
+                                                     VkCommandBufferLevel commandBufferLevel,
+                                                     const void *allocateInfoPNext,
+                                                     uint32_t arraySize = 1);
+        [[nodiscard]] VkResult allocateCommandBuffer(VkDevice logicalDevice,
+                                                     VkCommandBufferLevel commandBufferLevel,
+                                                     const void *allocateInfoPNext,
+                                                     const VkSemaphoreCreateInfo *semaphoreCreateInfo,
+                                                     uint32_t arraySize = 1);
+        [[nodiscard]] VkResult reset(VkCommandPoolResetFlags flags, uint64_t timeout = UINT64_MAX) const;
 
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
         [[nodiscard]] CommandBuffer &commandBuffer(uint32_t index = 0);
@@ -55,52 +52,19 @@ class CommandPool
 
 namespace luna
 {
-inline bool CommandPool::isDestroyed(const CommandPool &commandPool)
+inline CommandPool::CommandPool(const VkDevice logicalDevice, const VkCommandPoolCreateInfo *poolCreateInfo)
 {
-    return commandPool.isDestroyed_;
-}
-
-inline CommandPool::CommandPool(const VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo)
-{
-    CHECK_RESULT_THROW(allocate(logicalDevice, creationInfo));
-}
-
-inline void CommandPool::destroy(const VkDevice logicalDevice)
-{
-    if (isDestroyed_)
-    {
-        return;
-    }
-    for (const CommandBuffer &commandBuffer: commandBuffers_)
-    {
-        commandBuffer.destroy(logicalDevice);
-    }
-    vkDestroyCommandPool(logicalDevice, commandPool_, nullptr);
-    isDestroyed_ = true;
+    CHECK_RESULT_THROW(vkCreateCommandPool(logicalDevice, poolCreateInfo, nullptr, &commandPool_));
+    isDestroyed_ = false;
 }
 
 inline CommandPool::operator const VkCommandPool &() const
 {
+    assert(!isDestroyed_);
     return commandPool_;
 }
 
-inline VkResult CommandPool::allocate(const VkDevice logicalDevice, const VkCommandPoolCreateInfo &poolCreateInfo)
-{
-    isDestroyed_ = false;
-    CHECK_RESULT_RETURN(vkCreateCommandPool(logicalDevice, &poolCreateInfo, nullptr, &commandPool_));
-    return VK_SUCCESS;
-}
-inline VkResult CommandPool::allocate(const VkDevice logicalDevice, const LunaCommandPoolCreationInfo &creationInfo)
-{
-    const VkCommandPoolCreateInfo poolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = creationInfo.flags,
-        // TODO: queueFamilyIndex
-    };
-    CHECK_RESULT_RETURN(allocate(logicalDevice, poolCreateInfo));
-    return VK_SUCCESS;
-}
-inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
+inline VkResult CommandPool::allocateCommandBuffer(const VkDevice logicalDevice,
                                                    VkCommandBufferLevel commandBufferLevel,
                                                    const void *allocateInfoPNext,
                                                    const uint32_t arraySize)
@@ -113,7 +77,7 @@ inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
                                                   arraySize));
     return VK_SUCCESS;
 }
-inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
+inline VkResult CommandPool::allocateCommandBuffer(const VkDevice logicalDevice,
                                                    VkCommandBufferLevel commandBufferLevel,
                                                    const void *allocateInfoPNext,
                                                    const VkSemaphoreCreateInfo *semaphoreCreateInfo,
@@ -128,31 +92,15 @@ inline VkResult CommandPool::allocateCommandBuffer(VkDevice logicalDevice,
                                                   arraySize));
     return VK_SUCCESS;
 }
-inline VkResult CommandPool::reset(const VkDevice logicalDevice,
-                                   const VkCommandPoolResetFlags flags,
-                                   const uint64_t timeout) const
-{
-    for (const CommandBuffer &commandBuffer: commandBuffers_)
-    {
-        if (commandBuffer.type() == CommandBuffer::Type::ARRAY)
-        {
-            CHECK_RESULT_RETURN(commandBuffer.commandBufferArray().waitForAllFences(logicalDevice, timeout));
-        } else
-        {
-            CHECK_RESULT_RETURN(commandBuffer.commandBuffer().waitForFence(logicalDevice, timeout));
-        }
-    }
-    CHECK_RESULT_RETURN(vkResetCommandPool(logicalDevice, commandPool_, flags));
-
-    return VK_SUCCESS;
-}
 
 inline const CommandBuffer &CommandPool::commandBuffer(const uint32_t index) const
 {
+    assert(!isDestroyed_);
     return commandBuffers_.at(index);
 }
 inline CommandBuffer &CommandPool::commandBuffer(const uint32_t index)
 {
+    assert(!isDestroyed_);
     return commandBuffers_.at(index);
 }
 } // namespace luna

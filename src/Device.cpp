@@ -214,8 +214,9 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     };
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
-    CHECK_RESULT_THROW(createCommandPools());
     isDestroyed_ = false;
+
+    CHECK_RESULT_THROW(createCommandPools());
 }
 } // namespace luna
 
