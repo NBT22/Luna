@@ -47,13 +47,13 @@ class BufferRegion
          * @param[in] creationInfo The creation information for the buffer region
          * @param[out] outBuffer The buffer to place the region in
          * @param[out] outOffset The offset into the buffer at which to place the region
-         * @param[out] outUsesFreeSpace If the region is using the buffer's freeBytes or unusedBytes
+         * @param[out] outIterator An iterator to the buffer region that the new buffer region should be placed before
          * @return @c VK_SUCCESS if space was found for the region, or a meaningful result code otherwise
          */
         static VkResult findSpaceForBufferRegion(const LunaBufferCreationInfo &creationInfo,
                                                  Buffer *&outBuffer,
                                                  size_t &outOffset,
-                                                 bool &outUsesFreeSpace);
+                                                 std::list<BufferRegion>::iterator &outIterator);
         /// Helper method used by other overloads of @c createBufferRegion
         static void createBufferRegion(Buffer &buffer,
                                        size_t offset,
@@ -61,10 +61,10 @@ class BufferRegion
                                        VkDeviceSize size,
                                        const LunaBufferCreationInfo *creationInfos,
                                        LunaBuffer **bufferOut,
-                                       bool usesFreeSpace);
+                                       const std::list<BufferRegion>::iterator &iterator);
 
     public: // BufferRegion public members
-        BufferRegion(size_t size, uint8_t *data, Buffer *buffer);
+        BufferRegion(size_t size, uint8_t *data);
         BufferRegion(size_t size, uint8_t *data, size_t offset, Buffer *buffer, LunaBuffer *index);
         BufferRegion(size_t totalSize,
                      uint8_t *data,
@@ -74,14 +74,7 @@ class BufferRegion
                      const LunaBufferCreationInfo *creationInfos,
                      LunaBuffer **lunaBuffers);
 
-        constexpr bool operator==(const BufferRegion &other) const
-        {
-            return buffer_ == other.buffer_ &&
-                   offset_ == other.offset_ &&
-                   size_ == other.size_ &&
-                   data_ == other.data_ &&
-                   subRegions_ == other.subRegions_;
-        }
+
 
         [[nodiscard]] size_t size() const;
         [[nodiscard]] size_t offset(const SubRegion *subRegion = nullptr) const;
@@ -90,7 +83,6 @@ class BufferRegion
         size_t size_{};
         uint8_t *data_{};
         size_t offset_{};
-        Buffer *buffer_{};
         std::list<SubRegion> subRegions_{};
 };
 class BufferRegionIndex
@@ -103,7 +95,6 @@ class BufferRegionIndex
         static void destroy(BufferRegionIndex *const &bufferRegionIndex);
         /// Removes a buffer region index from the list. Calling this function with an invalid or null pointer will have no effect
         static void destroy(BufferRegionIndex *&bufferRegionIndex);
-        [[nodiscard]] static VkResult reserve(BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize);
         [[nodiscard]] static VkResult resize(BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize);
 
     private:
@@ -129,8 +120,10 @@ class BufferRegionIndex
         [[nodiscard]] size_t offset() const;
         [[nodiscard]] size_t size() const;
         [[nodiscard]] uint8_t *data() const;
+        [[nodiscard]] VkBufferCreateFlags creationFlags() const;
+        [[nodiscard]] VkBufferUsageFlags usageFlags() const;
+        void allocationCreateInfo(VmaAllocationCreateInfo &allocationCreateInfo) const;
         void creationInfo(LunaBufferCreationInfo &creationInfo) const;
-        void creationInfo(LunaBufferCreationInfo &creationInfo, VmaAllocationCreateInfo &allocationCreateInfo) const;
         [[nodiscard]] const VkBuffer &buffer() const;
         [[nodiscard]] const BufferRegion &bufferRegion() const;
         [[nodiscard]] const BufferRegion::SubRegion &subRegion() const;
@@ -158,9 +151,6 @@ class Buffer
 
         bool operator==(const Buffer &other) const;
 
-        void creationInfo(LunaBufferCreationInfo &creationInfo) const;
-        void creationInfo(LunaBufferCreationInfo &creationInfo, VmaAllocationCreateInfo &allocationCreateInfo) const;
-
     private: // Buffer private members
         std::atomic_bool destroyed_{true};
         VkBuffer buffer_{};
@@ -185,12 +175,11 @@ class Buffer
 
 namespace luna
 {
-inline BufferRegion::BufferRegion(const size_t size, uint8_t *data, Buffer *buffer)
+inline BufferRegion::BufferRegion(const size_t size, uint8_t *data)
 {
     assert(size_ == 0 || size <= size_);
     size_ = size;
     data_ = data;
-    buffer_ = buffer;
 }
 
 inline VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *buffer)
@@ -202,11 +191,14 @@ inline VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &c
                                                  const uint32_t count,
                                                  const LunaBufferCreationInfo *creationInfos)
 {
+    // TODO: Support for 0 byte buffer creation
+    assert(creationInfo.size != 0);
+
     Buffer *buffer{};
     size_t offset{};
-    bool usesFreeSpace{};
-    CHECK_RESULT_RETURN(findSpaceForBufferRegion(creationInfo, buffer, offset, usesFreeSpace));
-    createBufferRegion(*buffer, offset, count, creationInfo.size, creationInfos, bufferOut, usesFreeSpace);
+    std::list<BufferRegion>::iterator iterator{};
+    CHECK_RESULT_RETURN(findSpaceForBufferRegion(creationInfo, buffer, offset, iterator));
+    createBufferRegion(*buffer, offset, count, creationInfo.size, creationInfos, bufferOut, iterator);
     return VK_SUCCESS;
 }
 
@@ -216,18 +208,18 @@ inline void BufferRegion::createBufferRegion(Buffer &buffer,
                                              const VkDeviceSize size,
                                              const LunaBufferCreationInfo *creationInfos,
                                              LunaBuffer **bufferOut,
-                                             const bool usesFreeSpace)
+                                             const std::list<BufferRegion>::iterator &iterator)
 {
     uint8_t *regionData = buffer.data_ == nullptr ? nullptr : static_cast<uint8_t *>(buffer.data_) + offset;
     if (count > 1)
     {
         assert(count > 1 && creationInfos);
-        buffer.regions_.emplace_back(size, regionData, offset, &buffer, count, creationInfos, bufferOut);
+        buffer.regions_.emplace(iterator, size, regionData, offset, &buffer, count, creationInfos, bufferOut);
     } else
     {
-        buffer.regions_.emplace_back(size, regionData, offset, &buffer, *bufferOut);
+        buffer.regions_.emplace(iterator, size, regionData, offset, &buffer, *bufferOut);
     }
-    if (usesFreeSpace)
+    if (iterator == buffer.regions_.end())
     {
         buffer.freeBytes_ -= size;
     } else
@@ -444,16 +436,23 @@ inline uint8_t *BufferRegionIndex::data() const
     }
     return bufferRegion_->data_;
 }
+inline VkBufferCreateFlags BufferRegionIndex::creationFlags() const
+{
+    return buffer_->creationFlags_;
+}
+inline VkBufferUsageFlags BufferRegionIndex::usageFlags() const
+{
+    return buffer_->usageFlags_;
+}
+inline void BufferRegionIndex::allocationCreateInfo(VmaAllocationCreateInfo &allocationCreateInfo) const
+{
+    allocationCreateInfo = buffer_->allocationCreateInfo_;
+}
 inline void BufferRegionIndex::creationInfo(LunaBufferCreationInfo &creationInfo) const
 {
     creationInfo.size = size();
-    buffer_->creationInfo(creationInfo);
-}
-inline void BufferRegionIndex::creationInfo(LunaBufferCreationInfo &creationInfo,
-                                            VmaAllocationCreateInfo &allocationCreateInfo) const
-{
-    creationInfo.size = size();
-    buffer_->creationInfo(creationInfo, allocationCreateInfo);
+    creationInfo.flags = buffer_->creationFlags_;
+    creationInfo.usage = buffer_->usageFlags_;
 }
 inline const VkBuffer &BufferRegionIndex::buffer() const
 {
@@ -495,19 +494,6 @@ inline Buffer::operator const VkBuffer *() const
 inline bool Buffer::operator==(const Buffer &other) const
 {
     return data_ == other.data_ && allocation_ == other.allocation_ && buffer_ == other.buffer_;
-}
-
-inline void Buffer::creationInfo(LunaBufferCreationInfo &creationInfo) const
-{
-    creationInfo.flags = creationFlags_;
-    creationInfo.usage = usageFlags_;
-}
-inline void Buffer::creationInfo(LunaBufferCreationInfo &creationInfo,
-                                 VmaAllocationCreateInfo &allocationCreateInfo) const
-{
-    creationInfo.flags = creationFlags_;
-    creationInfo.usage = usageFlags_;
-    allocationCreateInfo = allocationCreateInfo_;
 }
 
 } // namespace luna

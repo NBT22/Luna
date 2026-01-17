@@ -66,6 +66,8 @@ void lunaWriteFramebufferToDescriptor(LunaDescriptorSet descriptorSet);
  */
 VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule);
 
+// TODO (0.3.0): Add lunaDestroyShaderModule
+
 /**
  * @brief Create a new graphics pipeline.
  * @param[in] creationInfo A pointer to the @c LunaGraphicsPipelineCreationInfo structure containing information about how to create the graphics pipeline.

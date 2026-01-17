@@ -25,7 +25,7 @@ static constexpr long double BLOCK_SIZE = 32 * 1024 * 1024;
 namespace luna
 {
 BufferRegion::BufferRegion(const size_t size, uint8_t *data, const size_t offset, Buffer *buffer, LunaBuffer *index):
-    BufferRegion(size, data, buffer)
+    BufferRegion(size, data)
 {
     offset_ = offset;
     bufferRegionIndices.emplace_back(buffer, this);
@@ -41,7 +41,7 @@ BufferRegion::BufferRegion(const size_t totalSize,
                            const uint32_t count,
                            const LunaBufferCreationInfo *creationInfos,
                            LunaBuffer **lunaBuffers):
-    BufferRegion(totalSize, data, buffer)
+    BufferRegion(totalSize, data)
 {
     offset_ = offset;
 
@@ -62,7 +62,7 @@ BufferRegion::BufferRegion(const size_t totalSize,
 VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &creationInfo,
                                                 Buffer *&outBuffer,
                                                 size_t &outOffset,
-                                                bool &outUsesFreeSpace)
+                                                std::list<BufferRegion>::iterator &outIterator)
 {
     for (Buffer &buffer: buffers)
     {
@@ -83,12 +83,12 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
             {
                 outBuffer = &buffer;
                 outOffset = 0;
-                outUsesFreeSpace = false;
+                outIterator = buffer.regions_.begin();
                 return VK_SUCCESS;
             }
             assert(buffer.regions_.size() != 1); // Internal state check
             const auto hasLargeEnoughGap = [&creationInfo](const BufferRegion &a, const BufferRegion &b) -> bool {
-                return a.offset() + a.size() < b.offset() - creationInfo.size;
+                return creationInfo.size <= b.offset() && a.offset() + a.size() < b.offset() - creationInfo.size;
             };
             const std::list<BufferRegion>::iterator regionIterator = std::ranges::adjacent_find(buffer.regions_,
                                                                                                 hasLargeEnoughGap);
@@ -96,7 +96,9 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
             {
                 outBuffer = &buffer;
                 outOffset = regionIterator->offset() + regionIterator->size();
-                outUsesFreeSpace = false;
+                outIterator = regionIterator;
+                ++outIterator;
+                assert((regionIterator != buffer.regions_.end()));
                 return VK_SUCCESS;
             }
             // No gap large enough to fit the new region was found, so continuing on to see if it can go at the end
@@ -107,7 +109,7 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
                    buffer.regions_.back().offset_ + buffer.regions_.back().size_); // Internal state check
             outBuffer = &buffer;
             outOffset = buffer.usedBytes_ + buffer.unusedBytes_;
-            outUsesFreeSpace = true;
+            outIterator = buffer.regions_.end();
             return VK_SUCCESS;
         }
     }
@@ -133,7 +135,7 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
                                                                                   : allocationCreateInfo));
     outBuffer = &buffers.back();
     outOffset = 0;
-    outUsesFreeSpace = true;
+    outIterator = outBuffer->regions_.end();
     return VK_SUCCESS;
 }
 
@@ -214,6 +216,7 @@ BufferRegionIndex::~BufferRegionIndex()
         {
             buffer_->unusedBytes_ += bufferRegion_->size_;
         }
+        buffer_->usedBytes_ -= bufferRegion_->size_;
     }
     if (bufferRegion_->subRegions_.empty())
     {
@@ -336,7 +339,7 @@ void lunaDestroyBuffer(const LunaBuffer buffer)
     luna::BufferRegionIndex::destroy(luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer));
 }
 
-VkResult lunaReserveBuffer(LunaBuffer *buffer, const VkDeviceSize size)
+VkResult lunaGrowBuffer(LunaBuffer *buffer, const VkDeviceSize size)
 {
     assert(*buffer);
     if (luna::helpers::fromHandle<luna::BufferRegionIndex>(*buffer)->size() < size)
@@ -372,17 +375,38 @@ VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const LunaBufferWriteInf
     return VK_SUCCESS;
 }
 
-void lunaBufferGetCreationInfo(const LunaBuffer buffer,
+VkDeviceSize lunaGetBufferSize(const LunaBuffer buffer)
+{
+    // TODO: luna::BufferRegionIndex::size() returns a size_t but we are assuming it's the same size as VkDeviceSize
+    return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->size();
+}
+
+VkBufferCreateFlags lunaGetBufferCreationFlags(const LunaBuffer buffer)
+{
+    return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->creationFlags();
+}
+
+VkBufferUsageFlags lunaGetBufferUsageFlags(const LunaBuffer buffer)
+{
+    return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->usageFlags();
+}
+
+void lunaGetBufferAllocationCreateInfo(const LunaBuffer buffer, VmaAllocationCreateInfo *allocationCreateInfo)
+{
+    assert(allocationCreateInfo);
+    luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->allocationCreateInfo(*allocationCreateInfo);
+}
+
+void lunaGetBufferCreationInfo(const LunaBuffer buffer,
                                LunaBufferCreationInfo *creationInfo,
                                VmaAllocationCreateInfo *allocationCreateInfo)
 {
     assert(creationInfo);
+    const luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
+    bufferRegionIndex->creationInfo(*creationInfo);
     if (allocationCreateInfo != nullptr)
     {
-        luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->creationInfo(*creationInfo, *allocationCreateInfo);
-    } else
-    {
-        luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->creationInfo(*creationInfo);
+        bufferRegionIndex->allocationCreateInfo(*allocationCreateInfo);
     }
 }
 
