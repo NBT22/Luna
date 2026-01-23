@@ -76,9 +76,20 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
             // This buffer is either destroyed or was created using flags incompatible with the new region
             continue;
         }
+        if (buffer.regions_.empty())
+        {
+            assert(buffer.usedBytes_ == 0 && buffer.unusedBytes_ == 0); // Internal state check
+            if (buffer.freeBytes_ < creationInfo.size)
+            {
+                continue;
+            }
+            outBuffer = &buffer;
+            outOffset = 0;
+            outIterator = buffer.regions_.end();
+            return VK_SUCCESS;
+        }
         if (creationInfo.size <= buffer.unusedBytes_) // Buffer has enough dead space to fit the new region
         {
-            assert(!buffer.regions_.empty()); // Internal state check
             if (creationInfo.size <= buffer.regions_.front().offset_) // New region can fit before the first region
             {
                 outBuffer = &buffer;
@@ -118,7 +129,7 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
     const VkBufferCreateInfo bufferCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .flags = creationInfo.flags,
-        .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::ceil(creationInfo.size / BLOCK_SIZE)),
+        .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::max(std::ceil(creationInfo.size / BLOCK_SIZE), 1.0L)),
         .usage = creationInfo.usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         .sharingMode = device.sharingMode(),
         .queueFamilyIndexCount = device.familyCount(),
@@ -137,6 +148,48 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
     outOffset = 0;
     outIterator = outBuffer->regions_.end();
     return VK_SUCCESS;
+}
+void BufferRegion::createBufferRegion(Buffer &buffer,
+                                      const size_t offset,
+                                      const uint32_t count,
+                                      const VkDeviceSize size,
+                                      const LunaBufferCreationInfo *creationInfos,
+                                      LunaBuffer **bufferOut,
+                                      const std::list<BufferRegion>::iterator &iterator)
+{
+    if (size == 0)
+    {
+        assert(count == 1);
+        bufferRegionIndices.emplace_back(&buffer, nullptr);
+        if (bufferOut != nullptr && *bufferOut != nullptr)
+        {
+            **bufferOut = helpers::toHandle(&bufferRegionIndices.back());
+        }
+        return;
+    }
+
+    uint8_t *regionData = buffer.data_ == nullptr ? nullptr : static_cast<uint8_t *>(buffer.data_) + offset;
+    if (count > 1)
+    {
+        assert(count > 1 && creationInfos);
+        buffer.regions_.emplace(iterator, size, regionData, offset, &buffer, count, creationInfos, bufferOut);
+    } else
+    {
+        buffer.regions_.emplace(iterator,
+                                size,
+                                regionData,
+                                offset,
+                                &buffer,
+                                bufferOut == nullptr ? nullptr : *bufferOut);
+    }
+    if (iterator == buffer.regions_.end())
+    {
+        buffer.freeBytes_ -= size;
+    } else
+    {
+        buffer.unusedBytes_ -= size;
+    }
+    buffer.usedBytes_ += size;
 }
 
 
@@ -164,7 +217,13 @@ void BufferRegionIndex::destroy(BufferRegionIndex *&bufferRegionIndex)
 
 BufferRegionIndex::~BufferRegionIndex()
 {
-    assert(buffer_ && bufferRegion_);
+    if (bufferRegion_ == nullptr)
+    {
+        assert(subRegion_ == nullptr);
+        return;
+    }
+
+    assert(buffer_);
     if (subRegion_ != nullptr)
     {
         if (&buffer_->regions_.back() == bufferRegion_ &&
@@ -327,6 +386,7 @@ VkResult lunaCreateBuffers(const uint32_t count, const LunaBufferCreationInfo *c
     for (uint32_t i = 0; i < count; i++)
     {
         const LunaBufferCreationInfo &creationInfo = creationInfos[i];
+        assert(creationInfo.size != 0);
         combinedCreationInfo.size += creationInfo.size;
         combinedCreationInfo.flags |= creationInfo.flags;
         combinedCreationInfo.usage |= creationInfo.usage;
