@@ -392,8 +392,11 @@ VkResult lunaDestroyInstance()
         device.destroy();
     }
 
-    vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
-    vkDestroyInstance(instance, nullptr);
+    if (instance != VK_NULL_HANDLE)
+    {
+        vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
+        vkDestroyInstance(instance, nullptr);
+    }
 
     return VK_SUCCESS;
 }
