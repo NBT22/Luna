@@ -341,7 +341,7 @@ void lunaDestroyBuffer(const LunaBuffer buffer)
 
 VkResult lunaGrowBuffer(LunaBuffer *buffer, const VkDeviceSize size)
 {
-    assert(*buffer);
+    assert(buffer && *buffer != LUNA_NULL_HANDLE);
     if (luna::helpers::fromHandle<luna::BufferRegionIndex>(*buffer)->size() < size)
     {
         return lunaResizeBuffer(buffer, size);
@@ -351,7 +351,7 @@ VkResult lunaGrowBuffer(LunaBuffer *buffer, const VkDeviceSize size)
 
 VkResult lunaResizeBuffer(LunaBuffer *buffer, const VkDeviceSize newSize)
 {
-    assert(*buffer);
+    assert(buffer && *buffer != LUNA_NULL_HANDLE);
     luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(*buffer);
     CHECK_RESULT_RETURN(luna::BufferRegionIndex::resize(bufferRegionIndex, newSize));
     *buffer = luna::helpers::toHandle(bufferRegionIndex);
@@ -377,22 +377,29 @@ VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const LunaBufferWriteInf
 
 VkDeviceSize lunaGetBufferSize(const LunaBuffer buffer)
 {
+    if (buffer == LUNA_NULL_HANDLE)
+    {
+        return 0;
+    }
     // TODO: luna::BufferRegionIndex::size() returns a size_t but we are assuming it's the same size as VkDeviceSize
     return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->size();
 }
 
 VkBufferCreateFlags lunaGetBufferCreationFlags(const LunaBuffer buffer)
 {
+    assert(buffer != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->creationFlags();
 }
 
 VkBufferUsageFlags lunaGetBufferUsageFlags(const LunaBuffer buffer)
 {
+    assert(buffer != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->usageFlags();
 }
 
 void lunaGetBufferAllocationCreateInfo(const LunaBuffer buffer, VmaAllocationCreateInfo *allocationCreateInfo)
 {
+    assert(buffer != LUNA_NULL_HANDLE);
     assert(allocationCreateInfo);
     luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->allocationCreateInfo(*allocationCreateInfo);
 }
@@ -401,6 +408,7 @@ void lunaGetBufferCreationInfo(const LunaBuffer buffer,
                                LunaBufferCreationInfo *creationInfo,
                                VmaAllocationCreateInfo *allocationCreateInfo)
 {
+    assert(buffer != LUNA_NULL_HANDLE);
     assert(creationInfo);
     const luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
     bufferRegionIndex->creationInfo(*creationInfo);
@@ -412,6 +420,11 @@ void lunaGetBufferCreationInfo(const LunaBuffer buffer,
 
 void lunaBindVertexBuffers(const LunaBuffer *buffers, const uint32_t firstBinding, const uint32_t bindingCount)
 {
+    if (bindingCount == 0)
+    {
+        return;
+    }
+    assert(buffers);
     std::vector<VkBuffer> buffersVector;
     buffersVector.reserve(bindingCount);
     std::vector<VkDeviceSize> offsetsVector;
@@ -420,6 +433,7 @@ void lunaBindVertexBuffers(const LunaBuffer *buffers, const uint32_t firstBindin
     {
         const luna::BufferRegionIndex *bufferRegionIndex =
                 luna::helpers::fromHandle<luna::BufferRegionIndex>(buffers[i]);
+        assert(bufferRegionIndex);
         buffersVector.emplace_back(bufferRegionIndex->buffer());
         offsetsVector.emplace_back(bufferRegionIndex->offset());
     }
@@ -433,6 +447,7 @@ void lunaBindVertexBuffers(const LunaBuffer *buffers, const uint32_t firstBindin
 
 void lunaBindIndexBuffer(const LunaBuffer buffer, const VkIndexType indexType)
 {
+    assert(buffer != LUNA_NULL_HANDLE);
     if (luna::boundIndexBuffer != buffer)
     {
         const luna::BufferRegionIndex *index = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
