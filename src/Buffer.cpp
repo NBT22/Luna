@@ -217,72 +217,71 @@ void BufferRegionIndex::destroy(BufferRegionIndex *&bufferRegionIndex)
 
 BufferRegionIndex::~BufferRegionIndex()
 {
-    if (bufferRegion_ == nullptr)
+    if (bufferRegion_ != nullptr)
     {
-        assert(subRegion_ == nullptr);
-        return;
-    }
-
-    assert(buffer_);
-    if (subRegion_ != nullptr)
-    {
-        if (&buffer_->regions_.back() == bufferRegion_ &&
-            (bufferRegion_->subRegions_.size() == 1 || subRegion_->offset != 0))
+        assert(buffer_);
+        if (subRegion_ != nullptr)
         {
-            buffer_->freeBytes_ += subRegion_->size;
-        } else
-        {
-            buffer_->unusedBytes_ += subRegion_->size;
-        }
-        buffer_->usedBytes_ -= subRegion_->size;
-        bufferRegion_->size_ -= subRegion_->size;
-        if (subRegion_->offset == 0)
-        {
-            bufferRegion_->offset_ += subRegion_->size;
-            if (bufferRegion_->data_ != nullptr)
+            if (&buffer_->regions_.back() == bufferRegion_ &&
+                (bufferRegion_->subRegions_.size() == 1 || subRegion_->offset != 0))
             {
-                bufferRegion_->data_ += subRegion_->size;
+                buffer_->freeBytes_ += subRegion_->size;
+            } else
+            {
+                buffer_->unusedBytes_ += subRegion_->size;
             }
-        }
-
-        if (bufferRegion_->subRegions_.size() == 1)
-        {
-            bufferRegion_->subRegions_.clear();
-        } else
-        {
-            const std::list<SubRegion>::iterator endIterator = bufferRegion_->subRegions_.end();
-            const std::list<SubRegion>::iterator iterator = std::find_if(bufferRegion_->subRegions_.begin(),
-                                                                         endIterator,
-                                                                         [this](const SubRegion &region) -> bool {
-                                                                             return region.offset == subRegion_->offset;
-                                                                         });
-            assert(iterator != endIterator);
-            for (std::list<SubRegion>::iterator regionIterator = iterator; regionIterator != endIterator;
-                 ++regionIterator)
+            buffer_->usedBytes_ -= subRegion_->size;
+            bufferRegion_->size_ -= subRegion_->size;
+            if (subRegion_->offset == 0)
             {
-                assert(regionIterator->offset >= subRegion_->offset);
-                regionIterator->offset -= subRegion_->size;
+                bufferRegion_->offset_ += subRegion_->size;
+                if (bufferRegion_->data_ != nullptr)
+                {
+                    bufferRegion_->data_ += subRegion_->size;
+                }
             }
 
-            bufferRegion_->subRegions_.erase(iterator);
-        }
-    } else
-    {
-        if (&buffer_->regions_.back() == bufferRegion_)
-        {
-            buffer_->freeBytes_ += bufferRegion_->size_;
+            if (bufferRegion_->subRegions_.size() == 1)
+            {
+                bufferRegion_->subRegions_.clear();
+            } else
+            {
+                const std::list<SubRegion>::iterator endIterator = bufferRegion_->subRegions_.end();
+                const std::list<SubRegion>::iterator iterator = std::find_if(bufferRegion_->subRegions_.begin(),
+                                                                             endIterator,
+                                                                             [this](const SubRegion &region) -> bool {
+                                                                                 return region.offset ==
+                                                                                        subRegion_->offset;
+                                                                             });
+                assert(iterator != endIterator);
+                for (std::list<SubRegion>::iterator regionIterator = iterator; regionIterator != endIterator;
+                     ++regionIterator)
+                {
+                    assert(regionIterator->offset >= subRegion_->offset);
+                    regionIterator->offset -= subRegion_->size;
+                }
+
+                bufferRegion_->subRegions_.erase(iterator);
+            }
         } else
         {
-            buffer_->unusedBytes_ += bufferRegion_->size_;
+            if (&buffer_->regions_.back() == bufferRegion_)
+            {
+                buffer_->freeBytes_ += bufferRegion_->size_;
+            } else
+            {
+                buffer_->unusedBytes_ += bufferRegion_->size_;
+            }
+            buffer_->usedBytes_ -= bufferRegion_->size_;
         }
-        buffer_->usedBytes_ -= bufferRegion_->size_;
+        if (bufferRegion_->subRegions_.empty())
+        {
+            buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool {
+                return region.offset_ == bufferRegion_->offset_;
+            });
+        }
     }
-    if (bufferRegion_->subRegions_.empty())
-    {
-        buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool {
-            return region.offset_ == bufferRegion_->offset_;
-        });
-    }
+
     if (buffer_->regions_.empty())
     {
         // TODO: This system is scuffed at best and severely bug-prone at worst
