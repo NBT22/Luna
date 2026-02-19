@@ -61,7 +61,6 @@ VkResult lunaResizeSwapchain(uint32_t renderPassResizeInfoCount,
                              VkExtent2D *newSwapchainExtent);
 
 VkResult lunaBeginFrame(bool allowSuboptimalSwapchain);
-void lunaTransitionColorImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout);
 VkResult lunaEndFrame(void);
 
 #ifdef __cplusplus

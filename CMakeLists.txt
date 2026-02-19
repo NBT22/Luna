@@ -1,7 +1,7 @@
 # TODO: Test version
 #  Slang requires 3.22
 #  EXCLUDE_FROM_ALL requires 3.28
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.28)
 project(Luna C CXX)
 
 set(LUNA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "The root directory of the project")
@@ -30,7 +30,7 @@ endif ()
 
 findDependencies()
 
-# TODO: The scripts to generate the header should probably live elsewhere
+# TODO (0.3.0): The scripts to generate the header should probably live elsewhere
 if (WIN32)
     add_custom_target(GenerateShaderHeader ALL BYPRODUCTS COMMAND powershell -ExecutionPolicy RemoteSigned -NoProfile -NonInteractive ${LUNA_SOURCE_DIR}/src/shaders/GenerateHeader.ps1 WORKING_DIRECTORY ${LUNA_SOURCE_DIR}/src/shaders)
 else ()

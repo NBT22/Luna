@@ -2,23 +2,20 @@
 // Created by NBT22 on 11/25/25.
 //
 
-#include <array>
 #include <cassert>
-#include <fstream>
-#include <sstream>
+#include <luna/lunaTypes.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
-#include "luna/lunaTypes.h"
 #include "ShaderModule.hpp"
-#include "SlangSession.hpp"
 
 #ifdef LUNA_SLANG_SHADERS
-#include <shader-slang/slang-com-helper.h>
+#include <array>
 #include <shader-slang/slang-com-ptr.h>
 #include <shader-slang/slang.h>
+#include "SlangSession.hpp"
 #endif
 
 namespace luna
@@ -124,12 +121,13 @@ ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo)
                                                                    &entryPoint);
     const std::array<slang::IComponentType *, 2> componentTypes = {module, entryPoint};
     slang::IComponentType *composedProgram{};
-    if (slangSession->addComponent<slang::ISession, slang::IComponentType>(slangSession->session(),
-                                                                       &slang::ISession::createCompositeComponentType,
-                                                                       componentTypes.data(),
-                                                                       static_cast<SlangInt>(componentTypes.size()),
-                                                                       &composedProgram,
-                                                                       &blob) != 0)
+    if (slangSession->addComponent<slang::ISession,
+                                   slang::IComponentType>(slangSession->session(),
+                                                          &slang::ISession::createCompositeComponentType,
+                                                          componentTypes.data(),
+                                                          static_cast<SlangInt>(componentTypes.size()),
+                                                          &composedProgram,
+                                                          &blob) != 0)
     {
         throw std::runtime_error(std::string{"Failed to compose program! Compiler log:\n"} +
                                  static_cast<const char *>(blob->getBufferPointer()));

@@ -26,6 +26,9 @@ VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo
 
 VkResult lunaUpdateImage(LunaImage image, const LunaImageWriteInfo *writeInfo);
 
+// TODO (0.3.0): Finalize this function
+VkResult lunaBlitImageToSwapchain(LunaImage image, const VkImageBlit *blitRegion);
+
 void lunaDestroyImage(LunaImage image);
 
 #ifdef __cplusplus

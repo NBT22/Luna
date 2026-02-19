@@ -37,8 +37,10 @@ class Image
         [[nodiscard]] VkResult write(const LunaImageWriteInfo &writeInfo) const;
         void updateDescriptorBinding(VkDevice logicalDevice,
                                      LunaDescriptorSet descriptorSet,
-                                     const char *descriptorLayoutBindingName) const;
+                                     const char *descriptorLayoutBindingName,
+                                     uint32_t descriptorArrayElement) const;
 
+        [[nodiscard]] VkImage image() const;
         [[nodiscard]] VkImageView imageView() const;
         [[nodiscard]] VkSampler sampler() const;
         [[nodiscard]] VkSampler sampler(LunaSampler sampler) const;
@@ -118,7 +120,8 @@ constexpr bool Image::operator==(const Image &other) const
 
 inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
                                            const LunaDescriptorSet descriptorSet,
-                                           const char *descriptorLayoutBindingName) const
+                                           const char *descriptorLayoutBindingName,
+                                           const uint32_t descriptorArrayElement) const
 {
     assert(descriptorSet);
     assert(descriptorLayoutBindingName);
@@ -134,6 +137,7 @@ inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = *descriptorSetIndex->set,
         .dstBinding = binding.index,
+        .dstArrayElement = descriptorArrayElement,
         .descriptorCount = 1,
         .descriptorType = binding.type,
         .pImageInfo = &imageInfo,
@@ -141,6 +145,10 @@ inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
     vkUpdateDescriptorSets(logicalDevice, 1, &writeDescriptor, 0, nullptr);
 }
 
+inline VkImage Image::image() const
+{
+    return image_;
+}
 inline VkImageView Image::imageView() const
 {
     return imageView_;

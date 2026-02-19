@@ -493,6 +493,7 @@ typedef struct
 
         LunaDescriptorSet descriptorSet;
         const char *descriptorLayoutBindingName;
+        uint32_t descriptorArrayElement;
 } LunaImageWriteInfo;
 
 // TODO: There should also be a `LunaSampledImageCreationInfo2`

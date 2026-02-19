@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 echo '#pragma once' > Shaders.hpp
 {
   echo '#ifdef LUNA_SLANG_SHADERS'

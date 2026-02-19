@@ -182,39 +182,6 @@ VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
     return VK_SUCCESS;
 }
 
-void lunaTransitionColorImageLayout(const VkImageLayout oldLayout, const VkImageLayout newLayout)
-{
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    assert(commandBuffer.isRecording());
-
-    constexpr VkImageSubresourceRange subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .levelCount = 1,
-        .layerCount = 1,
-    };
-    const VkImageMemoryBarrier memoryBarrier = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = luna::swapchain.images.at(luna::swapchain.imageIndex),
-        .subresourceRange = subresourceRange,
-    };
-    vkCmdPipelineBarrier(commandBuffer,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         0,
-                         0,
-                         nullptr,
-                         0,
-                         nullptr,
-                         1,
-                         &memoryBarrier);
-}
-
 VkResult lunaEndFrame()
 {
     using namespace luna;

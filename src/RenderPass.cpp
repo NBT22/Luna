@@ -405,6 +405,11 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
 
     if (samples_ != VK_SAMPLE_COUNT_1_BIT)
     {
+        const VkImageUsageFlags imageUsage = (swapchain.imageUsage & ~(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                                                       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                                                                       VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) == 0
+                                                     ? swapchain.imageUsage | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT
+                                                     : swapchain.imageUsage;
         const VkImageCreateInfo colorImageCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
@@ -414,7 +419,7 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .arrayLayers = 1,
             .samples = samples_,
             .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = swapchain.imageUsage | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+            .usage = imageUsage,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = device.queueFamilyIndices(),

@@ -251,7 +251,6 @@ inline bool CommandBufferArray::anyRecording() const
 }
 inline const Semaphore &CommandBufferArray::semaphore() const
 {
-    assert(!semaphores_.at(index_).isSignaled());
     return semaphores_.at(index_);
 }
 } // namespace luna::commandBuffer
