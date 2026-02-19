@@ -3,6 +3,11 @@
 //
 
 #include <luna/luna.h>
+#include <luna/lunaBuffer.h>
+#include <luna/lunaDevice.h>
+#include <luna/lunaDrawing.h>
+#include <luna/lunaInstance.h>
+#include <luna/lunaTypes.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_scancode.h>
@@ -13,11 +18,13 @@
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 
-#define CHECK_RESULT(value) \
-    if ((value) < 0) \
+#define MACRO_WRAPPER(expr) \
+    do \
     { \
-        return 5; \
-    }
+        expr; \
+    } while (false)
+
+#define CHECK_RESULT(expr) MACRO_WRAPPER(if ((expr) < 0) { return -5; })
 
 #pragma region typedefs
 typedef struct
@@ -105,6 +112,9 @@ static const Vertex vertices[3] = {
     {.x = 0.5f, .y = 0.5f, .g = 1},
     {.x = -0.5f, .y = 0.5f, .b = 1},
 };
+
+static const int WIDTH = 1080;
+static const int HEIGHT = 720;
 #pragma endregion constants
 
 static bool shouldQuit(void)
@@ -277,7 +287,10 @@ int main(void)
     {
         return 1;
     }
-    SDL_Window *window = SDL_CreateWindow("Luna Example", 1080, 720, SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_Window *window = SDL_CreateWindow("Luna Example",
+                                          WIDTH,
+                                          HEIGHT,
+                                          SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (window == NULL)
     {
         return 2;
@@ -317,8 +330,8 @@ int main(void)
     CHECK_RESULT(lunaCreateDevice(&deviceCreationInfo));
 
     const VkExtent3D extent = {
-        .width = 1080,
-        .height = 720,
+        .width = WIDTH,
+        .height = HEIGHT,
         .depth = 1,
     };
     const LunaSwapchainCreationInfo swapchainCreationInfo = {
@@ -344,29 +357,29 @@ int main(void)
     };
     LunaBuffer vertexBuffer = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer));
-    LunaBufferWriteInfo vertexBufferWriteInfo = {
+    const LunaBufferWriteInfo vertexBufferWriteInfo = {
         .bytes = sizeof(vertices),
         .data = vertices,
         .stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
     };
-    lunaWriteDataToBuffer(vertexBuffer, &vertexBufferWriteInfo);
+    CHECK_RESULT(lunaWriteDataToBuffer(vertexBuffer, &vertexBufferWriteInfo));
 
     const LunaRenderPassBeginInfo beginInfo = {
         .renderArea.extent.width = extent.width,
         .renderArea.extent.height = extent.height,
     };
 
+    const LunaDrawInfo drawInfo = {
+        .pipeline = graphicsPipeline,
+        .vertexCount = sizeof(vertices) / sizeof(*vertices),
+        .instanceCount = 1,
+    };
+
     while (!shouldQuit())
     {
         CHECK_RESULT(lunaBeginFrame(false));
         CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
-        CHECK_RESULT(lunaDrawBuffer(vertexBuffer,
-                                    graphicsPipeline,
-                                    (LunaGraphicsPipelineBindInfo[]){0},
-                                    sizeof(vertices) / sizeof(*vertices),
-                                    1,
-                                    0,
-                                    0));
+        CHECK_RESULT(lunaDrawBuffer(vertexBuffer, &drawInfo));
         lunaEndRenderPass();
         CHECK_RESULT(lunaEndFrame());
     }
