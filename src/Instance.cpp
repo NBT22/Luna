@@ -109,7 +109,7 @@ static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr));
     if (presentModeCount == 0)
     {
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
     }
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice,

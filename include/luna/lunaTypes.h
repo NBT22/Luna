@@ -499,7 +499,6 @@ typedef struct
         uint32_t descriptorArrayElement;
 } LunaImageWriteInfo;
 
-// TODO: There should also be a `LunaSampledImageCreationInfo2`
 typedef struct
 {
         VkImageCreateFlags flags;
