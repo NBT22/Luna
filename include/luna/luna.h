@@ -55,8 +55,6 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkUpdateDescriptorSets.html
  */
 void lunaWriteDescriptorSets(uint32_t descriptorWriteCount, const LunaWriteDescriptorSet *descriptorWrites);
-// TODO (0.3.0): Remove me and replace with a better solution
-void lunaWriteFramebufferToDescriptor(LunaDescriptorSet descriptorSet);
 
 /**
  * @brief Create a new shader module.
@@ -123,6 +121,14 @@ VkResult lunaResetCommandPool(LunaCommandPool commandPool, VkCommandPoolResetFla
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkResetCommandPool.html
  */
 VkResult lunaResetCommandPoolWithTimeout(LunaCommandPool commandPool, VkCommandPoolResetFlags flags, size_t timeout);
+
+/**
+ * @brief Insert a pipeline memory dependency
+ * @param[in] dependencyInfo
+ * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdPipelineBarrier.html
+ * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdPipelineBarrier2.html
+ */
+VkResult lunaPipelineBarrier(const LunaDependencyInfo *dependencyInfo);
 
 #ifdef __cplusplus
 }

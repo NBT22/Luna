@@ -8,7 +8,16 @@
 #include <cstdint>
 #include <exception>
 #include <vector>
+#include <volk.h>
 #include <vulkan/vulkan_core.h>
+
+static_assert(VK_ACCESS_NONE == VK_ACCESS_2_NONE);
+static_assert(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT == VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT);
+static_assert(VK_ACCESS_TRANSFER_READ_BIT == VK_ACCESS_2_TRANSFER_READ_BIT);
+static_assert(VK_ACCESS_TRANSFER_WRITE_BIT == VK_ACCESS_2_TRANSFER_WRITE_BIT);
+static_assert(VK_PIPELINE_STAGE_NONE == VK_PIPELINE_STAGE_2_NONE);
+static_assert(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT == VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
+static_assert(VK_PIPELINE_STAGE_TRANSFER_BIT == VK_PIPELINE_STAGE_2_TRANSFER_BIT);
 
 namespace luna::helpers
 {
@@ -18,7 +27,30 @@ class VkResultException final: public std::exception
         explicit VkResultException(const VkResult result): result(result) {}
         VkResult result;
 };
+
+void pipelineBarrier(VkCommandBuffer commandBuffer, const LunaDependencyInfo &dependencyInfo);
 } // namespace luna::helpers
+
+namespace luna
+{
+struct Swapchain
+{
+        VkSurfaceKHR surface{};
+        VkSurfaceFormatKHR format{};
+        VkExtent2D extent{};
+        VkImageUsageFlags imageUsage{};
+        VkCompositeAlphaFlagBitsKHR compositeAlpha{};
+        VkPresentModeKHR presentMode{};
+        bool clipped{};
+
+        std::atomic_bool safeToUse{};
+        VkSwapchainKHR swapchain{};
+        uint32_t imageCount{};
+        uint32_t imageIndex{};
+        std::vector<VkImage> images{};
+        std::vector<VkImageView> imageViews{};
+};
+} // namespace luna
 
 #ifdef _MSC_VER
 #define SUPRESS_MSVC_WARNING(NUMBER) __pragma(warning(suppress : NUMBER))
@@ -49,24 +81,3 @@ class VkResultException final: public std::exception
         return exception.result; \
     } \
     (void)0
-
-namespace luna
-{
-struct Swapchain
-{
-        VkSurfaceKHR surface{};
-        VkSurfaceFormatKHR format{};
-        VkExtent2D extent{};
-        VkImageUsageFlags imageUsage{};
-        VkCompositeAlphaFlagBitsKHR compositeAlpha{};
-        VkPresentModeKHR presentMode{};
-        bool clipped{};
-
-        std::atomic_bool safeToUse{};
-        VkSwapchainKHR swapchain{};
-        uint32_t imageCount{};
-        uint32_t imageIndex{};
-        std::vector<VkImage> images{};
-        std::vector<VkImageView> imageViews{};
-};
-} // namespace luna

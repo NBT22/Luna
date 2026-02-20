@@ -599,6 +599,48 @@ typedef struct
         uint32_t stride;
 } LunaDrawIndexedIndirectCountInfo;
 
+typedef struct
+{
+    LunaFlags sourceStageMask;
+    LunaFlags sourceAccessMask;
+    LunaFlags destinationStageMask;
+    LunaFlags destinationAccessMask;
+} LunaMemoryBarrier;
+
+typedef struct
+{
+    LunaFlags sourceStageMask;
+    LunaFlags sourceAccessMask;
+    LunaFlags destinationStageMask;
+    LunaFlags destinationAccessMask;
+    LunaBuffer buffer;
+    VkDeviceSize offset;
+    VkDeviceSize size;
+} LunaBufferMemoryBarrier;
+
+typedef struct
+{
+    LunaFlags sourceStageMask;
+    LunaFlags sourceAccessMask;
+    LunaFlags destinationStageMask;
+    LunaFlags destinationAccessMask;
+    VkImageLayout oldLayout;
+    VkImageLayout newLayout;
+    LunaImage image;
+    VkImageSubresourceRange subresourceRange;
+} LunaImageMemoryBarrier;
+
+typedef struct
+{
+        VkDependencyFlags flags;
+        uint32_t memoryBarrierCount;
+        const LunaMemoryBarrier *memoryBarriers;
+        uint32_t bufferMemoryBarrierCount;
+        const LunaBufferMemoryBarrier *bufferMemoryBarriers;
+        uint32_t imageMemoryBarrierCount;
+        const LunaImageMemoryBarrier *imageMemoryBarriers;
+} LunaDependencyInfo;
+
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)
 }
