@@ -26,8 +26,8 @@ VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo
 
 VkResult lunaUpdateImage(LunaImage image, const LunaImageWriteInfo *writeInfo);
 
-// TODO (0.3.0): Finalize this function
-VkResult lunaBlitImageToSwapchain(LunaImage image, const VkImageBlit *blitRegion);
+// TODO (0.3.0): Finalize this function (maybe allow for taking multiple images and regions)
+VkResult lunaBlitImageToSwapchain(LunaImage image, const VkImageBlit2 *blitRegion);
 
 void lunaDestroyImage(LunaImage image);
 

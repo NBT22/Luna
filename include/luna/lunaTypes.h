@@ -42,6 +42,8 @@ static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
 
 extern const LunaCommandPool LUNA_INTERNAL_GRAPHICS_COMMAND_POOL;
 
+typedef VkFlags64 LunaFlags;
+
 typedef struct
 {
         VkInstanceCreateFlags flags;
@@ -486,10 +488,11 @@ typedef struct
         const VkExtent3D *extent;
         uint32_t mipmapLevels;
         bool generateMipmaps;
+        VkFilter mipmapFilter;
 
-        VkPipelineStageFlags sourceStageMask;
-        VkPipelineStageFlags destinationStageMask;
-        VkAccessFlags destinationAccessMask;
+        LunaFlags sourceStageMask; ///< VkPipelineStageFlags or VkPipelineStageFlags2
+        LunaFlags destinationStageMask; ///< VkPipelineStageFlags or VkPipelineStageFlags2
+        LunaFlags destinationAccessMask; ///< VkAccessFlags or VkAccessFlags2
 
         LunaDescriptorSet descriptorSet;
         const char *descriptorLayoutBindingName;
