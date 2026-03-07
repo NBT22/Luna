@@ -64,6 +64,7 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
                                                 size_t &outOffset,
                                                 std::list<BufferRegion>::iterator &outIterator)
 {
+    // TODO (0.3.0): Uniform buffers have alignment requirements, and other buffer types may as well
     for (Buffer &buffer: buffers)
     {
         assert(std::ranges::is_sorted(buffer.regions_, [](const BufferRegion &a, const BufferRegion &b) -> bool {

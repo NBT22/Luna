@@ -452,6 +452,16 @@ VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSamp
     }
     return VK_SUCCESS;
 }
+void lunaDestroySampler(const LunaSampler sampler)
+{
+    if (sampler == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    const VkSampler vkSampler = *luna::helpers::fromHandle<VkSampler>(sampler);
+    luna::samplers.remove(vkSampler);
+    vkDestroySampler(luna::device, vkSampler, nullptr);
+}
 
 VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image)
 {

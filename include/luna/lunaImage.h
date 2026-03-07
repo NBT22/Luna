@@ -15,6 +15,7 @@ extern "C"
 #include <vulkan/vulkan_core.h>
 
 VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler);
+void lunaDestroySampler(LunaSampler sampler);
 
 VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image);
 VkResult lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo, uint32_t arrayLayers, LunaImage *image);
