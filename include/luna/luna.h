@@ -54,7 +54,7 @@ VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *alloc
  * @param[in] descriptorWrites An array of @c LunaWriteDescriptorSet structures containing information about what to write.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkUpdateDescriptorSets.html
  */
-void lunaWriteDescriptorSets(uint32_t descriptorWriteCount, const LunaWriteDescriptorSet *descriptorWrites);
+VkResult lunaWriteDescriptorSets(uint32_t descriptorWriteCount, const LunaWriteDescriptorSet *descriptorWrites);
 
 /**
  * @brief Create a new shader module.

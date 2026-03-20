@@ -16,20 +16,12 @@ extern "C"
 #include <vulkan/vulkan_core.h>
 
 /**
- * @brief Create a new buffer.
+ * @brief Create a new buffer, optionally with dedicated regions.
  * @param[in] creationInfo A pointer to the @c LunaBufferCreationInfo structure containing information about how to create the buffer.
  * @param[out] buffer A pointer to the @c LunaBuffer handle in which the resulting buffer will be returned.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
  */
 VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);
-/**
- * @brief Create an array of new buffers.
- * @param[in] count The number of elements in the @c creationInfos array.
- * @param[in] creationInfos An array of @c LunaBufferCreationInfo structures containing information about how to create the buffers.
- * @param[out] buffers An array of pointers to the @c LunaBuffer handles in which the resulting buffers will be returned.
- * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
- */
-VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer **buffers);
 
 /**
  * @brief Destroy a buffer.
@@ -37,6 +29,14 @@ VkResult lunaCreateBuffers(uint32_t count, const LunaBufferCreationInfo *creatio
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkDestroyBuffer.html
  */
 void lunaDestroyBuffer(LunaBuffer buffer);
+
+/**
+ * @brief Get the list of regions
+ * @param[in] buffer The @c LunaBuffer to get the regions of.
+ * @param[out] count The size of the @c LunaBufferRegion list returned by the function.
+ * @return A list of @code count@endcode @c LunaBufferRegion handles.
+ */
+LunaBufferRegion *lunaGetBufferRegions(LunaBuffer buffer, uint32_t *count);
 
 /**
  * @brief Ensure a buffer is at least @c size bytes, resizing if it is not.
@@ -53,6 +53,7 @@ VkResult lunaGrowBuffer(LunaBuffer *buffer, VkDeviceSize size);
 VkResult lunaResizeBuffer(LunaBuffer *buffer, VkDeviceSize newSize);
 
 VkResult lunaWriteDataToBuffer(LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo);
+void *lunaGetBufferDataPointer(LunaBuffer buffer);
 
 VkDeviceSize lunaGetBufferSize(LunaBuffer buffer);
 VkBufferCreateFlags lunaGetBufferCreationFlags(LunaBuffer buffer);

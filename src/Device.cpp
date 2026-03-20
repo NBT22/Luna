@@ -119,36 +119,20 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     }
 
     constexpr float queuePriority = 1;
-    std::array<VkDeviceQueueCreateInfo, 3> queuesCreateInfo{};
-    switch (familyCount_)
-    {
-        case 3:
-            queuesCreateInfo[2] = VkDeviceQueueCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                .queueFamilyIndex = familyIndices_.presentation,
-                .queueCount = 1,
-                .pQueuePriorities = &queuePriority,
-            };
-            [[fallthrough]];
-        case 2:
-            queuesCreateInfo[1] = VkDeviceQueueCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                .queueFamilyIndex = hasFamily_.transfer ? familyIndices_.transfer : familyIndices_.presentation,
-                .queueCount = 1,
-                .pQueuePriorities = &queuePriority,
-            };
-            [[fallthrough]];
-        case 1:
-            queuesCreateInfo[0] = VkDeviceQueueCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                .queueFamilyIndex = familyIndices_.graphics,
-                .queueCount = 1,
-                .pQueuePriorities = &queuePriority,
-            };
-            break;
-        default:
-            assert(familyCount_ == 1 || familyCount_ == 2 || familyCount_ == 3);
-    }
+    std::array<VkDeviceQueueCreateInfo, 2> queuesCreateInfo{
+        VkDeviceQueueCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueFamilyIndex = familyIndices_.graphics,
+            .queueCount = 1,
+            .pQueuePriorities = &queuePriority,
+        },
+        VkDeviceQueueCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueFamilyIndex = familyIndices_.compute,
+            .queueCount = 1,
+            .pQueuePriorities = &queuePriority,
+        },
+    };
     initQueueFamilyIndices();
 
     const VkPhysicalDeviceSynchronization2Features synchronization2Features = {
@@ -162,7 +146,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = pNext,
-        .queueCreateInfoCount = familyCount_,
+        .queueCreateInfoCount = hasFamily_.compute ? 2u : 1u,
         .pQueueCreateInfos = queuesCreateInfo.data(),
         .enabledExtensionCount = creationInfo.extensionCount,
         .ppEnabledExtensionNames = creationInfo.extensionNames,
@@ -172,7 +156,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     volkLoadDevice(logicalDevice_);
 
     vkGetDeviceQueue(logicalDevice_, familyIndices_.graphics, 0, &familyQueues_.graphics);
-    vkGetDeviceQueue(logicalDevice_, familyIndices_.transfer, 0, &familyQueues_.transfer);
+    vkGetDeviceQueue(logicalDevice_, familyIndices_.compute, 0, &familyQueues_.compute);
     vkGetDeviceQueue(logicalDevice_, familyIndices_.presentation, 0, &familyQueues_.presentation);
 
     const VmaVulkanFunctions vmaVulkanFunctions = {
@@ -266,6 +250,12 @@ VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo)
     LunaBuffer stagingBufferHandle = luna::helpers::toHandle(luna::stagingBuffer);
     CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
     luna::stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
+    return VK_SUCCESS;
+}
+
+VkResult lunaDeviceWaitIdle()
+{
+    CHECK_RESULT_RETURN(vkDeviceWaitIdle(luna::device));
     return VK_SUCCESS;
 }
 

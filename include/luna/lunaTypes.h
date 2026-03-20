@@ -32,6 +32,7 @@ LUNA_DEFINE_HANDLE(LunaShaderModule);
 LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
 LUNA_DEFINE_HANDLE(LunaComputePipeline);
 LUNA_DEFINE_HANDLE(LunaBuffer);
+LUNA_DEFINE_HANDLE(LunaBufferRegion);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
 LUNA_DEFINE_HANDLE(LunaCommandPool);
@@ -41,6 +42,7 @@ static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
 static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
 
 extern const LunaCommandPool LUNA_INTERNAL_GRAPHICS_COMMAND_POOL;
+extern const LunaCommandPool LUNA_INTERNAL_COMPUTE_COMMAND_POOL;
 
 typedef VkFlags64 LunaFlags;
 
@@ -210,7 +212,7 @@ typedef struct
 typedef struct
 {
         LunaDescriptorPool descriptorPool;
-        uint32_t descriptorSetCount;
+        uint32_t setLayoutCount;
         const LunaDescriptorSetLayout *setLayouts;
 } LunaDescriptorSetAllocationInfo;
 
@@ -224,9 +226,8 @@ typedef struct
 typedef struct
 {
         LunaBuffer buffer;
-        VkDeviceSize offset;
-        VkDeviceSize range;
-} LunaDescriptorBufferInfo;
+        VkFormat format;
+} LunaBufferViewCreationInfo;
 
 typedef struct
 {
@@ -235,8 +236,8 @@ typedef struct
         uint32_t descriptorArrayElement;
         uint32_t descriptorCount;
         const LunaDescriptorImageInfo *imageInfo;
-        const LunaDescriptorBufferInfo *bufferInfo;
-        const VkBufferView *texelBufferView; // TODO: Currently ignored
+        const LunaBuffer bufferInfo;
+        const LunaBufferViewCreationInfo *texelBufferView;
 } LunaWriteDescriptorSet;
 
 typedef struct
@@ -417,6 +418,7 @@ typedef struct
         LunaDynamicStateBindInfoUnion bindInfo;
 } LunaDynamicStateBindInfo;
 
+// TODO (0.3.0): Is it possible to bind a given binding of a descriptor set, or does the whole thing need to be bound
 typedef struct
 {
         uint32_t firstSet;
@@ -440,13 +442,23 @@ typedef struct
         uint32_t groupCountX;
         uint32_t groupCountY;
         uint32_t groupCountZ;
+        bool submitCommandBuffer;
 } LunaDispatchComputeInfo;
 
+/// @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
+// TODO (0.3.0): Have a way for buffers to say if they will be used for compute or not
 typedef struct
 {
+        /// If both @c regionCount and @c size are not zero, then @c size must be greater than or equal to the sum of
+        ///  the region sizes. If @c size is greater than the sum of all region sizes, then the buffer will be
+        ///  allocated @c size bytes, with any bytes not assigned to a region being after the last region.
         VkDeviceSize size;
         VkBufferCreateFlags flags;
         VkBufferUsageFlags usage;
+
+        uint32_t regionCount;
+        const VkDeviceSize *regionSizes;
+        const char **regionNames;
 
         const VmaAllocationCreateInfo *allocationCreateInfo;
 } LunaBufferCreationInfo;
@@ -516,7 +528,7 @@ typedef struct
         const LunaSamplerCreationInfo *samplerCreationInfo;
 
         const VmaAllocationCreateInfo *allocationCreateInfo;
-} LunaSampledImageCreationInfo;
+} LunaImageCreationInfo;
 
 typedef struct
 {
@@ -600,33 +612,33 @@ typedef struct
 
 typedef struct
 {
-    LunaFlags sourceStageMask;
-    LunaFlags sourceAccessMask;
-    LunaFlags destinationStageMask;
-    LunaFlags destinationAccessMask;
+        LunaFlags sourceStageMask;
+        LunaFlags sourceAccessMask;
+        LunaFlags destinationStageMask;
+        LunaFlags destinationAccessMask;
 } LunaMemoryBarrier;
 
 typedef struct
 {
-    LunaFlags sourceStageMask;
-    LunaFlags sourceAccessMask;
-    LunaFlags destinationStageMask;
-    LunaFlags destinationAccessMask;
-    LunaBuffer buffer;
-    VkDeviceSize offset;
-    VkDeviceSize size;
+        LunaFlags sourceStageMask;
+        LunaFlags sourceAccessMask;
+        LunaFlags destinationStageMask;
+        LunaFlags destinationAccessMask;
+        LunaBuffer buffer;
+        VkDeviceSize offset;
+        VkDeviceSize size;
 } LunaBufferMemoryBarrier;
 
 typedef struct
 {
-    LunaFlags sourceStageMask;
-    LunaFlags sourceAccessMask;
-    LunaFlags destinationStageMask;
-    LunaFlags destinationAccessMask;
-    VkImageLayout oldLayout;
-    VkImageLayout newLayout;
-    LunaImage image;
-    VkImageSubresourceRange subresourceRange;
+        LunaFlags sourceStageMask;
+        LunaFlags sourceAccessMask;
+        LunaFlags destinationStageMask;
+        LunaFlags destinationAccessMask;
+        VkImageLayout oldLayout;
+        VkImageLayout newLayout;
+        LunaImage image;
+        VkImageSubresourceRange subresourceRange;
 } LunaImageMemoryBarrier;
 
 typedef struct

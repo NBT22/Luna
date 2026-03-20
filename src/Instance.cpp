@@ -23,7 +23,10 @@
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "RenderPass.hpp"
+
+#ifdef LUNA_SLANG_SHADERS
 #include "SlangSession.hpp"
+#endif
 
 namespace
 {
@@ -45,7 +48,7 @@ void fillExtensionMap()
 
 namespace luna::helpers
 {
-static bool isInstanceExtensionAvailable(const char *extensionName, const uint32_t version = -1)
+static bool isInstanceExtensionAvailable(const char *extensionName, const uint32_t version = 0)
 {
     if (extensionMap.empty())
     {
@@ -275,6 +278,7 @@ std::list<Image> images{};
 
 const LunaCommandPool LUNA_INTERNAL_GRAPHICS_COMMAND_POOL =
         luna::helpers::toHandle(luna::device.commandPools().graphics);
+const LunaCommandPool LUNA_INTERNAL_COMPUTE_COMMAND_POOL = luna::helpers::toHandle(luna::device.commandPools().compute);
 
 VkResult lunaInitializeVolk()
 {
@@ -343,7 +347,10 @@ VkResult lunaDestroyInstance()
         {
             vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
         }
-        vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
+        if (swapchain.swapchain != VK_NULL_HANDLE)
+        {
+            vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
+        }
 
         for (const VkSampler sampler: samplers)
         {
@@ -387,16 +394,29 @@ VkResult lunaDestroyInstance()
 
         bufferRegionIndices.clear();
         BufferRegionIndex::waitForCleanupThread();
-        stagingBuffer = nullptr;
 
         device.destroy();
     }
 
     if (instance != VK_NULL_HANDLE)
     {
-        vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
+        if (swapchain.surface != VK_NULL_HANDLE)
+        {
+            vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
+        }
         vkDestroyInstance(instance, nullptr);
     }
+
+    swapchain.surface = VK_NULL_HANDLE;
+    swapchain.swapchain = VK_NULL_HANDLE;
+    depthImageFormat = VK_FORMAT_UNDEFINED;
+    apiVersion = 0;
+    instance = VK_NULL_HANDLE;
+    device = Device();
+    stagingBuffer = nullptr;
+    boundPipeline = VK_NULL_HANDLE;
+    boundVertexBuffer = LUNA_NULL_HANDLE;
+    boundIndexBuffer = LUNA_NULL_HANDLE;
 
     return VK_SUCCESS;
 }

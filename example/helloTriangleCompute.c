@@ -183,7 +183,7 @@ int main(void)
     LunaDescriptorSet descriptorSet = LUNA_NULL_HANDLE;
     const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
         .descriptorPool = descriptorPool,
-        .descriptorSetCount = 1,
+        .setLayoutCount = 1,
         .setLayouts = &descriptorSetLayout,
     };
     CHECK_RESULT(lunaAllocateDescriptorSets(&descriptorSetAllocationInfo, &descriptorSet));

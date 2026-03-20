@@ -53,7 +53,7 @@ ComputePipeline::~ComputePipeline()
 
 VkResult ComputePipeline::bind(const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const
 {
-    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
+    CommandBuffer &commandBuffer = device.commandPools().compute->commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
 
     if (pipeline_ != boundPipeline)
@@ -97,13 +97,20 @@ VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creati
 VkResult lunaDispatchCompute(const LunaDispatchComputeInfo *info)
 {
     assert(info);
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    assert(commandBuffer.isRecording());
+    luna::CommandBuffer &commandBuffer = luna::device.commandPools().compute->commandBuffer();
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
     CHECK_RESULT_RETURN(
             luna::helpers::fromHandle<luna::ComputePipeline>(info->pipeline)->bind(info->descriptorSetBindInfo));
     vkCmdDispatch(commandBuffer,
                   info->groupCountX == 0 ? 1 : info->groupCountX,
                   info->groupCountY == 0 ? 1 : info->groupCountY,
                   info->groupCountZ == 0 ? 1 : info->groupCountZ);
+    if (info->submitCommandBuffer)
+    {
+        // TODO (0.3.0): If possible, optionally allow the source stage mask
+        //  (if not possible to be optional, just use top of pipe)
+        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().compute,
+                                                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT));
+    }
     return VK_SUCCESS;
 }

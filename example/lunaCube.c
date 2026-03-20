@@ -366,7 +366,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass,
     CHECK_RESULT(lunaCreateDescriptorPool(&descriptorPoolCreationInfo, &descriptorPool));
     const LunaDescriptorSetAllocationInfo descriptorSetAllocationInfo = {
         .descriptorPool = descriptorPool,
-        .descriptorSetCount = 1,
+        .setLayoutCount = 1,
         .setLayouts = &descriptorSetLayout,
     };
     CHECK_RESULT(lunaAllocateDescriptorSets(&descriptorSetAllocationInfo, descriptorSet));
@@ -394,7 +394,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass,
         .minFilter = VK_FILTER_LINEAR,
         .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
     };
-    const LunaSampledImageCreationInfo imageCreationInfo = {
+    const LunaImageCreationInfo imageCreationInfo = {
         .format = VK_FORMAT_R8G8B8A8_UNORM,
         .width = width,
         .height = height,
@@ -493,21 +493,18 @@ int main(void)
                                         &transformMatrix,
                                         &graphicsPipeline));
 
-    const LunaBufferCreationInfo bufferCreationInfos[] = {
-        {
-            .size = sizeof(vertices),
-            .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        },
-        {
-            .size = sizeof(indices),
-            .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        },
+    const LunaBufferCreationInfo vertexBufferCreationInfo = {
+        .size = sizeof(vertices),
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
     };
     LunaBuffer vertexBuffer = LUNA_NULL_HANDLE;
+    CHECK_RESULT(lunaCreateBuffer(&vertexBufferCreationInfo, &vertexBuffer));
+    const LunaBufferCreationInfo indexBufferCreationInfo = {
+        .size = sizeof(indices),
+        .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    };
     LunaBuffer indexBuffer = LUNA_NULL_HANDLE;
-    CHECK_RESULT(lunaCreateBuffers(sizeof(bufferCreationInfos) / sizeof(*bufferCreationInfos),
-                                   bufferCreationInfos,
-                                   (LunaBuffer *[]){&vertexBuffer, &indexBuffer}));
+    CHECK_RESULT(lunaCreateBuffer(&indexBufferCreationInfo, &indexBuffer));
     LunaBufferWriteInfo vertexBufferWriteInfo = {
         .bytes = sizeof(vertices),
         .data = vertices,

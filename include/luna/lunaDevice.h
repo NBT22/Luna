@@ -16,6 +16,8 @@ extern "C"
 VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo);
 VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo);
 
+VkResult lunaDeviceWaitIdle();
+
 void lunaGetPhysicalDeviceProperties(VkPhysicalDeviceProperties *properties);
 void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties);
 

@@ -48,6 +48,7 @@ class CommandBuffer
                              uint32_t arraySize,
                              uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
+        VkResult submitCommandBuffer(VkQueue queue, VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         VkResult submitCommandBuffer(VkQueue queue,
                                      const VkSubmitInfo &submitInfo,
                                      VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
@@ -256,6 +257,20 @@ inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
                                      typeAsString() +
                                      " when used in beginSingleUseCommandBuffer!");
     }
+}
+inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue, VkPipelineStageFlags stageMask)
+{
+    const VkSubmitInfo submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = semaphore().isSignaled() ? 1u : 0u,
+        .pWaitSemaphores = &semaphore(),
+        .pWaitDstStageMask = &stageMask,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &commandBuffer(),
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &semaphore(),
+    };
+    return submitCommandBuffer(queue, submitInfo, stageMask);
 }
 inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
                                                    const VkSubmitInfo &submitInfo,

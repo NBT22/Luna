@@ -127,7 +127,7 @@ static void blitImage(const VkCommandBuffer commandBuffer,
     }
 }
 
-static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
+static VkResult createImage(const LunaImageCreationInfo &creationInfo,
                             uint32_t depth,
                             uint32_t arrayLayers,
                             LunaImage *imageIndex)
@@ -152,7 +152,7 @@ static VkResult createImage(const LunaSampledImageCreationInfo &creationInfo,
 
 namespace luna
 {
-Image::Image(const LunaSampledImageCreationInfo &creationInfo, const uint32_t depth, const uint32_t arrayLayers)
+Image::Image(const LunaImageCreationInfo &creationInfo, const uint32_t depth, const uint32_t arrayLayers)
 {
     assert(creationInfo.sampler == LUNA_NULL_HANDLE || creationInfo.samplerCreationInfo == nullptr);
     if (creationInfo.sampler != LUNA_NULL_HANDLE)
@@ -253,6 +253,8 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
                                  layout_,
                                  image_,
                                  subresourceRange);
+        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
+                                                              writeInfo.destinationStageMask));
         return VK_SUCCESS;
     }
     VkExtent3D extent = writeInfo.extent == nullptr ? extent_ : *writeInfo.extent;
@@ -307,19 +309,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
                                  subresourceRange);
     }
 
-    const Semaphore &semaphore = commandBuffer.semaphore();
-    const VkSubmitInfo queueSubmitInfo = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
-        .pWaitSemaphores = semaphore.isSignaled() ? &semaphore : nullptr,
-        .pWaitDstStageMask = &semaphore.stageMask(),
-        .commandBufferCount = 1,
-        .pCommandBuffers = &commandBuffer,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &semaphore,
-    };
     CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
-                                                          queueSubmitInfo,
                                                           writeInfo.destinationStageMask));
     return VK_SUCCESS;
 }
@@ -463,24 +453,22 @@ void lunaDestroySampler(const LunaSampler sampler)
     vkDestroySampler(luna::device, vkSampler, nullptr);
 }
 
-VkResult lunaCreateImage(const LunaSampledImageCreationInfo *creationInfo, LunaImage *image)
+VkResult lunaCreateImage(const LunaImageCreationInfo *creationInfo, LunaImage *image)
 {
     assert(creationInfo);
     return luna::helpers::createImage(*creationInfo, 0, 1, image);
 }
-VkResult lunaCreateImageArray(const LunaSampledImageCreationInfo *creationInfo,
-                              const uint32_t arrayLayers,
-                              LunaImage *image)
+VkResult lunaCreateImageArray(const LunaImageCreationInfo *creationInfo, const uint32_t arrayLayers, LunaImage *image)
 {
     assert(creationInfo && arrayLayers);
     return luna::helpers::createImage(*creationInfo, 0, arrayLayers, image);
 }
-VkResult lunaCreateImage3D(const LunaSampledImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
+VkResult lunaCreateImage3D(const LunaImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
 {
     assert(creationInfo);
     return luna::helpers::createImage(*creationInfo, depth, 1, image);
 }
-VkResult lunaCreateImage3DArray(const LunaSampledImageCreationInfo *creationInfo,
+VkResult lunaCreateImage3DArray(const LunaImageCreationInfo *creationInfo,
                                 const uint32_t depth,
                                 const uint32_t arrayLayers,
                                 LunaImage *image)
@@ -549,6 +537,41 @@ VkResult lunaBlitImageToSwapchain(const LunaImage image, const VkImageBlit2 *bli
                                    swapchainImage,
                                    subresourceRange);
 
+    return VK_SUCCESS;
+}
+
+VkResult lunaCopyImageToBuffer(const LunaImage image,
+                               const LunaBuffer buffer,
+                               const uint32_t regionCount,
+                               const VkBufferImageCopy *regions)
+{
+    assert(image != LUNA_NULL_HANDLE && buffer != LUNA_NULL_HANDLE);
+
+    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer(1);
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+    const luna::Image &imageObject = *luna::helpers::fromHandle<luna::Image>(image);
+    const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
+
+    std::vector<VkBufferImageCopy> regionsVector;
+    regionsVector.reserve(regionCount);
+    for (uint32_t i = 0; i < regionCount; i++)
+    {
+        const VkBufferImageCopy &region = regions[i];
+        regionsVector.emplace_back(region.bufferOffset + bufferRegionIndex.offset(),
+                                   region.bufferRowLength,
+                                   region.bufferImageHeight,
+                                   region.imageSubresource,
+                                   region.imageOffset,
+                                   region.imageExtent);
+    }
+
+    vkCmdCopyImageToBuffer(commandBuffer,
+                           imageObject.image(),
+                           imageObject.layout(),
+                           bufferRegionIndex.buffer(),
+                           regionCount,
+                           regions);
+    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics));
     return VK_SUCCESS;
 }
 

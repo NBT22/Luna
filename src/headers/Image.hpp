@@ -28,7 +28,7 @@ namespace luna
 class Image
 {
     public:
-        Image(const LunaSampledImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
+        Image(const LunaImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
 
         ~Image();
 
@@ -42,6 +42,7 @@ class Image
 
         [[nodiscard]] VkImage image() const;
         [[nodiscard]] VkImageView imageView() const;
+        [[nodiscard]] VkImageLayout layout() const;
         [[nodiscard]] VkSampler sampler() const;
         [[nodiscard]] VkSampler sampler(LunaSampler sampler) const;
 
@@ -152,6 +153,10 @@ inline VkImage Image::image() const
 inline VkImageView Image::imageView() const
 {
     return imageView_;
+}
+inline VkImageLayout Image::layout() const
+{
+    return layout_;
 }
 inline VkSampler Image::sampler() const
 {

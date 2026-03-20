@@ -528,7 +528,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCrea
     {
         if (i < creationInfo.shaderModuleCreationInfoCount)
         {
-            creationInfo.shaderModules[i] = pipelineShaderModules.at(i);
+            creationInfo.shaderModules[i] = helpers::toHandle(pipelineShaderModules.at(i));
         } else
         {
             pipelineShaderModules.emplace_back(helpers::fromHandle<ShaderModule>(creationInfo.shaderModules[i]));

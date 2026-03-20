@@ -1,3 +1,4 @@
+//
 // Created by NBT22 on 2/12/25.
 //
 
@@ -6,10 +7,15 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <forward_list>
 #include <list>
 #include <luna/lunaBuffer.h>
 #include <luna/lunaDrawing.h>
 #include <luna/lunaTypes.h>
+#include <map>
+#include <ranges>
+#include <tuple>
+#include <utility>
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
@@ -24,38 +30,21 @@ static constexpr long double BLOCK_SIZE = 32 * 1024 * 1024;
 
 namespace luna
 {
-BufferRegion::BufferRegion(const size_t size, uint8_t *data, const size_t offset, Buffer *buffer, LunaBuffer *index):
-    BufferRegion(size, data)
-{
-    offset_ = offset;
-    bufferRegionIndices.emplace_back(buffer, this);
-    if (index != nullptr)
-    {
-        *index = helpers::toHandle(&bufferRegionIndices.back());
-    }
-}
-BufferRegion::BufferRegion(const size_t totalSize,
+BufferRegion::BufferRegion(const size_t size,
                            uint8_t *data,
                            const size_t offset,
+                           std::map<const char *, SubRegion> &&subRegions,
                            Buffer *buffer,
-                           const uint32_t count,
-                           const LunaBufferCreationInfo *creationInfos,
-                           LunaBuffer **lunaBuffers):
-    BufferRegion(totalSize, data)
+                           LunaBuffer *outBuffer):
+    size_(size),
+    data_(data),
+    offset_(offset),
+    subRegions_(std::move(subRegions))
 {
-    offset_ = offset;
-
-    uint32_t subRegionOffset = 0;
-    for (uint32_t i = 0; i < count; i++)
+    bufferRegionIndices.emplace_back(buffer, this);
+    if (outBuffer != nullptr)
     {
-        const size_t size = creationInfos[i].size;
-        subRegions_.emplace_back(size, subRegionOffset);
-        subRegionOffset += size;
-        bufferRegionIndices.emplace_back(buffer, this, &subRegions_.back());
-        if (lunaBuffers != nullptr && lunaBuffers[i] != nullptr)
-        {
-            *lunaBuffers[i] = helpers::toHandle(&bufferRegionIndices.back());
-        }
+        *outBuffer = helpers::toHandle(&bufferRegionIndices.back());
     }
 }
 
@@ -150,47 +139,51 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
     outIterator = outBuffer->regions_.end();
     return VK_SUCCESS;
 }
-void BufferRegion::createBufferRegion(Buffer &buffer,
-                                      const size_t offset,
-                                      const uint32_t count,
-                                      const VkDeviceSize size,
-                                      const LunaBufferCreationInfo *creationInfos,
-                                      LunaBuffer **bufferOut,
-                                      const std::list<BufferRegion>::iterator &iterator)
+VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *outBuffer)
 {
-    if (size == 0)
+    std::map<const char *, SubRegion> subRegions;
+    VkDeviceSize combinedRegionSizes = 0;
+    for (uint32_t i = 0; i < creationInfo.regionCount; i++)
     {
-        assert(count == 1);
-        bufferRegionIndices.emplace_back(&buffer, nullptr);
-        if (bufferOut != nullptr && *bufferOut != nullptr)
-        {
-            **bufferOut = helpers::toHandle(&bufferRegionIndices.back());
-        }
-        return;
+        subRegions.emplace(std::piecewise_construct,
+                           std::forward_as_tuple(creationInfo.regionNames[i]),
+                           std::forward_as_tuple(creationInfo.regionSizes[i], combinedRegionSizes));
+        combinedRegionSizes += creationInfo.regionSizes[i];
+        assert(combinedRegionSizes <= creationInfo.size);
     }
 
-    uint8_t *regionData = buffer.data_ == nullptr ? nullptr : static_cast<uint8_t *>(buffer.data_) + offset;
-    if (count > 1)
+    Buffer *buffer{};
+    size_t offset{};
+    std::list<BufferRegion>::iterator iterator{};
+    CHECK_RESULT_RETURN(findSpaceForBufferRegion(creationInfo, buffer, offset, iterator));
+
+    if (creationInfo.size == 0)
     {
-        assert(count > 1 && creationInfos);
-        buffer.regions_.emplace(iterator, size, regionData, offset, &buffer, count, creationInfos, bufferOut);
+        bufferRegionIndices.emplace_back(buffer, nullptr);
+        if (outBuffer != nullptr)
+        {
+            *outBuffer = helpers::toHandle(&bufferRegionIndices.back());
+        }
+        return VK_SUCCESS;
+    }
+
+    buffer->regions_.emplace(iterator,
+                             creationInfo.size,
+                             static_cast<uint8_t *>(buffer->data_) + offset,
+                             offset,
+                             std::move(subRegions),
+                             buffer,
+                             outBuffer);
+    if (iterator == buffer->regions_.end())
+    {
+        buffer->freeBytes_ -= creationInfo.size;
     } else
     {
-        buffer.regions_.emplace(iterator,
-                                size,
-                                regionData,
-                                offset,
-                                &buffer,
-                                bufferOut == nullptr ? nullptr : *bufferOut);
+        buffer->unusedBytes_ -= creationInfo.size;
     }
-    if (iterator == buffer.regions_.end())
-    {
-        buffer.freeBytes_ -= size;
-    } else
-    {
-        buffer.unusedBytes_ -= size;
-    }
-    buffer.usedBytes_ += size;
+    buffer->usedBytes_ += creationInfo.size;
+
+    return VK_SUCCESS;
 }
 
 
@@ -218,6 +211,11 @@ void BufferRegionIndex::destroy(BufferRegionIndex *&bufferRegionIndex)
 
 BufferRegionIndex::~BufferRegionIndex()
 {
+    for (const VkBufferView view: views_)
+    {
+        vkDestroyBufferView(device, view, nullptr);
+    }
+
     if (bufferRegion_ != nullptr)
     {
         assert(buffer_);
@@ -247,21 +245,25 @@ BufferRegionIndex::~BufferRegionIndex()
                 bufferRegion_->subRegions_.clear();
             } else
             {
-                const std::list<SubRegion>::iterator endIterator = bufferRegion_->subRegions_.end();
-                const std::list<SubRegion>::iterator iterator = std::find_if(bufferRegion_->subRegions_.begin(),
-                                                                             endIterator,
-                                                                             [this](const SubRegion &region) -> bool {
-                                                                                 return region.offset ==
-                                                                                        subRegion_->offset;
-                                                                             });
-                assert(iterator != endIterator);
-                for (std::list<SubRegion>::iterator regionIterator = iterator; regionIterator != endIterator;
-                     ++regionIterator)
+                const decltype(bufferRegion_->subRegions_)::iterator iterator =
+                        std::ranges::find_if(bufferRegion_->subRegions_,
+                                             [this](decltype(bufferRegion_->subRegions_)::const_reference pair)
+                                                     -> bool { return &pair.second == subRegion_; });
+                assert(iterator != bufferRegion_->subRegions_.end());
+                std::ranges::for_each(bufferRegion_->subRegions_ | std::views::values,
+                                      [this](SubRegion &subRegion) -> void {
+                                          if (subRegion_->offset < subRegion.offset)
+                                          {
+                                              subRegion.offset -= subRegion_->size;
+                                          }
+                                      });
+                for (SubRegion &subRegion: bufferRegion_->subRegions_ | std::views::values)
                 {
-                    assert(regionIterator->offset >= subRegion_->offset);
-                    regionIterator->offset -= subRegion_->size;
+                    if (subRegion_->offset < subRegion.offset)
+                    {
+                        subRegion.offset -= subRegion_->size;
+                    }
                 }
-
                 bufferRegion_->subRegions_.erase(iterator);
             }
         } else
@@ -304,6 +306,10 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
                                          const VkPipelineStageFlags stageFlags) const
 {
     assert(bytes <= size() - offset);
+
+    // return vmaCopyMemoryToAllocation(device.allocator(), data, buffer_->allocation_, offset, bytes);
+    //
+    // return VK_SUCCESS;
     uint8_t *mappedData = BufferRegionIndex::data();
     if (mappedData != nullptr)
     {
@@ -324,21 +330,22 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
             .size = bytes,
         };
         vkCmdCopyBuffer(commandBuffer, stagingBuffer->buffer(), buffer(), 1, &copyRegion);
-        const Semaphore &semaphore = commandBuffer.semaphore();
-        const VkSubmitInfo queueSubmitInfo = {
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
-            .pWaitSemaphores = semaphore.isSignaled() ? &semaphore : nullptr,
-            .pWaitDstStageMask = &semaphore.stageMask(),
-            .commandBufferCount = 1,
-            .pCommandBuffers = &commandBuffer,
-            .signalSemaphoreCount = 1,
-            .pSignalSemaphores = &semaphore,
-        };
-        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
-                                                              queueSubmitInfo,
-                                                              stageFlags));
+        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics, stageFlags));
     }
+    return VK_SUCCESS;
+}
+
+VkResult BufferRegionIndex::createBufferView(const LunaBufferViewCreationInfo &creationInfo, VkBufferView &view)
+{
+    view = views_.emplace_back();
+    const VkBufferViewCreateInfo bufferViewCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+        .buffer = buffer(),
+        .format = creationInfo.format,
+        .offset = offset(),
+        .range = size(),
+    };
+    CHECK_RESULT_RETURN(vkCreateBufferView(device, &bufferViewCreateInfo, nullptr, &view));
     return VK_SUCCESS;
 }
 
@@ -377,21 +384,6 @@ VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer
 {
     assert(creationInfo);
     return luna::BufferRegion::createBufferRegion(*creationInfo, buffer);
-}
-
-VkResult lunaCreateBuffers(const uint32_t count, const LunaBufferCreationInfo *creationInfos, LunaBuffer **buffers)
-{
-    assert(creationInfos);
-    LunaBufferCreationInfo combinedCreationInfo{};
-    for (uint32_t i = 0; i < count; i++)
-    {
-        const LunaBufferCreationInfo &creationInfo = creationInfos[i];
-        assert(creationInfo.size != 0);
-        combinedCreationInfo.size += creationInfo.size;
-        combinedCreationInfo.flags |= creationInfo.flags;
-        combinedCreationInfo.usage |= creationInfo.usage;
-    }
-    return luna::BufferRegion::createBufferRegion(combinedCreationInfo, buffers, count, creationInfos);
 }
 
 void lunaDestroyBuffer(const LunaBuffer buffer)
@@ -433,6 +425,12 @@ VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const LunaBufferWriteInf
                                                             writeInfo->stageFlags));
     }
     return VK_SUCCESS;
+}
+
+void *lunaGetBufferDataPointer(const LunaBuffer buffer)
+{
+    assert(buffer != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->data();
 }
 
 VkDeviceSize lunaGetBufferSize(const LunaBuffer buffer)
