@@ -53,12 +53,12 @@ class Device
         [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const noexcept;
 
     private:
-        VkResult findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-        void initQueueFamilyIndices();
-        [[nodiscard]] bool checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
-        [[nodiscard]] bool checkFeatureSupport(const VkBool32 *requiredFeatures) const;
-        [[nodiscard]] bool checkUsability(VkPhysicalDevice device, VkSurfaceKHR surface);
-        VkResult createCommandPools();
+        VkResult findQueueFamilyIndices_(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+        void initQueueFamilyIndices_();
+        [[nodiscard]] bool checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
+        [[nodiscard]] bool checkFeatureSupport_(const VkBool32 *requiredFeatures) const;
+        [[nodiscard]] bool checkUsability_(VkPhysicalDevice device, VkSurfaceKHR surface);
+        VkResult createCommandPools_();
 
         bool isDestroyed_{true};
         VkPhysicalDevice physicalDevice_{};
@@ -208,7 +208,7 @@ inline VkPhysicalDeviceVulkan13Features Device::vulkan13Features() const noexcep
 // TODO: Better family finding logic to allow for
 //  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
 //  2. Ensuring that the most optimal layout is found, regardless of what order the implementation provides the families
-inline VkResult Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface)
+inline VkResult Device::findQueueFamilyIndices_(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface)
 {
     assert(physicalDevice != VK_NULL_HANDLE);
     hasFamily_.graphics = false;
@@ -230,7 +230,7 @@ inline VkResult Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDe
                                                                      surface,
                                                                      &supportsPresentation));
         }
-        if (!hasFamily_.graphics && (families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+        if (!hasFamily_.graphics && (families.at(index).queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
         {
             hasFamily_.graphics = true;
             familyIndices_.graphics = index;
@@ -240,12 +240,12 @@ inline VkResult Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDe
             hasFamily_.presentation = true;
             familyIndices_.presentation = index;
 
-            if (!computeFound && (families[index].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+            if (!computeFound && (families.at(index).queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
             {
                 familyIndices_.compute = index;
                 computeFound = true;
             }
-        } else if (!hasFamily_.compute && (families[index].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+        } else if (!hasFamily_.compute && (families.at(index).queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
         {
             computeFound = true;
             hasFamily_.compute = true;
@@ -266,7 +266,7 @@ inline VkResult Device::findQueueFamilyIndices(const VkPhysicalDevice physicalDe
     // TODO: Allow for not having graphics/compute queues
     return VK_ERROR_UNKNOWN;
 }
-inline void Device::initQueueFamilyIndices()
+inline void Device::initQueueFamilyIndices_()
 {
     assert(queueFamilyIndices_.empty());
     queueFamilyIndices_.emplace_back(familyIndices_.graphics);
@@ -275,7 +275,7 @@ inline void Device::initQueueFamilyIndices()
         queueFamilyIndices_.emplace_back(familyIndices_.compute);
     }
 }
-inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
+inline bool Device::checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
     const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures.features);
     constexpr size_t featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
@@ -290,12 +290,12 @@ inline bool Device::checkFeatureSupport(const VkPhysicalDeviceFeatures2 &require
 
     if (requiredFeatures.pNext != nullptr)
     {
-        return checkFeatureSupport(static_cast<const VkBool32 *>(requiredFeatures.pNext));
+        return checkFeatureSupport_(static_cast<const VkBool32 *>(requiredFeatures.pNext));
     }
 
     return true;
 }
-inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
+inline bool Device::checkFeatureSupport_(const VkBool32 *requiredFeatures) const
 {
     assert(requiredFeatures);
     static_assert(alignof(void *) == alignof(VkPhysicalDeviceVulkan11Features) &&
@@ -369,11 +369,11 @@ inline bool Device::checkFeatureSupport(const VkBool32 *requiredFeatures) const
     const void *pNext = *reinterpret_cast<const void *const *>(requiredFeatures + 1);
     if (pNext != nullptr)
     {
-        return checkFeatureSupport(static_cast<const VkBool32 *>(pNext));
+        return checkFeatureSupport_(static_cast<const VkBool32 *>(pNext));
     }
     return true;
 }
-inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfaceKHR surface)
+inline bool Device::checkUsability_(const VkPhysicalDevice device, const VkSurfaceKHR surface)
 {
     if (surface != VK_NULL_HANDLE)
     {
@@ -391,7 +391,7 @@ inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfac
         }
     }
 
-    CHECK_RESULT_THROW(findQueueFamilyIndices(device, surface));
+    CHECK_RESULT_THROW(findQueueFamilyIndices_(device, surface));
 
     vkGetPhysicalDeviceProperties(device, &properties_);
     vkGetPhysicalDeviceMemoryProperties(device, &memoryProperties_);
@@ -409,15 +409,14 @@ inline bool Device::checkUsability(const VkPhysicalDevice device, const VkSurfac
                                                             availableExtensions.data()));
     for (uint32_t j = 0; j < extensionCount; j++)
     {
-        // NOLINTNEXTLINE(*-pro-bounds-array-to-pointer-decay)
-        if (std::strcmp(availableExtensions[j].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (std::strcmp(availableExtensions.at(j).extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
         {
             return true;
         }
     }
     return false;
 }
-inline VkResult Device::createCommandPools()
+inline VkResult Device::createCommandPools_()
 {
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,

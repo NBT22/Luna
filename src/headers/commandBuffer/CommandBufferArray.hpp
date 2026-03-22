@@ -128,9 +128,9 @@ inline void CommandBufferArray::destroy(const VkDevice logicalDevice) const
     assert(semaphores_.size() == fences_.size());
     for (size_t i = 0; i < semaphores_.size(); i++)
     {
-        assert(!isRecordings_[i]);
-        fences_[i].destroy(logicalDevice);
-        semaphores_[i].destroy(logicalDevice);
+        assert(!isRecordings_.at(i));
+        fences_.at(i).destroy(logicalDevice);
+        semaphores_.at(i).destroy(logicalDevice);
     }
 }
 inline void CommandBufferArray::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool) const
@@ -138,9 +138,9 @@ inline void CommandBufferArray::destroy(const VkDevice logicalDevice, const VkCo
     assert(semaphores_.size() == fences_.size());
     for (size_t i = 0; i < semaphores_.size(); i++)
     {
-        assert(!isRecordings_[i]);
-        fences_[i].destroy(logicalDevice);
-        semaphores_[i].destroy(logicalDevice);
+        assert(!isRecordings_.at(i));
+        fences_.at(i).destroy(logicalDevice);
+        semaphores_.at(i).destroy(logicalDevice);
     }
     vkFreeCommandBuffers(logicalDevice, commandPool, commandBuffers_.size(), commandBuffers_.data());
 }
@@ -247,7 +247,7 @@ inline bool CommandBufferArray::isRecording() const
 }
 inline bool CommandBufferArray::anyRecording() const
 {
-    return std::any_of(isRecordings_.begin(), isRecordings_.end(), [](const uint8_t val) -> bool { return val != 0u; });
+    return std::ranges::any_of(isRecordings_, [](const uint8_t val) -> bool { return val != 0u; });
 }
 inline const Semaphore &CommandBufferArray::semaphore() const
 {

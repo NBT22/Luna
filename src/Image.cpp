@@ -18,7 +18,6 @@
 #include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
-#include "Semaphore.hpp"
 
 namespace luna::helpers
 {

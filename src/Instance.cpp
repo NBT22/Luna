@@ -23,6 +23,7 @@
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "RenderPass.hpp"
+#include "helpers/Handle.hpp"
 
 #ifdef LUNA_SLANG_SHADERS
 #include "SlangSession.hpp"
@@ -77,7 +78,7 @@ static VkResult findSwapchainFormat(const VkPhysicalDevice physicalDevice,
         const VkSurfaceFormatKHR &targetFormat = targetFormats[i];
         for (uint32_t j = 0; j < formatCount; j++)
         {
-            const VkSurfaceFormatKHR &format = formats[j];
+            const VkSurfaceFormatKHR &format = formats.at(j);
             if (format.colorSpace == targetFormat.colorSpace && format.format == targetFormat.format)
             {
                 destination = format;
@@ -125,7 +126,7 @@ static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
         const VkPresentModeKHR mode = targetPresentModes[i];
         for (uint32_t j = 0; j < presentModeCount; j++)
         {
-            if (presentModes[j] == mode)
+            if (presentModes.at(j) == mode)
             {
                 destination = mode;
                 break;
@@ -155,11 +156,11 @@ static VkResult createSwapchainImages(const VkDevice logicalDevice)
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
         CHECK_RESULT_RETURN(createImageView(logicalDevice,
-                                            swapchain.images[i],
+                                            swapchain.images.at(i),
                                             swapchain.format.format,
                                             VK_IMAGE_ASPECT_COLOR_BIT,
                                             1,
-                                            &swapchain.imageViews[i]));
+                                            &swapchain.imageViews.at(i)));
     }
     return VK_SUCCESS;
 }

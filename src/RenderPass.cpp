@@ -540,7 +540,7 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
             .height = extent_.height,
             .layers = 1,
         };
-        CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffers_[i]));
+        CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffers_.at(i)));
         attachments_.back() = swapchain.imageViews.at(i + 1);
     }
     const VkFramebufferCreateInfo framebufferCreateInfo = {
@@ -580,7 +580,7 @@ VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
     const VkRenderPassBeginInfo renderPassBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPass_,
-        .framebuffer = framebuffers_[swapchain.imageIndex],
+        .framebuffer = framebuffers_.at(swapchain.imageIndex),
         .renderArea = beginInfo.renderArea,
         .clearValueCount = clearValueCount,
         .pClearValues = clearValues.data(),

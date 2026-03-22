@@ -83,9 +83,8 @@ class CommandBuffer
 
 namespace luna
 {
-inline CommandBuffer::CommandBuffer(const CommandBuffer &other)
+inline CommandBuffer::CommandBuffer(const CommandBuffer &other): type_(other.type_)
 {
-    type_ = other.type_;
     switch (type_)
     {
         case Type::SINGLE:

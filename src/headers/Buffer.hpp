@@ -82,7 +82,7 @@ class BufferRegionIndex
         [[nodiscard]] static VkResult resize(BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize);
 
     private:
-        static inline std::thread cleanupThread_{};
+        static inline std::thread cleanupThread_{}; // NOLINT(*-identifier-naming)
 
     public:
         BufferRegionIndex() = delete;
@@ -148,7 +148,6 @@ class Buffer
 
 #include <algorithm>
 #include <cassert>
-#include <luna/lunaBuffer.h>
 #include <stdexcept>
 
 namespace luna
@@ -196,11 +195,9 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
         if (!regionCanBeResizedIntoFreeBytes && !regionIsLast)
         {
             std::list<BufferRegion>::const_iterator bufferRegionIterator =
-                    std::find_if(buffer->regions_.cbegin(),
-                                 buffer->regions_.cend(),
-                                 [&bufferRegion](const BufferRegion &region) -> bool {
-                                     return &region == bufferRegion;
-                                 });
+                    std::ranges::find_if(buffer->regions_, [&bufferRegion](const BufferRegion &region) -> bool {
+                        return &region == bufferRegion;
+                    });
             assert(bufferRegionIterator != buffer->regions_.cend()); // Internal state check
             ++bufferRegionIterator;
             assert(bufferRegionIterator != buffer->regions_.cend()); // Internal state check

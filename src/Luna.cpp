@@ -5,6 +5,7 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <list>
 #include <luna/luna.h>
 #include <luna/lunaTypes.h>
 #include <vector>
@@ -60,11 +61,11 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
         CHECK_RESULT_RETURN(createImageView(luna::device,
-                                            luna::swapchain.images[i],
+                                            luna::swapchain.images.at(i),
                                             luna::swapchain.format.format,
                                             VK_IMAGE_ASPECT_COLOR_BIT,
                                             1,
-                                            &luna::swapchain.imageViews[i]));
+                                            &luna::swapchain.imageViews.at(i)));
     }
     assert(capabilities.minImageCount <= luna::swapchain.imageCount &&
            luna::swapchain.imageCount <= capabilities.maxImageCount);

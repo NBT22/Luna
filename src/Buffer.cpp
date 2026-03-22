@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <forward_list>
 #include <list>
 #include <luna/lunaBuffer.h>
 #include <luna/lunaDrawing.h>
@@ -24,7 +23,6 @@
 #include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
-#include "Semaphore.hpp"
 
 static constexpr long double BLOCK_SIZE = 32 * 1024 * 1024;
 
@@ -99,7 +97,7 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
                 outOffset = regionIterator->offset() + regionIterator->size();
                 outIterator = regionIterator;
                 ++outIterator;
-                assert((regionIterator != buffer.regions_.end()));
+                assert(regionIterator != buffer.regions_.end());
                 return VK_SUCCESS;
             }
             // No gap large enough to fit the new region was found, so continuing on to see if it can go at the end
@@ -354,14 +352,13 @@ VkResult BufferRegionIndex::createBufferView(const LunaBufferViewCreationInfo &c
 }
 
 
-Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo, const VmaAllocationCreateInfo &allocationCreateInfo)
+Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo, const VmaAllocationCreateInfo &allocationCreateInfo):
+    creationFlags_(bufferCreateInfo.flags),
+    usageFlags_(bufferCreateInfo.usage),
+    allocationCreateInfo_(allocationCreateInfo),
+    freeBytes_(bufferCreateInfo.size)
 {
     BufferRegionIndex::waitForCleanupThread();
-
-    creationFlags_ = bufferCreateInfo.flags;
-    usageFlags_ = bufferCreateInfo.usage;
-    freeBytes_ = bufferCreateInfo.size;
-    allocationCreateInfo_ = allocationCreateInfo;
 
     VmaAllocationInfo allocationInfo;
     CHECK_RESULT_THROW(vmaCreateBuffer(device.allocator(),

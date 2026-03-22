@@ -7,9 +7,13 @@
 #include <cstdint>
 #include <luna/luna.h>
 #include <luna/lunaTypes.h>
+#include <volk.h>
 #include <vulkan/vulkan_core.h>
+#include "CommandBuffer.hpp"
+#include "CommandPool.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "helpers/Handle.hpp"
 
 namespace luna
 {

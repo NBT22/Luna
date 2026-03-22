@@ -39,7 +39,7 @@ struct Swapchain
         VkSurfaceFormatKHR format{};
         VkExtent2D extent{};
         VkImageUsageFlags imageUsage{};
-        VkCompositeAlphaFlagBitsKHR compositeAlpha{};
+        VkCompositeAlphaFlagBitsKHR compositeAlpha{VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR};
         VkPresentModeKHR presentMode{};
         bool clipped{};
 

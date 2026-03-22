@@ -101,8 +101,8 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     {
         vkGetPhysicalDeviceFeatures2(physicalDevice, &features_);
         // checkUsability can throw an error, but it will be caught by the function calling this constructor
-        if (!checkFeatureSupport(creationInfo.requiredFeatures) ||
-            !checkUsability(physicalDevice, creationInfo.surface))
+        if (!checkFeatureSupport_(creationInfo.requiredFeatures) ||
+            !checkUsability_(physicalDevice, creationInfo.surface))
         {
             continue;
         }
@@ -133,7 +133,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
             .pQueuePriorities = &queuePriority,
         },
     };
-    initQueueFamilyIndices();
+    initQueueFamilyIndices_();
 
     const VkPhysicalDeviceSynchronization2Features synchronization2Features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
@@ -200,7 +200,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
 
     isDestroyed_ = false;
 
-    CHECK_RESULT_THROW(createCommandPools());
+    CHECK_RESULT_THROW(createCommandPools_());
 }
 } // namespace luna
 

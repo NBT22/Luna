@@ -19,7 +19,7 @@ namespace luna
 struct RenderPassSubpassIndex
 {
         uint32_t index;
-        const class RenderPass *renderPass;
+        const RenderPass *renderPass;
 };
 
 // TODO: Check if attachment is requested to be used without being created
@@ -59,7 +59,7 @@ class RenderPass
         std::string name_{};
         RenderPassSubpassIndex unnamedSubpass_{};
         std::unordered_map<std::string, RenderPassSubpassIndex> subpassMap_{};
-        VkSampleCountFlagBits samples_{};
+        VkSampleCountFlagBits samples_{VK_SAMPLE_COUNT_1_BIT};
         VkExtent3D extent_{};
         VkExtent3D maxExtent_{};
         VmaAllocation colorImageAllocation_{};
