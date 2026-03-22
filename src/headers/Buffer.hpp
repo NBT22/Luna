@@ -94,7 +94,7 @@ class BufferRegionIndex
                                             size_t bytes,
                                             size_t offset = 0,
                                             VkPipelineStageFlags stageFlags = 0) const;
-        VkResult createBufferView(const LunaBufferViewCreationInfo &creationInfo, VkBufferView &view);
+        VkResult createBufferView(const LunaBufferViewCreationInfo &creationInfo, LunaBufferView *lunaView);
 
         [[nodiscard]] size_t offset() const;
         [[nodiscard]] size_t size() const;
@@ -109,7 +109,7 @@ class BufferRegionIndex
         Buffer *buffer_{};
         BufferRegion *bufferRegion_{};
         BufferRegion::SubRegion *subRegion_{};
-        std::vector<VkBufferView> views_{};
+        std::list<VkBufferView> views_{};
 };
 // TODO (0.3.0): Buffer writes need synchronization using vkCmdPipelineBarrier
 class Buffer

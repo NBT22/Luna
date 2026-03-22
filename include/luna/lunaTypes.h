@@ -33,6 +33,7 @@ LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
 LUNA_DEFINE_HANDLE(LunaComputePipeline);
 LUNA_DEFINE_HANDLE(LunaBuffer);
 LUNA_DEFINE_HANDLE(LunaBufferRegion);
+LUNA_DEFINE_HANDLE(LunaBufferView);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
 LUNA_DEFINE_HANDLE(LunaCommandPool);
@@ -237,7 +238,7 @@ typedef struct
         uint32_t descriptorCount;
         const LunaDescriptorImageInfo *imageInfo;
         const LunaBuffer bufferInfo;
-        const LunaBufferViewCreationInfo *texelBufferView;
+        const LunaBufferView texelBufferView;
 } LunaWriteDescriptorSet;
 
 typedef struct

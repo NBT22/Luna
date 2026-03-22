@@ -22,7 +22,7 @@ class Image;
 class CommandPool;
 class SlangSession;
 
-using HandleType = uint64_t;
+LUNA_DEFINE_HANDLE(HandleType);
 
 template<typename T> concept HandleData = std::same_as<T, RenderPass> ||
                                           std::same_as<T, RenderPassSubpassIndex> ||
@@ -33,6 +33,7 @@ template<typename T> concept HandleData = std::same_as<T, RenderPass> ||
                                           std::same_as<T, GraphicsPipeline> ||
                                           std::same_as<T, ComputePipeline> ||
                                           std::same_as<T, BufferRegionIndex> ||
+                                          std::same_as<T, VkBufferView> ||
                                           std::same_as<T, VkSampler> ||
                                           std::same_as<T, Image> ||
                                           std::same_as<T, CommandPool> ||

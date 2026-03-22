@@ -56,10 +56,7 @@ VkResult ComputePipeline::bind(const LunaDescriptorSetBindInfo &descriptorSetBin
     CommandBuffer &commandBuffer = device.commandPools().compute->commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
 
-    if (pipeline_ != boundPipeline)
-    {
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_);
-    }
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_);
     if (descriptorSetBindInfo.descriptorSetCount > 0)
     {
         std::vector<VkDescriptorSet> descriptorSetsVector;

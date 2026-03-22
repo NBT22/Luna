@@ -52,6 +52,8 @@ VkResult lunaGrowBuffer(LunaBuffer *buffer, VkDeviceSize size);
  */
 VkResult lunaResizeBuffer(LunaBuffer *buffer, VkDeviceSize newSize);
 
+VkResult lunaCreateBufferView(const LunaBufferViewCreationInfo *creationInfo, LunaBufferView *bufferView);
+
 VkResult lunaWriteDataToBuffer(LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo);
 void *lunaGetBufferDataPointer(LunaBuffer buffer);
 

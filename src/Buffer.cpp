@@ -169,7 +169,7 @@ VkResult BufferRegion::createBufferRegion(const LunaBufferCreationInfo &creation
 
     buffer->regions_.emplace(iterator,
                              creationInfo.size,
-                             static_cast<uint8_t *>(buffer->data_) + offset,
+                             buffer->data_ == nullptr ? nullptr : static_cast<uint8_t *>(buffer->data_) + offset,
                              offset,
                              std::move(subRegions),
                              buffer,
@@ -307,13 +307,12 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
 {
     assert(bytes <= size() - offset);
 
-    // return vmaCopyMemoryToAllocation(device.allocator(), data, buffer_->allocation_, offset, bytes);
-    //
-    // return VK_SUCCESS;
     uint8_t *mappedData = BufferRegionIndex::data();
     if (mappedData != nullptr)
     {
         std::copy_n(data, bytes, mappedData + offset);
+        // TODO (0.3.0): If the allocation is not HOST_COHERENT, then vkFlushMappedMemoryRanges must be called
+        // TODO (0.3.0): Memory dependency for the provided stageFlags
     } else
     {
         assert(this != stagingBuffer);
@@ -335,9 +334,9 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
     return VK_SUCCESS;
 }
 
-VkResult BufferRegionIndex::createBufferView(const LunaBufferViewCreationInfo &creationInfo, VkBufferView &view)
+VkResult BufferRegionIndex::createBufferView(const LunaBufferViewCreationInfo &creationInfo, LunaBufferView *lunaView)
 {
-    view = views_.emplace_back();
+    VkBufferView &view = views_.emplace_back();
     const VkBufferViewCreateInfo bufferViewCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
         .buffer = buffer(),
@@ -346,6 +345,11 @@ VkResult BufferRegionIndex::createBufferView(const LunaBufferViewCreationInfo &c
         .range = size(),
     };
     CHECK_RESULT_RETURN(vkCreateBufferView(device, &bufferViewCreateInfo, nullptr, &view));
+
+    if (lunaView != LUNA_NULL_HANDLE)
+    {
+        *lunaView = helpers::toHandle(view);
+    }
     return VK_SUCCESS;
 }
 
@@ -408,6 +412,15 @@ VkResult lunaResizeBuffer(LunaBuffer *buffer, const VkDeviceSize newSize)
     CHECK_RESULT_RETURN(luna::BufferRegionIndex::resize(bufferRegionIndex, newSize));
     *buffer = luna::helpers::toHandle(bufferRegionIndex);
     return VK_SUCCESS;
+}
+
+VkResult lunaCreateBufferView(const LunaBufferViewCreationInfo *creationInfo, LunaBufferView *bufferView)
+{
+    assert(creationInfo);
+    assert(creationInfo->buffer != LUNA_NULL_HANDLE);
+
+    return luna::helpers::fromHandle<luna::BufferRegionIndex>(creationInfo->buffer)
+            ->createBufferView(*creationInfo, bufferView);
 }
 
 VkResult lunaWriteDataToBuffer(const LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo)

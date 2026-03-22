@@ -360,13 +360,8 @@ VkResult lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const Luna
                                 &descriptorBufferInfos.back(),
                                 nullptr);
         }
-        if (descriptorWrite.texelBufferView != nullptr)
+        if (descriptorWrite.texelBufferView != LUNA_NULL_HANDLE)
         {
-            BufferRegionIndex *bufferRegionIndex =
-                    helpers::fromHandle<BufferRegionIndex>(descriptorWrite.texelBufferView->buffer);
-            assert(bufferRegionIndex != nullptr);
-            VkBufferView bufferView{};
-            CHECK_RESULT_RETURN(bufferRegionIndex->createBufferView(*descriptorWrite.texelBufferView, bufferView));
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
@@ -376,7 +371,7 @@ VkResult lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const Luna
                                 binding.type,
                                 nullptr,
                                 nullptr,
-                                &bufferView);
+                                helpers::fromHandle<VkBufferView>(descriptorWrite.texelBufferView));
         }
     }
     vkUpdateDescriptorSets(device, writes.size(), writes.data(), 0, nullptr);
