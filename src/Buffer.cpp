@@ -298,6 +298,15 @@ BufferRegionIndex::~BufferRegionIndex()
     }
 }
 
+VkResult BufferRegionIndex::flushMemory() const
+{
+    CHECK_RESULT_RETURN(vmaFlushAllocation(device.allocator(),
+                                           buffer_->allocation_,
+                                           offset(),
+                                           size()));
+    return VK_SUCCESS;
+}
+
 VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
                                          const size_t bytes,
                                          const size_t offset,
@@ -309,7 +318,7 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
     if (mappedData != nullptr)
     {
         std::copy_n(data, bytes, mappedData + offset);
-        // TODO (0.3.0): If the allocation is not HOST_COHERENT, then vkFlushMappedMemoryRanges must be called
+        CHECK_RESULT_RETURN(flushMemory());
         // TODO (0.3.0): Memory dependency for the provided stageFlags
     } else
     {

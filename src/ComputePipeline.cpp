@@ -94,6 +94,7 @@ VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creati
 VkResult lunaDispatchCompute(const LunaDispatchComputeInfo *info)
 {
     assert(info);
+    assert(info->pipeline != LUNA_NULL_HANDLE);
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().compute->commandBuffer();
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
     CHECK_RESULT_RETURN(

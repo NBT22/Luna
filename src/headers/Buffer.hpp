@@ -90,11 +90,12 @@ class BufferRegionIndex
 
         ~BufferRegionIndex();
 
+        VkResult flushMemory() const;
         [[nodiscard]] VkResult copyToBuffer(const uint8_t *data,
                                             size_t bytes,
                                             size_t offset = 0,
                                             VkPipelineStageFlags stageFlags = 0) const;
-        VkResult createBufferView(const LunaBufferViewCreationInfo &creationInfo, LunaBufferView *lunaView);
+        [[nodiscard]] VkResult createBufferView(const LunaBufferViewCreationInfo &creationInfo, LunaBufferView *lunaView);
 
         [[nodiscard]] size_t offset() const;
         [[nodiscard]] size_t size() const;
