@@ -96,7 +96,8 @@ VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creati
  * @param[in] info A pointer to the @c LunaDispatchCompute structure containing information about what to dispatch.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdDispatch.html
  */
-VkResult lunaDispatchCompute(const LunaDispatchComputeInfo *info);
+VkResult lunaDispatch(const LunaDispatchInfo *info);
+VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info);
 
 /**
  * @brief Create a new command pool.

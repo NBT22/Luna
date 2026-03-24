@@ -128,17 +128,8 @@ inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
                                                    const VkPipelineStageFlags stageMask)
 {
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
-    // TODO (0.3.0): BUG!! Not signaling breaks GAME, but signaling breaks GAME SDK
-    static constexpr bool SDK = true;
-    if constexpr (SDK)
-    {
-        CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, nullptr));
-        fence_.setWillBeSignaled(false);
-    } else
-    {
-        CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fence_));
-        fence_.setWillBeSignaled(true);
-    }
+    CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fence_));
+    fence_.setWillBeSignaled(true);
     isRecording_ = false;
     if (submitInfo.signalSemaphoreCount > 0)
     {

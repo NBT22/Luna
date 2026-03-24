@@ -440,11 +440,24 @@ typedef struct
 {
         LunaComputePipeline pipeline;
         LunaDescriptorSetBindInfo descriptorSetBindInfo;
+        uint32_t baseGroupX;
+        uint32_t baseGroupY;
+        uint32_t baseGroupZ;
         uint32_t groupCountX;
         uint32_t groupCountY;
         uint32_t groupCountZ;
         bool submitCommandBuffer;
-} LunaDispatchComputeInfo;
+} LunaDispatchBaseInfo;
+
+typedef struct
+{
+        LunaComputePipeline pipeline;
+        LunaDescriptorSetBindInfo descriptorSetBindInfo;
+        uint32_t groupCountX;
+        uint32_t groupCountY;
+        uint32_t groupCountZ;
+        bool submitCommandBuffer;
+} LunaDispatchInfo;
 
 /// @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
 // TODO (0.3.0): Have a way for buffers to say if they will be used for compute or not
