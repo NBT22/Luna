@@ -93,10 +93,15 @@ VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsi
 VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creationInfo, LunaComputePipeline *pipeline);
 /**
  * @brief Dispatch a compute pipeline.
- * @param[in] info A pointer to the @c LunaDispatchCompute structure containing information about what to dispatch.
+ * @param[in] info A pointer to the @c LunaDispatchInfo structure containing information about what to dispatch.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdDispatch.html
  */
 VkResult lunaDispatch(const LunaDispatchInfo *info);
+/**
+ * @brief Dispatch a compute pipeline, with potentially non-zero starting workgroup ids.
+ * @param[in] info A pointer to the @c LunaDispatchBaseInfo structure containing information about what to dispatch.
+ * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdDispatchBase.html
+ */
 VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info);
 
 /**

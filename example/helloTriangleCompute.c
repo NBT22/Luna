@@ -188,7 +188,7 @@ int main(void)
     };
     CHECK_RESULT(lunaAllocateDescriptorSets(&descriptorSetAllocationInfo, &descriptorSet));
 
-    const LunaDispatchComputeInfo dispatchComputeInfo = {
+    const LunaDispatchInfo dispatchComputeInfo = {
         .pipeline = pipeline,
         .descriptorSetBindInfo.descriptorSetCount = 1,
         .descriptorSetBindInfo.descriptorSets = &descriptorSet,
@@ -201,7 +201,7 @@ int main(void)
         CHECK_RESULT(lunaBeginFrame(false));
         lunaTransitionColorImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
         lunaWriteFramebufferToDescriptor(descriptorSet);
-        CHECK_RESULT(lunaDispatchCompute(&dispatchComputeInfo));
+        CHECK_RESULT(lunaDispatch(&dispatchComputeInfo));
         lunaTransitionColorImageLayout(VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         CHECK_RESULT(lunaEndFrame());
     }

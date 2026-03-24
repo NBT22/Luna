@@ -253,6 +253,16 @@ VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo)
     return VK_SUCCESS;
 }
 
+VkDevice lunaGetDevice()
+{
+    return luna::device;
+}
+
+VkPhysicalDevice lunaGetPhysicalDevice()
+{
+    return luna::device;
+}
+
 VkResult lunaDeviceWaitIdle()
 {
     CHECK_RESULT_RETURN(vkDeviceWaitIdle(luna::device));
