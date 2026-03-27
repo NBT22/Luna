@@ -10,9 +10,9 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "DescriptorSetLayout.hpp"
+#include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
-#include "helpers/Handle.hpp"
 
 namespace luna
 {
@@ -31,7 +31,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
         bindingMap_.emplace(binding.bindingName, Binding{.index = bindingIndex, .type = binding.descriptorType});
         bindings.emplace_back(bindingIndex,
                               binding.descriptorType,
-                              binding.descriptorCount,
+                              binding.descriptorCount == 0 ? 1 : binding.descriptorCount,
                               binding.stageFlags,
                               binding.immutableSamplers);
         bindingFlags.emplace_back(binding.bindingFlags);
