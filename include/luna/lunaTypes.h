@@ -227,8 +227,9 @@ typedef struct
 typedef struct
 {
         LunaBuffer buffer;
-        VkFormat format;
-} LunaBufferViewCreationInfo;
+        VkDeviceSize offset;
+        VkDeviceSize range;
+} LunaDescriptorBufferInfo;
 
 typedef struct
 {
@@ -237,7 +238,7 @@ typedef struct
         uint32_t descriptorArrayElement;
         uint32_t descriptorCount;
         const LunaDescriptorImageInfo *imageInfo;
-        LunaBuffer bufferInfo;
+        const LunaDescriptorBufferInfo *bufferInfo;
         LunaBufferView texelBufferView;
 } LunaWriteDescriptorSet;
 
@@ -476,6 +477,12 @@ typedef struct
 
         const VmaAllocationCreateInfo *allocationCreateInfo;
 } LunaBufferCreationInfo;
+
+typedef struct
+{
+        LunaBuffer buffer;
+        VkFormat format;
+} LunaBufferViewCreationInfo;
 
 typedef struct
 {

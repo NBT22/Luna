@@ -342,14 +342,17 @@ VkResult lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const Luna
                                 nullptr,
                                 nullptr);
         }
-        if (descriptorWrite.bufferInfo != LUNA_NULL_HANDLE)
+        if (descriptorWrite.bufferInfo != nullptr)
         {
-            const LunaBuffer buffer = descriptorWrite.bufferInfo;
+            const LunaBuffer buffer = descriptorWrite.bufferInfo->buffer;
             const BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(buffer);
             assert(bufferRegionIndex != nullptr);
+            assert(descriptorWrite.bufferInfo->offset < bufferRegionIndex->size());
             descriptorBufferInfos.emplace_back(bufferRegionIndex->buffer(),
-                                               bufferRegionIndex->offset(),
-                                               bufferRegionIndex->size());
+                                               bufferRegionIndex->offset() + descriptorWrite.bufferInfo->offset,
+                                               descriptorWrite.bufferInfo->range == 0
+                                                       ? bufferRegionIndex->size() - descriptorWrite.bufferInfo->offset
+                                                       : descriptorWrite.bufferInfo->range);
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
