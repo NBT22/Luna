@@ -64,6 +64,13 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
             // This buffer is either destroyed or was created using flags incompatible with the new region
             continue;
         }
+
+        /// TODO (0.3.0): Properly ensure allocation compatablility
+        if (buffer.allocationCreateInfo_.flags != creationInfo.allocationCreateInfo->flags)
+        {
+            continue;
+        }
+
         if (buffer.regions_.empty())
         {
             assert(buffer.usedBytes_ == 0 && buffer.unusedBytes_ == 0); // Internal state check
@@ -300,10 +307,7 @@ BufferRegionIndex::~BufferRegionIndex()
 
 VkResult BufferRegionIndex::flushMemory() const
 {
-    CHECK_RESULT_RETURN(vmaFlushAllocation(device.allocator(),
-                                           buffer_->allocation_,
-                                           offset(),
-                                           size()));
+    CHECK_RESULT_RETURN(vmaFlushAllocation(device.allocator(), buffer_->allocation_, offset(), size()));
     return VK_SUCCESS;
 }
 
@@ -417,6 +421,25 @@ VkResult lunaResizeBuffer(LunaBuffer *buffer, const VkDeviceSize newSize)
     luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(*buffer);
     CHECK_RESULT_RETURN(luna::BufferRegionIndex::resize(bufferRegionIndex, newSize));
     *buffer = luna::helpers::toHandle(bufferRegionIndex);
+    return VK_SUCCESS;
+}
+
+VkResult lunaFillBuffer(const LunaBuffer buffer, const uint32_t data)
+{
+    assert(buffer != LUNA_NULL_HANDLE);
+
+    // TODO (0.3.0): Command buffer needs to be picked such that it will actually be submitted. This applies to all
+    //  command buffers and is an important consideration, since headless compute doesn't have the render loop that much
+    //  of the library assumes will always be present.
+    luna::CommandBuffer &commandBuffer = luna::device.commandPools().compute->commandBuffer(0);
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+
+    const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
+    vkCmdFillBuffer(commandBuffer,
+                    bufferRegionIndex.buffer(),
+                    bufferRegionIndex.offset(),
+                    bufferRegionIndex.size(),
+                    data);
     return VK_SUCCESS;
 }
 
