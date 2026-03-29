@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 #include <vulkan/vulkan_core.h>
 #include "Fence.hpp"
 #include "Semaphore.hpp"
@@ -15,20 +16,15 @@ class CommandBuffer
 {
     public:
         CommandBuffer() = default;
-        CommandBuffer(VkDevice logicalDevice,
-                      VkCommandPool commandPool,
-                      VkCommandBufferLevel commandBufferLevel,
-                      const void *allocateInfoPNext);
-        CommandBuffer(VkDevice logicalDevice,
-                      VkCommandPool commandPool,
-                      VkCommandBufferLevel commandBufferLevel,
-                      const void *allocateInfoPNext,
-                      const VkSemaphoreCreateInfo *semaphoreCreateInfo);
+        CommandBuffer(VkDevice logicalDevice, VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
+
+        CommandBuffer(CommandBuffer &&other) noexcept = default;
+
+        CommandBuffer &operator=(CommandBuffer &&other) noexcept = default;
 
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
-        void destroy(VkDevice logicalDevice) const;
         void destroy(VkDevice logicalDevice, VkCommandPool commandPool);
 
         VkResult beginSingleUseCommandBuffer();
@@ -59,20 +55,10 @@ namespace luna::commandBuffer
 {
 inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
                                     const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel,
-                                    const void *allocateInfoPNext):
-    CommandBuffer(logicalDevice, commandPool, commandBufferLevel, allocateInfoPNext, nullptr)
-{}
-inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
-                                    const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel,
-                                    const void *allocateInfoPNext,
-                                    const VkSemaphoreCreateInfo *semaphoreCreateInfo):
-    semaphore_(logicalDevice, semaphoreCreateInfo)
+                                    const VkCommandBufferLevel commandBufferLevel)
 {
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .pNext = allocateInfoPNext,
         .commandPool = commandPool,
         .level = commandBufferLevel,
         .commandBufferCount = 1,
@@ -95,17 +81,9 @@ inline const VkCommandBuffer *CommandBuffer::operator&() const
     return &commandBuffer_;
 }
 
-inline void CommandBuffer::destroy(const VkDevice logicalDevice) const
-{
-    assert(!isRecording_);
-    fence_.destroy(logicalDevice);
-    semaphore_.destroy(logicalDevice);
-}
 inline void CommandBuffer::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool)
 {
     assert(!isRecording_);
-    fence_.destroy(logicalDevice);
-    semaphore_.destroy(logicalDevice);
     vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer_);
     commandBuffer_ = VK_NULL_HANDLE;
 }

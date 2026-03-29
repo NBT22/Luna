@@ -71,15 +71,9 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
            luna::swapchain.imageCount <= capabilities.maxImageCount);
     CHECK_RESULT_RETURN(luna::device.createSemaphores(luna::swapchain.imageCount));
 
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
     CHECK_RESULT_RETURN(
-            luna::device.commandPools().graphics->commandBuffer().resizeArray(luna::device,
-                                                                              *luna::device.commandPools().graphics,
+            luna::device.commandPools().graphics->commandBuffer().resizeArray(*luna::device.commandPools().graphics,
                                                                               VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                              nullptr,
-                                                                              &semaphoreCreateInfo,
                                                                               luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;
@@ -387,7 +381,7 @@ VkResult lunaPipelineBarrier(const LunaDependencyInfo *dependencyInfo)
     assert(dependencyInfo);
 
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
     luna::helpers::pipelineBarrier(commandBuffer, *dependencyInfo);
     return VK_SUCCESS;
 }
@@ -534,8 +528,8 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
            swapchain.extent.height <= capabilities.maxImageExtent.height);
 
     CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.waitForAllFences(device));
-    CHECK_RESULT_RETURN(commandBuffer.recreateSemaphores(device));
+    CHECK_RESULT_RETURN(commandBuffer.waitForAllFences());
+    CHECK_RESULT_RETURN(commandBuffer.recreateSemaphores());
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
         vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
@@ -570,8 +564,8 @@ VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
 {
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
     // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
-    CHECK_RESULT_RETURN(commandBuffer.waitForFence(luna::device));
-    CHECK_RESULT_RETURN(commandBuffer.resetFence(luna::device));
+    CHECK_RESULT_RETURN(commandBuffer.waitForFence());
+    CHECK_RESULT_RETURN(commandBuffer.resetFence());
     const VkResult acquireImageResult = vkAcquireNextImageKHR(luna::device,
                                                               luna::swapchain.swapchain,
                                                               UINT64_MAX,

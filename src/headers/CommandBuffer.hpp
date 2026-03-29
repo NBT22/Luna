@@ -6,9 +6,11 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vulkan/vulkan_core.h>
 #include "commandBuffer/CommandBuffer.hpp"
 #include "commandBuffer/CommandBufferArray.hpp"
+#include "helpers/Handle.hpp"
 #include "Semaphore.hpp"
 
 namespace luna
@@ -22,29 +24,18 @@ class CommandBuffer
             ARRAY,
         };
 
-        CommandBuffer(const CommandBuffer &other);
-        CommandBuffer(VkDevice logicalDevice,
-                      VkCommandPool commandPool,
-                      VkCommandBufferLevel commandBufferLevel,
-                      const void *allocateInfoPNext,
-                      uint32_t arraySize);
-        CommandBuffer(VkDevice logicalDevice,
-                      VkCommandPool commandPool,
-                      VkCommandBufferLevel commandBufferLevel,
-                      const void *allocateInfoPNext,
-                      const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                      uint32_t arraySize);
+        CommandBuffer(VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
+        CommandBuffer(VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel, uint32_t arraySize);
+
+        CommandBuffer(CommandBuffer &&other) noexcept = default;
+
+        CommandBuffer &operator=(CommandBuffer &&other) noexcept = default;
 
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
-        void destroy(VkDevice logicalDevice) const;
-
-        VkResult resizeArray(VkDevice logicalDevice,
-                             VkCommandPool commandPool,
+        VkResult resizeArray(VkCommandPool commandPool,
                              VkCommandBufferLevel commandBufferLevel,
-                             const void *allocateInfoPNext,
-                             const VkSemaphoreCreateInfo *semaphoreCreateInfo,
                              uint32_t arraySize,
                              uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
@@ -53,11 +44,11 @@ class CommandBuffer
                                      const VkSubmitInfo &submitInfo,
                                      VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
-        VkResult waitForAllFences(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
-        VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
-        VkResult resetFence(VkDevice logicalDevice);
-        VkResult recreateSemaphores(VkDevice logicalDevice);
-        VkResult ensureIsRecording(VkDevice logicalDevice, bool shouldResetFence = false);
+        [[nodiscard]] VkResult waitForAllFences(uint64_t timeout = UINT64_MAX) const;
+        [[nodiscard]] VkResult waitForFence(uint64_t timeout = UINT64_MAX) const;
+        VkResult resetFence();
+        VkResult recreateSemaphores();
+        VkResult ensureIsRecording(bool shouldResetFence = false);
 
         [[nodiscard]] bool isRecording() const;
         [[nodiscard]] const Semaphore &semaphore() const;
@@ -83,74 +74,6 @@ class CommandBuffer
 
 namespace luna
 {
-inline CommandBuffer::CommandBuffer(const CommandBuffer &other): type_(other.type_)
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            commandBuffer_ = other.commandBuffer_;
-            break;
-        case Type::ARRAY:
-            commandBufferArray_ = other.commandBufferArray_;
-            break;
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in copy constructor!");
-    }
-}
-inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
-                                    const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel,
-                                    const void *allocateInfoPNext,
-                                    const uint32_t arraySize)
-{
-    assert(arraySize > 0);
-    if (arraySize == 1)
-    {
-        type_ = Type::SINGLE;
-        commandBuffer_ = commandBuffer::CommandBuffer(logicalDevice,
-                                                      commandPool,
-                                                      commandBufferLevel,
-                                                      allocateInfoPNext);
-    } else
-    {
-        type_ = Type::ARRAY;
-        commandBufferArray_ = commandBuffer::CommandBufferArray(logicalDevice,
-                                                                commandPool,
-                                                                commandBufferLevel,
-                                                                allocateInfoPNext,
-                                                                arraySize);
-    }
-}
-inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
-                                    const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel,
-                                    const void *allocateInfoPNext,
-                                    const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                                    const uint32_t arraySize)
-{
-    assert(arraySize > 0);
-    if (arraySize == 1)
-    {
-        type_ = Type::SINGLE;
-        commandBuffer_ = commandBuffer::CommandBuffer(logicalDevice,
-                                                      commandPool,
-                                                      commandBufferLevel,
-                                                      allocateInfoPNext,
-                                                      semaphoreCreateInfo);
-    } else
-    {
-        type_ = Type::ARRAY;
-        commandBufferArray_ = commandBuffer::CommandBufferArray(logicalDevice,
-                                                                commandPool,
-                                                                commandBufferLevel,
-                                                                allocateInfoPNext,
-                                                                semaphoreCreateInfo,
-                                                                arraySize);
-    }
-}
-
 inline CommandBuffer::operator const VkCommandBuffer &() const
 {
     switch (type_)
@@ -178,71 +101,6 @@ inline const VkCommandBuffer *CommandBuffer::operator&() const
     }
 }
 
-inline void CommandBuffer::destroy(const VkDevice logicalDevice) const
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            commandBuffer_.destroy(logicalDevice);
-            break;
-        case Type::ARRAY:
-            commandBufferArray_.destroy(logicalDevice);
-            break;
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in destroy!");
-    }
-}
-
-inline VkResult CommandBuffer::resizeArray(const VkDevice logicalDevice,
-                                           const VkCommandPool commandPool,
-                                           const VkCommandBufferLevel commandBufferLevel,
-                                           const void *allocateInfoPNext,
-                                           const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                                           const uint32_t arraySize,
-                                           const uint64_t timeout)
-{
-    if ((type_ == Type::SINGLE && arraySize == 1) || (type_ == Type::ARRAY && arraySize == commandBufferArray_.size()))
-    {
-        return VK_SUCCESS;
-    }
-    switch (type_)
-    {
-        case Type::SINGLE:
-            CHECK_RESULT_RETURN(commandBuffer_.waitForFence(logicalDevice, timeout));
-            commandBuffer_.destroy(logicalDevice, commandPool);
-            commandBufferArray_ = commandBuffer::CommandBufferArray(logicalDevice,
-                                                                    commandPool,
-                                                                    commandBufferLevel,
-                                                                    allocateInfoPNext,
-                                                                    semaphoreCreateInfo,
-                                                                    arraySize);
-            type_ = Type::ARRAY;
-            break;
-        case Type::ARRAY:
-            assert(!commandBufferArray_.anyRecording());
-            CHECK_RESULT_RETURN(commandBufferArray_.waitForAllFences(logicalDevice, timeout));
-            commandBufferArray_.destroy(logicalDevice, commandPool);
-            if (arraySize == 1)
-            {
-                commandBuffer_ = commandBuffer::CommandBuffer(logicalDevice,
-                                                              commandPool,
-                                                              commandBufferLevel,
-                                                              allocateInfoPNext,
-                                                              semaphoreCreateInfo);
-                type_ = Type::SINGLE;
-            } else
-            {
-                commandBufferArray_ = commandBuffer::CommandBufferArray(logicalDevice,
-                                                                        commandPool,
-                                                                        commandBufferLevel,
-                                                                        allocateInfoPNext,
-                                                                        semaphoreCreateInfo,
-                                                                        arraySize);
-            }
-            break;
-    }
-    return VK_SUCCESS;
-}
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
 {
     switch (type_)
@@ -300,67 +158,6 @@ inline bool CommandBuffer::getAndSetIsSignaled(const bool value)
                                      typeAsString() +
                                      " when used in getAndSetIsSignaled!");
     }
-}
-inline VkResult CommandBuffer::waitForAllFences(const VkDevice logicalDevice, const uint64_t timeout) const
-{
-    switch (type_)
-    {
-        case Type::ARRAY:
-            return commandBufferArray_.waitForAllFences(logicalDevice, timeout);
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in waitForAllFences!");
-    }
-}
-inline VkResult CommandBuffer::waitForFence(const VkDevice logicalDevice, const uint64_t timeout) const
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.waitForFence(logicalDevice, timeout);
-        case Type::ARRAY:
-            return commandBufferArray_.waitForFence(logicalDevice, timeout);
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in waitForFence!");
-    }
-}
-inline VkResult CommandBuffer::resetFence(const VkDevice logicalDevice)
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.resetFence(logicalDevice);
-        case Type::ARRAY:
-            return commandBufferArray_.resetFence(logicalDevice);
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in resetFence!");
-    }
-}
-inline VkResult CommandBuffer::recreateSemaphores(const VkDevice logicalDevice)
-{
-    switch (type_)
-    {
-        case Type::ARRAY:
-            return commandBufferArray_.recreateSemaphores(logicalDevice);
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in recreateSemaphores!");
-    }
-}
-inline VkResult CommandBuffer::ensureIsRecording(const VkDevice logicalDevice, const bool shouldResetFence)
-{
-    if (!isRecording())
-    {
-        CHECK_RESULT_RETURN(waitForFence(logicalDevice));
-        if (shouldResetFence)
-        {
-            CHECK_RESULT_RETURN(resetFence(logicalDevice));
-        }
-        CHECK_RESULT_RETURN(beginSingleUseCommandBuffer());
-    }
-    return VK_SUCCESS;
 }
 
 inline bool CommandBuffer::isRecording() const

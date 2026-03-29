@@ -37,6 +37,7 @@ LUNA_DEFINE_HANDLE(LunaBufferView);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
 LUNA_DEFINE_HANDLE(LunaCommandPool);
+LUNA_DEFINE_HANDLE(LunaCommandBuffer);
 LUNA_DEFINE_HANDLE(LunaSlangSession);
 
 static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
@@ -560,13 +561,6 @@ typedef struct
 
 typedef struct
 {
-        VkCommandPoolCreateFlags flags;
-        VkQueueFlags requiredQueueFlags;
-        bool requireQueuePresentationSupport;
-} LunaCommandPoolCreationInfo;
-
-typedef struct
-{
         LunaRenderPass renderPass;
         uint32_t width;
         uint32_t height;
@@ -672,6 +666,21 @@ typedef struct
         uint32_t imageMemoryBarrierCount;
         const LunaImageMemoryBarrier *imageMemoryBarriers;
 } LunaDependencyInfo;
+
+typedef struct
+{
+    VkCommandPoolCreateFlags flags;
+    VkQueueFlags requiredQueueFlags;
+    bool requireQueuePresentationSupport;
+} LunaCommandPoolCreationInfo;
+
+typedef struct
+{
+    LunaCommandPool commandPool;
+    VkCommandBufferLevel level;
+    /// Luna will create an array of command buffers and automatically select the one recorded least recently
+    uint32_t arrayCount;
+} LunaCommandBufferAllocationInfo;
 
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)

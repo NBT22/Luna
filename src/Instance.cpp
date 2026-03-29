@@ -229,15 +229,9 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
            luna::swapchain.imageCount <= capabilities.maxImageCount);
     CHECK_RESULT_RETURN(luna::device.createSemaphores(luna::swapchain.imageCount));
 
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
     CHECK_RESULT_RETURN(
-            luna::device.commandPools().graphics->commandBuffer().resizeArray(luna::device,
-                                                                              *luna::device.commandPools().graphics,
+            luna::device.commandPools().graphics->commandBuffer().resizeArray(*luna::device.commandPools().graphics,
                                                                               VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                              nullptr,
-                                                                              &semaphoreCreateInfo,
                                                                               luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;

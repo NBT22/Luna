@@ -237,7 +237,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
     };
 
     CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer(1);
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
 
     if (writeInfo.bytes == 0 || writeInfo.pixels == nullptr)
     {
@@ -499,7 +499,7 @@ VkResult lunaBlitImageToSwapchain(const LunaImage image, const VkImageBlit2 *bli
     assert(blitRegion);
 
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
 
     constexpr VkImageSubresourceRange subresourceRange = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -547,7 +547,7 @@ VkResult lunaCopyImageToBuffer(const LunaImage image,
     assert(image != LUNA_NULL_HANDLE && buffer != LUNA_NULL_HANDLE);
 
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer(1);
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
     const luna::Image &imageObject = *luna::helpers::fromHandle<luna::Image>(image);
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
 

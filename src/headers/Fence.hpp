@@ -12,13 +12,17 @@ class Fence
 {
     public:
         Fence() = default;
-        Fence(VkDevice logicalDevice, const VkFenceCreateInfo *fenceCreateInfo);
+        explicit Fence(const VkFenceCreateInfo &fenceCreateInfo);
+
+        Fence(Fence &&other) = default;
+
+        ~Fence();
+
+        Fence &operator=(Fence &&other) noexcept = default;
 
         operator const VkFence &() const;
         const VkFence *operator&() const;
         VkFence *operator&();
-
-        void destroy(VkDevice logicalDevice) const;
 
         void setWillBeSignaled(bool value);
 
@@ -37,11 +41,6 @@ class Fence
 
 namespace luna
 {
-inline Fence::Fence(const VkDevice logicalDevice, const VkFenceCreateInfo *fenceCreateInfo)
-{
-    CHECK_RESULT_THROW(vkCreateFence(logicalDevice, fenceCreateInfo, nullptr, &fence_));
-}
-
 inline Fence::operator const VkFence &() const
 {
     return fence_;
@@ -53,11 +52,6 @@ inline const VkFence *Fence::operator&() const
 inline VkFence *Fence::operator&()
 {
     return &fence_;
-}
-
-inline void Fence::destroy(const VkDevice logicalDevice) const
-{
-    vkDestroyFence(logicalDevice, fence_, nullptr);
 }
 
 inline void Fence::setWillBeSignaled(const bool value)

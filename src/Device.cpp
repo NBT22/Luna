@@ -199,8 +199,6 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
     isDestroyed_ = false;
-
-    CHECK_RESULT_THROW(createCommandPools_());
 }
 } // namespace luna
 
@@ -219,6 +217,7 @@ VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo)
         .physicalDevicePreferenceDefinition = creationInfo->physicalDevicePreferenceDefinition,
     };
     TRY_CATCH_RESULT(luna::device = luna::Device(creationInfo2));
+    luna::device.createInternalCommandPools();
     constexpr VmaAllocationCreateInfo allocationCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO,

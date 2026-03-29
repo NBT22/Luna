@@ -37,9 +37,11 @@ class Device
 
         VkResult addShaderModule(const LunaShaderModuleCreationInfo &creationInfo, LunaShaderModule *shaderModule);
         VkResult createSemaphores(uint32_t imageCount);
+        VkResult createInternalCommandPools();
         VkResult addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
                                            LunaCommandPool *commandPool);
 
+        [[nodiscard]] bool isDestroyed() const noexcept;
         [[nodiscard]] VkSharingMode sharingMode() const noexcept;
         /// A getter for the @c familyCount_ value
         /// @return The total count of unique families
@@ -58,7 +60,6 @@ class Device
         [[nodiscard]] bool checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
         [[nodiscard]] bool checkFeatureSupport_(const VkBool32 *requiredFeatures) const;
         [[nodiscard]] bool checkUsability_(VkPhysicalDevice device, VkSurfaceKHR surface);
-        VkResult createCommandPools_();
 
         bool isDestroyed_{true};
         VkPhysicalDevice physicalDevice_{};
@@ -85,7 +86,6 @@ class Device
 
 #pragma region Implementation
 
-#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <volk.h>
@@ -121,10 +121,7 @@ inline void Device::destroy()
     {
         internalCommandPools_.presentation->destroy();
     }
-    for (const Semaphore &renderFinishedSemaphore: renderFinishedSemaphores_)
-    {
-        vkDestroySemaphore(logicalDevice_, renderFinishedSemaphore, nullptr);
-    }
+    renderFinishedSemaphores_.clear();
     vmaDestroyAllocator(allocator_);
     vkDestroyDevice(logicalDevice_, nullptr);
 
@@ -157,6 +154,31 @@ inline VkResult Device::createSemaphores(const uint32_t imageCount)
     }
     return VK_SUCCESS;
 }
+inline VkResult Device::createInternalCommandPools()
+{
+    const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = familyIndices_.graphics,
+    };
+    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &graphicsCommandPoolCreateInfo));
+    internalCommandPools_.graphics = &commandPools_.back();
+
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+
+    const VkCommandPoolCreateInfo computeCommandPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = familyIndices_.compute,
+    };
+    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &computeCommandPoolCreateInfo));
+    internalCommandPools_.compute = &commandPools_.back();
+
+    CHECK_RESULT_RETURN(internalCommandPools_.compute->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+
+    return VK_SUCCESS;
+}
 inline VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
                                                   LunaCommandPool *commandPool)
 {
@@ -168,6 +190,10 @@ inline VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationI
     return VK_SUCCESS;
 }
 
+inline bool Device::isDestroyed() const noexcept
+{
+    return isDestroyed_;
+}
 inline VkSharingMode Device::sharingMode() const noexcept
 {
     return hasFamily_.compute ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
@@ -415,44 +441,6 @@ inline bool Device::checkUsability_(const VkPhysicalDevice device, const VkSurfa
         }
     }
     return false;
-}
-inline VkResult Device::createCommandPools_()
-{
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-
-    const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = familyIndices_.graphics,
-    };
-    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &graphicsCommandPoolCreateInfo));
-    internalCommandPools_.graphics = &commandPools_.back();
-
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(logicalDevice_,
-                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                              nullptr,
-                                                                              &semaphoreCreateInfo));
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(logicalDevice_,
-                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                              nullptr,
-                                                                              &semaphoreCreateInfo));
-
-    const VkCommandPoolCreateInfo computeCommandPoolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = familyIndices_.compute,
-    };
-    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &computeCommandPoolCreateInfo));
-    internalCommandPools_.compute = &commandPools_.back();
-
-    CHECK_RESULT_RETURN(internalCommandPools_.compute->allocateCommandBuffer(logicalDevice_,
-                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                             nullptr,
-                                                                             &semaphoreCreateInfo));
-
-    return VK_SUCCESS;
 }
 } // namespace luna
 

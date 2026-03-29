@@ -23,15 +23,7 @@ class CommandPool
 
         void destroy();
 
-        [[nodiscard]] VkResult allocateCommandBuffer(VkDevice logicalDevice,
-                                                     VkCommandBufferLevel commandBufferLevel,
-                                                     const void *allocateInfoPNext,
-                                                     uint32_t arraySize = 1);
-        [[nodiscard]] VkResult allocateCommandBuffer(VkDevice logicalDevice,
-                                                     VkCommandBufferLevel commandBufferLevel,
-                                                     const void *allocateInfoPNext,
-                                                     const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                                                     uint32_t arraySize = 1);
+        [[nodiscard]] VkResult allocateCommandBuffer(VkCommandBufferLevel commandBufferLevel, uint32_t arraySize = 1);
         [[nodiscard]] VkResult reset(VkCommandPoolResetFlags flags, uint64_t timeout = UINT64_MAX) const;
 
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
@@ -64,32 +56,16 @@ inline CommandPool::operator const VkCommandPool &() const
     return commandPool_;
 }
 
-inline VkResult CommandPool::allocateCommandBuffer(const VkDevice logicalDevice,
-                                                   VkCommandBufferLevel commandBufferLevel,
-                                                   const void *allocateInfoPNext,
-                                                   const uint32_t arraySize)
+inline VkResult CommandPool::allocateCommandBuffer(VkCommandBufferLevel commandBufferLevel, const uint32_t arraySize)
 {
     assert(!isDestroyed_);
-    TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice,
-                                                  commandPool_,
-                                                  commandBufferLevel,
-                                                  allocateInfoPNext,
-                                                  arraySize));
-    return VK_SUCCESS;
-}
-inline VkResult CommandPool::allocateCommandBuffer(const VkDevice logicalDevice,
-                                                   VkCommandBufferLevel commandBufferLevel,
-                                                   const void *allocateInfoPNext,
-                                                   const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                                                   const uint32_t arraySize)
-{
-    assert(!isDestroyed_);
-    TRY_CATCH_RESULT(commandBuffers_.emplace_back(logicalDevice,
-                                                  commandPool_,
-                                                  commandBufferLevel,
-                                                  allocateInfoPNext,
-                                                  semaphoreCreateInfo,
-                                                  arraySize));
+    if (arraySize == 1)
+    {
+        TRY_CATCH_RESULT(commandBuffers_.emplace_back(commandPool_, commandBufferLevel));
+    } else
+    {
+        TRY_CATCH_RESULT(commandBuffers_.emplace_back(commandPool_, commandBufferLevel, arraySize));
+    }
     return VK_SUCCESS;
 }
 

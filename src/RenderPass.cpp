@@ -561,7 +561,7 @@ VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
     assert(swapchain.imageIndex != -1u);
     CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
 
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording());
 
     uint32_t clearValueCount = 1;
     std::vector<VkClearValue> clearValues;

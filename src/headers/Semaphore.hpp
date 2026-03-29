@@ -11,15 +11,18 @@ namespace luna
 class Semaphore
 {
     public:
-        Semaphore() = default;
-        Semaphore(VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo);
+        Semaphore();
+        ~Semaphore();
+
+        Semaphore(Semaphore &&other) noexcept = default;
+
+        Semaphore &operator=(Semaphore &&other) noexcept = default;
 
         operator const VkSemaphore &() const;
         const VkSemaphore *operator&() const;
         VkSemaphore *operator&();
 
-        void destroy(VkDevice logicalDevice) const;
-        VkResult recreate(VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo);
+        VkResult create();
 
         void setIsSignaled(bool value);
         void setStageMask(VkPipelineStageFlags value);
@@ -28,9 +31,7 @@ class Semaphore
         [[nodiscard]] const VkPipelineStageFlags &stageMask() const;
 
     private:
-        // bool isDestroyed_{true};
         bool isSignaled_{};
-        // void *createInfoPNext{};
         VkPipelineStageFlags stageMask_{};
         VkSemaphore semaphore_{};
 };
@@ -38,20 +39,8 @@ class Semaphore
 
 #pragma region Implementation
 
-#include <volk.h>
-#include "Luna.hpp"
-
 namespace luna
 {
-inline Semaphore::Semaphore(const VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo)
-{
-    if (semaphoreCreateInfo == nullptr)
-    {
-        return;
-    }
-    CHECK_RESULT_THROW(vkCreateSemaphore(logicalDevice, semaphoreCreateInfo, nullptr, &semaphore_));
-}
-
 inline Semaphore::operator const VkSemaphore &() const
 {
     return semaphore_;
@@ -63,16 +52,6 @@ inline const VkSemaphore *Semaphore::operator&() const
 inline VkSemaphore *Semaphore::operator&()
 {
     return &semaphore_;
-}
-
-inline void Semaphore::destroy(const VkDevice logicalDevice) const
-{
-    vkDestroySemaphore(logicalDevice, semaphore_, nullptr);
-}
-inline VkResult Semaphore::recreate(const VkDevice logicalDevice, const VkSemaphoreCreateInfo *semaphoreCreateInfo)
-{
-    CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice, semaphoreCreateInfo, nullptr, &semaphore_));
-    return VK_SUCCESS;
 }
 
 inline void Semaphore::setIsSignaled(const bool value)

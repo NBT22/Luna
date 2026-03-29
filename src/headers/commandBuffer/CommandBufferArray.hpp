@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 #include "Fence.hpp"
@@ -24,20 +25,16 @@ class CommandBufferArray
         CommandBufferArray(VkDevice logicalDevice,
                            VkCommandPool commandPool,
                            VkCommandBufferLevel commandBufferLevel,
-                           const void *allocateInfoPNext,
                            uint32_t count);
-        CommandBufferArray(VkDevice logicalDevice,
-                           VkCommandPool commandPool,
-                           VkCommandBufferLevel commandBufferLevel,
-                           const void *allocateInfoPNext,
-                           const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                           uint32_t count);
+
+        // CommandBufferArray(CommandBufferArray &&other) noexcept = default;
+        //
+        // CommandBufferArray &operator=(CommandBufferArray &&other) = default;
 
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
-        void destroy(VkDevice logicalDevice) const;
-        void destroy(VkDevice logicalDevice, VkCommandPool commandPool) const;
+        void destroy(VkDevice logicalDevice, VkCommandPool commandPool);
 
         VkResult beginSingleUseCommandBuffer();
         VkResult submitCommandBuffer(VkQueue queue,
@@ -47,7 +44,7 @@ class CommandBufferArray
         VkResult waitForAllFences(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
         VkResult resetFence(VkDevice logicalDevice);
-        VkResult recreateSemaphores(VkDevice logicalDevice);
+        VkResult recreateSemaphores();
 
         [[nodiscard]] size_t size() const;
         [[nodiscard]] bool isRecording() const;
@@ -75,7 +72,6 @@ namespace luna::commandBuffer
 inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
                                               const VkCommandPool commandPool,
                                               const VkCommandBufferLevel commandBufferLevel,
-                                              const void *allocateInfoPNext,
                                               const uint32_t count)
 {
     commandBuffers_.resize(count);
@@ -83,7 +79,6 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
     isRecordings_.resize(count);
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .pNext = allocateInfoPNext,
         .commandPool = commandPool,
         .level = commandBufferLevel,
         .commandBufferCount = count,
@@ -98,20 +93,8 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
     {
         CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence));
     }
-}
-inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
-                                              const VkCommandPool commandPool,
-                                              const VkCommandBufferLevel commandBufferLevel,
-                                              const void *allocateInfoPNext,
-                                              const VkSemaphoreCreateInfo *semaphoreCreateInfo,
-                                              const uint32_t count):
-    CommandBufferArray(logicalDevice, commandPool, commandBufferLevel, allocateInfoPNext, count)
-{
+
     semaphores_.resize(count);
-    for (Semaphore &semaphore: semaphores_)
-    {
-        semaphore = Semaphore(logicalDevice, semaphoreCreateInfo);
-    }
 }
 
 inline CommandBufferArray::operator const VkCommandBuffer &() const
@@ -123,25 +106,11 @@ inline const VkCommandBuffer *CommandBufferArray::operator&() const
     return &commandBuffers_.at(index_);
 }
 
-inline void CommandBufferArray::destroy(const VkDevice logicalDevice) const
+inline void CommandBufferArray::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool)
 {
     assert(semaphores_.size() == fences_.size());
-    for (size_t i = 0; i < semaphores_.size(); i++)
-    {
-        assert(!isRecordings_.at(i));
-        fences_.at(i).destroy(logicalDevice);
-        semaphores_.at(i).destroy(logicalDevice);
-    }
-}
-inline void CommandBufferArray::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool) const
-{
-    assert(semaphores_.size() == fences_.size());
-    for (size_t i = 0; i < semaphores_.size(); i++)
-    {
-        assert(!isRecordings_.at(i));
-        fences_.at(i).destroy(logicalDevice);
-        semaphores_.at(i).destroy(logicalDevice);
-    }
+    semaphores_.clear();
+    fences_.clear();
     vkFreeCommandBuffers(logicalDevice, commandPool, commandBuffers_.size(), commandBuffers_.data());
 }
 
@@ -222,15 +191,13 @@ inline VkResult CommandBufferArray::resetFence(const VkDevice logicalDevice)
     fences_.at(index_).setWillBeSignaled(false);
     return vkResetFences(logicalDevice, 1, &fences_.at(index_));
 }
-inline VkResult CommandBufferArray::recreateSemaphores(const VkDevice logicalDevice)
+inline VkResult CommandBufferArray::recreateSemaphores()
 {
-    constexpr VkSemaphoreCreateInfo createInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-    for (Semaphore &semaphore: semaphores_)
+    const size_t count = semaphores_.size();
+    semaphores_.clear();
+    for (size_t i = 0; i < count; i++)
     {
-        semaphore.destroy(logicalDevice);
-        CHECK_RESULT_RETURN(semaphore.recreate(logicalDevice, &createInfo));
+        semaphores_.emplace_back();
     }
     return VK_SUCCESS;
 }

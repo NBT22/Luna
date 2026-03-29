@@ -54,7 +54,7 @@ ComputePipeline::~ComputePipeline()
 VkResult ComputePipeline::bind(const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const
 {
     CommandBuffer &commandBuffer = device.commandPools().compute->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording());
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_);
     if (descriptorSetBindInfo.descriptorSetCount > 0)
@@ -91,17 +91,23 @@ VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creati
     return VK_SUCCESS;
 }
 
-VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info) {
+VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info)
+{
     assert(info);
     assert(info->pipeline != LUNA_NULL_HANDLE);
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().compute->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::ComputePipeline>(info->pipeline)->bind(info->descriptorSetBindInfo));
-    vkCmdDispatchBase(commandBuffer, info->baseGroupX, info->baseGroupY, info->baseGroupZ,
-                  info->groupCountX == 0 ? 1 : info->groupCountX,
-                  info->groupCountY == 0 ? 1 : info->groupCountY,
-                  info->groupCountZ == 0 ? 1 : info->groupCountZ);
-    if (info->submitCommandBuffer) {
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
+    CHECK_RESULT_RETURN(
+            luna::helpers::fromHandle<luna::ComputePipeline>(info->pipeline)->bind(info->descriptorSetBindInfo));
+    vkCmdDispatchBase(commandBuffer,
+                      info->baseGroupX,
+                      info->baseGroupY,
+                      info->baseGroupZ,
+                      info->groupCountX == 0 ? 1 : info->groupCountX,
+                      info->groupCountY == 0 ? 1 : info->groupCountY,
+                      info->groupCountZ == 0 ? 1 : info->groupCountZ);
+    if (info->submitCommandBuffer)
+    {
         // TODO (0.3.0): If possible, optionally allow the source stage mask
         //  (if not possible to be optional, just use top of pipe)
         CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().compute,

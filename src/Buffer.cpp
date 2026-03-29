@@ -329,7 +329,7 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
         assert(this != stagingBuffer);
         // TODO: Should this use a dedicated transfer command buffer
         CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer(1);
-        CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+        CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
         CHECK_RESULT_RETURN(resize(stagingBuffer, bytes));
         assert(stagingBuffer->data() != nullptr);
         // ReSharper disable once CppDFANullDereference
@@ -432,7 +432,7 @@ VkResult lunaFillBuffer(const LunaBuffer buffer, const uint32_t data)
     //  command buffers and is an important consideration, since headless compute doesn't have the render loop that much
     //  of the library assumes will always be present.
     luna::CommandBuffer &commandBuffer = luna::device.commandPools().compute->commandBuffer(0);
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device, true));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
 
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
     vkCmdFillBuffer(commandBuffer,

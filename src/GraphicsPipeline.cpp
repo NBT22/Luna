@@ -815,7 +815,7 @@ VkResult GraphicsPipeline::pushConstants() const
 {
     const std::vector<LunaPushConstantsRange> &pushConstantsRanges = pushConstantsRanges_;
     CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(luna::device));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording());
     uint32_t offset = 0;
     for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
     {
@@ -834,7 +834,7 @@ VkResult GraphicsPipeline::pushConstants() const
 VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) const
 {
     CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording());
     for (uint32_t i = 0; i < bindInfo.dynamicStateCount; i++)
     {
         const LunaDynamicStateBindInfo &dynamicState = bindInfo.dynamicStates[i];

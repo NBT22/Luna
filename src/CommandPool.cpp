@@ -5,15 +5,15 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <luna/luna.h>
+#include <luna/lunaCommandBuffer.h>
 #include <luna/lunaTypes.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
 #include "CommandPool.hpp"
+#include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
-#include "helpers/Handle.hpp"
 
 namespace luna
 {
@@ -34,10 +34,7 @@ void CommandPool::destroy()
     {
         return;
     }
-    for (const CommandBuffer &commandBuffer: commandBuffers_)
-    {
-        commandBuffer.destroy(device);
-    }
+    commandBuffers_.clear();
     vkDestroyCommandPool(device, commandPool_, nullptr);
     isDestroyed_ = true;
 }

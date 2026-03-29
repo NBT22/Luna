@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <exception>
+#include <luna/lunaTypes.h>
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>

@@ -20,6 +20,7 @@ class ComputePipeline;
 class BufferRegionIndex;
 class Image;
 class CommandPool;
+class CommandBuffer;
 class SlangSession;
 
 LUNA_DEFINE_HANDLE(HandleType);
@@ -37,6 +38,8 @@ template<typename T> concept HandleData = std::same_as<T, RenderPass> ||
                                           std::same_as<T, VkSampler> ||
                                           std::same_as<T, Image> ||
                                           std::same_as<T, CommandPool> ||
+                                          std::same_as<T, CommandBuffer> ||
+                                          std::same_as<T, VkCommandBuffer> ||
                                           std::same_as<T, SlangSession>;
 } // namespace luna
 namespace luna::helpers
