@@ -36,7 +36,7 @@ void CommandPool::destroy()
     }
     for (CommandBuffer &commandBuffer: commandBuffers_)
     {
-        commandBuffer.destroy(commandPool_);
+        commandBuffer.destroy();
     }
     vkDestroyCommandPool(device, commandPool_, nullptr);
     isDestroyed_ = true;

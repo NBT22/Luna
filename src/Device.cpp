@@ -278,6 +278,11 @@ void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties)
     vkGetPhysicalDeviceProperties2(luna::device, properties);
 }
 
+// void lunaGetQueue(const LunaQueueProperties *requiredProperties, VkQueue queue){
+//
+//     vkGetDeviceQueue()
+// }
+
 VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule)
 {
     assert(creationInfo);

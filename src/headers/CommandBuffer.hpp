@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <vulkan/vulkan_core.h>
 #include "commandBuffer/CommandBuffer.hpp"
 #include "commandBuffer/CommandBufferArray.hpp"
@@ -30,10 +29,9 @@ class CommandBuffer
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
-        void destroy(VkCommandPool commandPool);
+        void destroy();
 
-        VkResult resizeArray(VkCommandPool commandPool,
-                             VkCommandBufferLevel commandBufferLevel,
+        VkResult resizeArray(VkCommandBufferLevel commandBufferLevel,
                              uint32_t arraySize,
                              uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
@@ -60,6 +58,7 @@ class CommandBuffer
         Type type_{};
         commandBuffer::CommandBuffer commandBuffer_{};
         commandBuffer::CommandBufferArray commandBufferArray_{};
+        VkCommandPool commandPool_{};
 };
 } // namespace luna
 

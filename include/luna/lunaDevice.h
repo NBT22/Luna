@@ -24,6 +24,8 @@ VkResult lunaDeviceWaitIdle(void);
 void lunaGetPhysicalDeviceProperties(VkPhysicalDeviceProperties *properties);
 void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties);
 
+void lunaGetQueue(const LunaQueueProperties *requiredProperties, VkQueue queue);
+
 #ifdef __cplusplus
 }
 #endif

@@ -669,18 +669,24 @@ typedef struct
 
 typedef struct
 {
-    VkCommandPoolCreateFlags flags;
-    VkQueueFlags requiredQueueFlags;
-    bool requireQueuePresentationSupport;
+        VkCommandPoolCreateFlags flags;
+        VkQueueFlags requiredQueueFlags;
+        bool requireQueuePresentationSupport;
 } LunaCommandPoolCreationInfo;
 
 typedef struct
 {
-    LunaCommandPool commandPool;
-    VkCommandBufferLevel level;
-    /// Luna will create an array of command buffers and automatically select the one recorded least recently
-    uint32_t arrayCount;
+        LunaCommandPool commandPool;
+        VkCommandBufferLevel level;
+        /// Luna will create an array of command buffers and automatically select the one recorded least recently
+        uint32_t arrayCount;
 } LunaCommandBufferAllocationInfo;
+
+typedef struct
+{
+        VkQueueFamilyProperties queueFamilyProperties;
+        bool presentationSupport;
+} LunaQueueProperties;
 
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)

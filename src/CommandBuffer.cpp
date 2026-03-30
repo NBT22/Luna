@@ -7,9 +7,9 @@
 #include <luna/lunaCommandBuffer.h>
 #include <luna/lunaTypes.h>
 #include <stdexcept>
-#include <utility>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
+#include "Fence.hpp"
 #include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
@@ -18,26 +18,28 @@ namespace luna
 {
 CommandBuffer::CommandBuffer(const VkCommandPool commandPool, const VkCommandBufferLevel commandBufferLevel):
     type_(Type::SINGLE),
-    commandBuffer_(device, commandPool, commandBufferLevel)
+    commandBuffer_(device, commandPool, commandBufferLevel),
+    commandPool_(commandPool)
 {}
 CommandBuffer::CommandBuffer(const VkCommandPool commandPool,
                              const VkCommandBufferLevel commandBufferLevel,
                              const uint32_t arraySize):
     type_(Type::ARRAY),
-    commandBufferArray_(device, commandPool, commandBufferLevel, arraySize)
+    commandBufferArray_(device, commandPool, commandBufferLevel, arraySize),
+    commandPool_(commandPool)
 {
     assert(arraySize > 1);
 }
 
-void CommandBuffer::destroy(const VkCommandPool commandPool)
+void CommandBuffer::destroy()
 {
     switch (type_)
     {
         case Type::SINGLE:
-            commandBuffer_.destroy(device, commandPool);
+            commandBuffer_.destroy(device, commandPool_);
             break;
         case Type::ARRAY:
-            commandBufferArray_.destroy(device, commandPool);
+            commandBufferArray_.destroy(device, commandPool_);
             break;
         default:
             throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in destroy");
@@ -45,8 +47,7 @@ void CommandBuffer::destroy(const VkCommandPool commandPool)
 }
 
 
-VkResult CommandBuffer::resizeArray(const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel,
+VkResult CommandBuffer::resizeArray(const VkCommandBufferLevel commandBufferLevel,
                                     const uint32_t arraySize,
                                     const uint64_t timeout)
 {
@@ -58,22 +59,25 @@ VkResult CommandBuffer::resizeArray(const VkCommandPool commandPool,
     {
         case Type::SINGLE:
             CHECK_RESULT_RETURN(commandBuffer_.waitForFence(device, timeout));
-            commandBuffer_.destroy(device, commandPool);
-            commandBufferArray_ = commandBuffer::CommandBufferArray(device, commandPool, commandBufferLevel, arraySize);
+            commandBuffer_.destroy(device, commandPool_);
+            commandBufferArray_ = commandBuffer::CommandBufferArray(device,
+                                                                    commandPool_,
+                                                                    commandBufferLevel,
+                                                                    arraySize);
             type_ = Type::ARRAY;
             break;
         case Type::ARRAY:
             assert(!commandBufferArray_.anyRecording());
             CHECK_RESULT_RETURN(commandBufferArray_.waitForAllFences(device, timeout));
-            commandBufferArray_.destroy(device, commandPool);
+            commandBufferArray_.destroy(device, commandPool_);
             if (arraySize == 1)
             {
-                commandBuffer_ = commandBuffer::CommandBuffer(device, commandPool, commandBufferLevel);
+                commandBuffer_ = commandBuffer::CommandBuffer(device, commandPool_, commandBufferLevel);
                 type_ = Type::SINGLE;
             } else
             {
                 commandBufferArray_ = commandBuffer::CommandBufferArray(device,
-                                                                        commandPool,
+                                                                        commandPool_,
                                                                         commandBufferLevel,
                                                                         arraySize);
             }
@@ -160,4 +164,40 @@ VkResult lunaAllocateCommandBuffer(const LunaCommandBufferAllocationInfo *alloca
     CHECK_RESULT_RETURN(commandPool.allocateCommandBuffer(allocationInfo->level, arrayCount));
     *commandBuffer = luna::helpers::toHandle(commandPool.commandBuffer());
     return VK_SUCCESS;
+}
+
+VkResult lunaBeginCommandBuffer(const LunaCommandBuffer commandBuffer)
+{
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    // TODO (0.3.0): Implement this
+    return VK_SUCCESS;
+}
+
+VkResult lunaEndCommandBuffer(const LunaCommandBuffer commandBuffer)
+{
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    const luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBufferObject));
+    return VK_SUCCESS;
+}
+
+VkResult lunaResetCommandBuffer(const LunaCommandBuffer commandBuffer, const VkCommandBufferResetFlags flags)
+{
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    const luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(vkResetCommandBuffer(commandBufferObject, flags));
+    return VK_SUCCESS;
+}
+
+void lunaDestroyCommandBuffer(const LunaCommandBuffer commandBuffer)
+{
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    commandBufferObject.destroy();
+    // TODO (0.3.0): Wherever the handle is a pointer to should get freed
 }

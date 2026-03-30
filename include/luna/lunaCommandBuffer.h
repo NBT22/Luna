@@ -11,6 +11,8 @@ extern "C"
 #endif
 
 #include <luna/lunaTypes.h>
+#include <stddef.h>
+#include <vulkan/vulkan_core.h>
 
 /**
  * @brief Create a new command pool.
@@ -36,7 +38,16 @@ VkResult lunaResetCommandPool(LunaCommandPool commandPool, VkCommandPoolResetFla
  */
 VkResult lunaResetCommandPoolWithTimeout(LunaCommandPool commandPool, VkCommandPoolResetFlags flags, size_t timeout);
 
-VkResult lunaAllocateCommandBuffer(const LunaCommandBufferAllocationInfo *allocationInfo, LunaCommandBuffer *commandBuffer);
+VkResult lunaAllocateCommandBuffer(const LunaCommandBufferAllocationInfo *allocationInfo,
+                                   LunaCommandBuffer *commandBuffer);
+
+VkResult lunaBeginCommandBuffer(LunaCommandBuffer commandBuffer);
+
+VkResult lunaEndCommandBuffer(LunaCommandBuffer commandBuffer);
+
+VkResult lunaResetCommandBuffer(LunaCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
+
+void lunaDestroyCommandBuffer(LunaCommandBuffer commandBuffer);
 
 #ifdef __cplusplus
 }
