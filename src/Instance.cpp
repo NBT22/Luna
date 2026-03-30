@@ -249,9 +249,6 @@ uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
 BufferRegionIndex *stagingBuffer{};
-VkPipeline boundPipeline{};
-LunaBuffer boundVertexBuffer{};
-LunaBuffer boundIndexBuffer{};
 
 #ifdef LUNA_SLANG_SHADERS
 slang::IGlobalSession *globalSlangSession{};
@@ -409,9 +406,6 @@ VkResult lunaDestroyInstance()
     instance = VK_NULL_HANDLE;
     device = Device();
     stagingBuffer = nullptr;
-    boundPipeline = VK_NULL_HANDLE;
-    boundVertexBuffer = LUNA_NULL_HANDLE;
-    boundIndexBuffer = LUNA_NULL_HANDLE;
 
     return VK_SUCCESS;
 }

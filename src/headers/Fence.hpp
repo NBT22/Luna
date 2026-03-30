@@ -14,15 +14,11 @@ class Fence
         Fence() = default;
         explicit Fence(const VkFenceCreateInfo &fenceCreateInfo);
 
-        Fence(Fence &&other) = default;
-
-        ~Fence();
-
-        Fence &operator=(Fence &&other) noexcept = default;
-
         operator const VkFence &() const;
         const VkFence *operator&() const;
         VkFence *operator&();
+
+        void destroy();
 
         void setWillBeSignaled(bool value);
 
@@ -37,7 +33,6 @@ class Fence
 #pragma region Implementation
 
 #include <volk.h>
-#include "Luna.hpp"
 
 namespace luna
 {

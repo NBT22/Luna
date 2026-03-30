@@ -5,7 +5,6 @@
 #pragma once
 
 #include <cstdint>
-#include <utility>
 #include <vulkan/vulkan_core.h>
 #include "Fence.hpp"
 #include "Semaphore.hpp"
@@ -17,10 +16,6 @@ class CommandBuffer
     public:
         CommandBuffer() = default;
         CommandBuffer(VkDevice logicalDevice, VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
-
-        CommandBuffer(CommandBuffer &&other) noexcept = default;
-
-        CommandBuffer &operator=(CommandBuffer &&other) noexcept = default;
 
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
@@ -55,7 +50,14 @@ namespace luna::commandBuffer
 {
 inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
                                     const VkCommandPool commandPool,
-                                    const VkCommandBufferLevel commandBufferLevel)
+                                    const VkCommandBufferLevel commandBufferLevel):
+    fence_(VkFenceCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    }),
+    semaphore_(VkSemaphoreCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    })
 {
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -64,12 +66,6 @@ inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
         .commandBufferCount = 1,
     };
     CHECK_RESULT_THROW(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, &commandBuffer_));
-
-    constexpr VkFenceCreateInfo fenceCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
-    CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence_));
 }
 
 inline CommandBuffer::operator const VkCommandBuffer &() const
@@ -84,6 +80,8 @@ inline const VkCommandBuffer *CommandBuffer::operator&() const
 inline void CommandBuffer::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool)
 {
     assert(!isRecording_);
+    fence_.destroy();
+    semaphore_.destroy();
     vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer_);
     commandBuffer_ = VK_NULL_HANDLE;
 }

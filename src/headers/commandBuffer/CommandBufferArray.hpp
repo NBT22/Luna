@@ -27,10 +27,6 @@ class CommandBufferArray
                            VkCommandBufferLevel commandBufferLevel,
                            uint32_t count);
 
-        // CommandBufferArray(CommandBufferArray &&other) noexcept = default;
-        //
-        // CommandBufferArray &operator=(CommandBufferArray &&other) = default;
-
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
@@ -75,7 +71,6 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
                                               const uint32_t count)
 {
     commandBuffers_.resize(count);
-    fences_.resize(count);
     isRecordings_.resize(count);
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -85,16 +80,20 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
     };
     CHECK_RESULT_THROW(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, commandBuffers_.data()));
 
+    fences_.reserve(count);
+    semaphores_.reserve(count);
     constexpr VkFenceCreateInfo fenceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    for (Fence &fence: fences_)
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    for (uint32_t i = 0; i < count; i++)
     {
-        CHECK_RESULT_THROW(vkCreateFence(logicalDevice, &fenceCreateInfo, nullptr, &fence));
+        fences_.emplace_back(fenceCreateInfo);
+        semaphores_.emplace_back(semaphoreCreateInfo);
     }
-
-    semaphores_.resize(count);
 }
 
 inline CommandBufferArray::operator const VkCommandBuffer &() const
@@ -108,9 +107,17 @@ inline const VkCommandBuffer *CommandBufferArray::operator&() const
 
 inline void CommandBufferArray::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool)
 {
-    assert(semaphores_.size() == fences_.size());
-    semaphores_.clear();
+    assert(std::ranges::all_of(isRecordings_, [](const uint8_t val) -> bool { return val == 0; }));
+    for (Fence &fence: fences_)
+    {
+        fence.destroy();
+    }
     fences_.clear();
+    for (Semaphore &semaphore: semaphores_)
+    {
+        semaphore.destroy();
+    }
+    semaphores_.clear();
     vkFreeCommandBuffers(logicalDevice, commandPool, commandBuffers_.size(), commandBuffers_.data());
 }
 
@@ -198,6 +205,7 @@ inline VkResult CommandBufferArray::recreateSemaphores()
     for (size_t i = 0; i < count; i++)
     {
         semaphores_.emplace_back();
+        CHECK_RESULT_RETURN(semaphores_.back().create());
     }
     return VK_SUCCESS;
 }

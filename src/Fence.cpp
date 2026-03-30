@@ -14,8 +14,13 @@ Fence::Fence(const VkFenceCreateInfo &fenceCreateInfo)
     CHECK_RESULT_THROW(vkCreateFence(device, &fenceCreateInfo, nullptr, &fence_));
 }
 
-Fence::~Fence()
+void Fence::destroy()
 {
+    if (device.isDestroyed() || fence_ == VK_NULL_HANDLE)
+    {
+        return;
+    }
     vkDestroyFence(device, fence_, nullptr);
+    fence_ = VK_NULL_HANDLE;
 }
 } // namespace luna

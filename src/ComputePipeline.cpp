@@ -75,7 +75,6 @@ VkResult ComputePipeline::bind(const LunaDescriptorSetBindInfo &descriptorSetBin
                                 descriptorSetBindInfo.dynamicOffsetCount,
                                 descriptorSetBindInfo.dynamicOffsets);
     }
-    boundPipeline = pipeline_;
     return VK_SUCCESS;
 }
 } // namespace luna

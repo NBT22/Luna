@@ -542,21 +542,16 @@ void lunaBindVertexBuffers(const LunaBuffer *buffers, const uint32_t firstBindin
                            bindingCount,
                            buffersVector.data(),
                            offsetsVector.data());
-    luna::boundVertexBuffer = LUNA_NULL_HANDLE;
 }
 
 void lunaBindIndexBuffer(const LunaBuffer buffer, const VkIndexType indexType)
 {
     assert(buffer != LUNA_NULL_HANDLE);
-    if (luna::boundIndexBuffer != buffer)
-    {
-        const luna::BufferRegionIndex *index = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
-        vkCmdBindIndexBuffer(luna::device.commandPools().graphics->commandBuffer(),
-                             index->buffer(),
-                             index->offset(),
-                             indexType);
-        luna::boundIndexBuffer = buffer;
-    }
+    const luna::BufferRegionIndex *index = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
+    vkCmdBindIndexBuffer(luna::device.commandPools().graphics->commandBuffer(),
+                         index->buffer(),
+                         index->offset(),
+                         indexType);
 }
 
 VkResult lunaDrawBuffer(const LunaBuffer vertexBuffer, const LunaDrawInfo *drawInfo)
@@ -570,13 +565,9 @@ VkResult lunaDrawBuffer(const LunaBuffer vertexBuffer, const LunaDrawInfo *drawI
     assert(commandBuffer.isRecording()); // Internal state check
     if (vertexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundVertexBuffer != vertexBuffer)
-        {
-            boundVertexBuffer = vertexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundVertexBuffer);
-            const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(vertexBuffer);
+        const size_t bufferOffset = index->offset();
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
     }
     vkCmdDraw(commandBuffer,
               drawInfo->vertexCount,
@@ -598,13 +589,9 @@ VkResult lunaDrawBufferIndirect(const LunaBuffer vertexBuffer, const LunaDrawInd
     assert(commandBuffer.isRecording()); // Internal state check
     if (vertexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundVertexBuffer != vertexBuffer)
-        {
-            boundVertexBuffer = vertexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundVertexBuffer);
-            const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(vertexBuffer);
+        const size_t bufferOffset = index->offset();
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
     }
     vkCmdDrawIndirect(commandBuffer,
                       bufferRegionIndex->buffer(),
@@ -630,13 +617,9 @@ VkResult lunaDrawBufferIndirectCount(const LunaBuffer vertexBuffer, const LunaDr
     assert(commandBuffer.isRecording()); // Internal state check
     if (vertexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundVertexBuffer != vertexBuffer)
-        {
-            boundVertexBuffer = vertexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundVertexBuffer);
-            const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(vertexBuffer);
+        const size_t bufferOffset = index->offset();
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
     }
     vkCmdDrawIndirectCount(commandBuffer,
                            drawParameterBufferRegionIndex->buffer(),
@@ -662,22 +645,14 @@ VkResult lunaDrawBufferIndexed(const LunaBuffer vertexBuffer,
     assert(commandBuffer.isRecording()); // Internal state check
     if (vertexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundVertexBuffer != vertexBuffer)
-        {
-            boundVertexBuffer = vertexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundVertexBuffer);
-            const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(vertexBuffer);
+        const size_t bufferOffset = index->offset();
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
     }
     if (indexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundIndexBuffer != indexBuffer)
-        {
-            boundIndexBuffer = indexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(indexBuffer);
+        vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
     }
     vkCmdDrawIndexed(commandBuffer,
                      drawInfo->indexCount,
@@ -703,22 +678,14 @@ VkResult lunaDrawBufferIndexedIndirect(const LunaBuffer vertexBuffer,
     assert(commandBuffer.isRecording()); // Internal state check
     if (vertexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundVertexBuffer != vertexBuffer)
-        {
-            boundVertexBuffer = vertexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundVertexBuffer);
-            const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(vertexBuffer);
+        const size_t bufferOffset = index->offset();
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
     }
     if (indexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundIndexBuffer != indexBuffer)
-        {
-            boundIndexBuffer = indexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(indexBuffer);
+        vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
     }
     vkCmdDrawIndexedIndirect(commandBuffer,
                              bufferRegionIndex->buffer(),
@@ -747,22 +714,14 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaBuffer vertexBuffer,
     assert(commandBuffer.isRecording()); // Internal state check
     if (vertexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundVertexBuffer != vertexBuffer)
-        {
-            boundVertexBuffer = vertexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundVertexBuffer);
-            const size_t bufferOffset = index->offset();
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(vertexBuffer);
+        const size_t bufferOffset = index->offset();
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &index->buffer(), &bufferOffset);
     }
     if (indexBuffer != LUNA_NULL_HANDLE)
     {
-        if (boundIndexBuffer != indexBuffer)
-        {
-            boundIndexBuffer = indexBuffer;
-            const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(boundIndexBuffer);
-            vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
-        }
+        const BufferRegionIndex *index = helpers::fromHandle<BufferRegionIndex>(indexBuffer);
+        vkCmdBindIndexBuffer(commandBuffer, index->buffer(), index->offset(), indexType);
     }
     vkCmdDrawIndexedIndirectCount(commandBuffer,
                                   drawParameterBufferRegionIndex->buffer(),

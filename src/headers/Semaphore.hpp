@@ -11,16 +11,14 @@ namespace luna
 class Semaphore
 {
     public:
-        Semaphore();
-        ~Semaphore();
-
-        Semaphore(Semaphore &&other) noexcept = default;
-
-        Semaphore &operator=(Semaphore &&other) noexcept = default;
+        Semaphore() = default;
+        explicit Semaphore(const VkSemaphoreCreateInfo &semaphoreCreateInfo);
 
         operator const VkSemaphore &() const;
         const VkSemaphore *operator&() const;
         VkSemaphore *operator&();
+
+        void destroy();
 
         VkResult create();
 

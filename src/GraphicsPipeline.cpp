@@ -856,10 +856,7 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
                 throw std::runtime_error("Unhandled dynamic state type!");
         }
     }
-    if (pipeline_ != boundPipeline)
-    {
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
-    }
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
     if (bindInfo.descriptorSetBindInfo.descriptorSetCount > 0)
     {
         std::vector<VkDescriptorSet> descriptorSetsVector;
@@ -878,7 +875,6 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
                                 bindInfo.descriptorSetBindInfo.dynamicOffsetCount,
                                 bindInfo.descriptorSetBindInfo.dynamicOffsets);
     }
-    boundPipeline = pipeline_;
     return VK_SUCCESS;
 }
 } // namespace luna

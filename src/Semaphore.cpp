@@ -3,21 +3,20 @@
 //
 
 #include <cassert>
+#include <vulkan/vulkan_core.h>
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "Semaphore.hpp"
 
 namespace luna
 {
-Semaphore::Semaphore()
+Semaphore::Semaphore(const VkSemaphoreCreateInfo &semaphoreCreateInfo)
 {
-    if (!device.isDestroyed())
-    {
-        CHECK_RESULT_THROW(create());
-    }
+    assert(!device.isDestroyed());
+    CHECK_RESULT_THROW(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore_));
 }
 
-Semaphore::~Semaphore()
+void Semaphore::destroy()
 {
     if (device.isDestroyed() || semaphore_ == VK_NULL_HANDLE)
     {
@@ -26,6 +25,7 @@ Semaphore::~Semaphore()
     vkDestroySemaphore(device, semaphore_, nullptr);
     semaphore_ = VK_NULL_HANDLE;
 }
+
 VkResult Semaphore::create()
 {
     assert(!device.isDestroyed() && semaphore_ == VK_NULL_HANDLE);

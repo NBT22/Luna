@@ -109,6 +109,11 @@ inline void Device::destroy()
         return;
     }
     shaderModules_.clear();
+    for (CommandPool &commandPool: commandPools_)
+    {
+        commandPool.destroy();
+    }
+    commandPools_.clear();
     if (internalCommandPools_.graphics != nullptr)
     {
         internalCommandPools_.graphics->destroy();
@@ -120,6 +125,10 @@ inline void Device::destroy()
     if (internalCommandPools_.presentation != nullptr)
     {
         internalCommandPools_.presentation->destroy();
+    }
+    for (Semaphore &semaphore: renderFinishedSemaphores_)
+    {
+        semaphore.destroy();
     }
     renderFinishedSemaphores_.clear();
     vmaDestroyAllocator(allocator_);

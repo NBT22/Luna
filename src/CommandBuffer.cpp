@@ -29,6 +29,22 @@ CommandBuffer::CommandBuffer(const VkCommandPool commandPool,
     assert(arraySize > 1);
 }
 
+void CommandBuffer::destroy(const VkCommandPool commandPool)
+{
+    switch (type_)
+    {
+        case Type::SINGLE:
+            commandBuffer_.destroy(device, commandPool);
+            break;
+        case Type::ARRAY:
+            commandBufferArray_.destroy(device, commandPool);
+            break;
+        default:
+            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in destroy");
+    }
+}
+
+
 VkResult CommandBuffer::resizeArray(const VkCommandPool commandPool,
                                     const VkCommandBufferLevel commandBufferLevel,
                                     const uint32_t arraySize,

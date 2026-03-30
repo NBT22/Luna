@@ -27,12 +27,10 @@ class CommandBuffer
         CommandBuffer(VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
         CommandBuffer(VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel, uint32_t arraySize);
 
-        CommandBuffer(CommandBuffer &&other) noexcept = default;
-
-        CommandBuffer &operator=(CommandBuffer &&other) noexcept = default;
-
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
+
+        void destroy(VkCommandPool commandPool);
 
         VkResult resizeArray(VkCommandPool commandPool,
                              VkCommandBufferLevel commandBufferLevel,

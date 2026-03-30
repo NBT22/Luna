@@ -636,8 +636,5 @@ VkResult lunaEndFrame()
     }
 
     swapchain.imageIndex = -1u;
-    boundPipeline = VK_NULL_HANDLE;
-    boundVertexBuffer = LUNA_NULL_HANDLE;
-    boundIndexBuffer = LUNA_NULL_HANDLE;
     return presentationResult;
 }
