@@ -26,6 +26,7 @@ class CommandBuffer
         VkResult submitCommandBuffer(VkQueue queue,
                                      const VkSubmitInfo &submitInfo,
                                      VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endCommandBuffer();
         bool getAndSetIsSignaled(bool value);
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
         VkResult resetFence(VkDevice logicalDevice);
@@ -119,6 +120,12 @@ inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
             }
         }
     }
+    return VK_SUCCESS;
+}
+inline VkResult CommandBuffer::endCommandBuffer()
+{
+    CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
+    isRecording_ = false;
     return VK_SUCCESS;
 }
 inline bool CommandBuffer::getAndSetIsSignaled(const bool value)

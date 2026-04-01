@@ -39,6 +39,7 @@ class CommandBuffer
         VkResult submitCommandBuffer(VkQueue queue,
                                      const VkSubmitInfo &submitInfo,
                                      VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endCommandBuffer();
         bool getAndSetIsSignaled(bool value);
         [[nodiscard]] VkResult waitForAllFences(uint64_t timeout = UINT64_MAX) const;
         [[nodiscard]] VkResult waitForFence(uint64_t timeout = UINT64_MAX) const;
@@ -56,9 +57,9 @@ class CommandBuffer
 
     private:
         Type type_{};
+        VkCommandPool commandPool_{};
         commandBuffer::CommandBuffer commandBuffer_{};
         commandBuffer::CommandBufferArray commandBufferArray_{};
-        VkCommandPool commandPool_{};
 };
 } // namespace luna
 

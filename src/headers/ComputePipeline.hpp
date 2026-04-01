@@ -20,7 +20,8 @@ class ComputePipeline
 
         ~ComputePipeline();
 
-        [[nodiscard]] VkResult bind(const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const;
+        [[nodiscard]] VkResult bind(VkCommandBuffer commandBuffer,
+                                    const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const;
 
         [[nodiscard]] VkPipelineLayout layout() const;
 

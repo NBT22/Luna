@@ -104,6 +104,10 @@ VkResult lunaDispatch(const LunaDispatchInfo *info);
  */
 VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info);
 
+VkResult lunaBindComputePipeline(VkCommandBuffer commandBuffer,
+                                 LunaComputePipeline pipeline,
+                                 const LunaDescriptorSetBindInfo *descriptorSetBindInfo);
+
 /**
  * @brief Insert a pipeline memory dependency
  * @param[in] dependencyInfo

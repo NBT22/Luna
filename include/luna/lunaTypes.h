@@ -67,6 +67,13 @@ typedef struct
         VkPhysicalDeviceType preferredDeviceType;
 } LunaPhysicalDevicePreferenceDefinition;
 
+typedef struct
+{
+        VkQueueFamilyProperties queueFamilyProperties;
+        bool presentationSupport;
+        uint32_t queueCount;
+} LunaQueueFamilyProperties;
+
 // TODO (0.3.0): Remove duplicate structures and prefer the `[...]2` structures
 typedef struct
 {
@@ -74,6 +81,9 @@ typedef struct
         const char *const *extensionNames;
         VkPhysicalDeviceFeatures requiredFeatures;
         VkSurfaceKHR surface;
+
+        uint32_t requiredQueueFamiliesCount;
+        const LunaQueueFamilyProperties *requiredQueueFamilies;
 
         const LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
 } LunaDeviceCreationInfo;
@@ -84,6 +94,9 @@ typedef struct
         const char *const *extensionNames;
         VkPhysicalDeviceFeatures2 requiredFeatures;
         VkSurfaceKHR surface;
+
+        uint32_t requiredQueueFamiliesCount;
+        const LunaQueueFamilyProperties *requiredQueueFamilies;
 
         const LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
 } LunaDeviceCreationInfo2;
@@ -441,24 +454,26 @@ typedef struct
 typedef struct
 {
         LunaComputePipeline pipeline;
-        LunaDescriptorSetBindInfo descriptorSetBindInfo;
+        const LunaDescriptorSetBindInfo *descriptorSetBindInfo;
         uint32_t baseGroupX;
         uint32_t baseGroupY;
         uint32_t baseGroupZ;
         uint32_t groupCountX;
         uint32_t groupCountY;
         uint32_t groupCountZ;
-        bool submitCommandBuffer;
+        bool endCommandBuffer;
+        bool submitQueue;
 } LunaDispatchBaseInfo;
 
 typedef struct
 {
         LunaComputePipeline pipeline;
-        LunaDescriptorSetBindInfo descriptorSetBindInfo;
+        const LunaDescriptorSetBindInfo *descriptorSetBindInfo;
         uint32_t groupCountX;
         uint32_t groupCountY;
         uint32_t groupCountZ;
-        bool submitCommandBuffer;
+        bool endCommandBuffer;
+        bool submitQueue;
 } LunaDispatchInfo;
 
 /// @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
@@ -686,6 +701,7 @@ typedef struct
 {
         VkQueueFamilyProperties queueFamilyProperties;
         bool presentationSupport;
+        uint32_t queueIndex;
 } LunaQueueProperties;
 
 #ifdef __cplusplus

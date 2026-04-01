@@ -86,6 +86,21 @@ VkResult CommandBuffer::resizeArray(const VkCommandBufferLevel commandBufferLeve
     return VK_SUCCESS;
 }
 
+VkResult CommandBuffer::endCommandBuffer()
+{
+    switch (type_)
+    {
+        case Type::SINGLE:
+            return commandBuffer_.endCommandBuffer();
+        case Type::ARRAY:
+            return commandBufferArray_.endCommandBuffer();
+        default:
+            throw std::runtime_error("Invalid command buffer type " +
+                                     typeAsString() +
+                                     " when used in submitCommandBuffer!");
+    }
+}
+
 VkResult CommandBuffer::waitForAllFences(const uint64_t timeout) const
 {
     switch (type_)
@@ -179,8 +194,8 @@ VkResult lunaEndCommandBuffer(const LunaCommandBuffer commandBuffer)
 {
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
-    const luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBufferObject));
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.endCommandBuffer());
     return VK_SUCCESS;
 }
 

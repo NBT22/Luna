@@ -36,6 +36,7 @@ class CommandBufferArray
         VkResult submitCommandBuffer(VkQueue queue,
                                      const VkSubmitInfo &submitInfo,
                                      VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endCommandBuffer();
         bool getAndSetIsSignaled(bool value);
         VkResult waitForAllFences(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
@@ -155,6 +156,12 @@ inline VkResult CommandBufferArray::submitCommandBuffer(const VkQueue queue,
         }
     }
     index_ = (index_ + 1) % commandBuffers_.size();
+    return VK_SUCCESS;
+}
+inline VkResult CommandBufferArray::endCommandBuffer()
+{
+    CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffers_.at(index_)));
+    isRecordings_.at(index_) = static_cast<uint8_t>(0);
     return VK_SUCCESS;
 }
 inline bool CommandBufferArray::getAndSetIsSignaled(const bool value)

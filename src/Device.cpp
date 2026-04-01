@@ -214,10 +214,12 @@ VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo)
         .extensionNames = creationInfo->extensionNames,
         .requiredFeatures = requiredFeatures2,
         .surface = creationInfo->surface,
+        .requiredQueueFamiliesCount = creationInfo->requiredQueueFamiliesCount,
+        .requiredQueueFamilies = creationInfo->requiredQueueFamilies,
         .physicalDevicePreferenceDefinition = creationInfo->physicalDevicePreferenceDefinition,
     };
     TRY_CATCH_RESULT(luna::device = luna::Device(creationInfo2));
-    luna::device.createInternalCommandPools();
+    CHECK_RESULT_RETURN(luna::device.createInternalCommandPools());
     constexpr VmaAllocationCreateInfo allocationCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO,
@@ -237,6 +239,7 @@ VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo)
 {
     assert(creationInfo);
     TRY_CATCH_RESULT(luna::device = luna::Device(*creationInfo));
+    CHECK_RESULT_RETURN(luna::device.createInternalCommandPools());
     constexpr VmaAllocationCreateInfo allocationCreateInfo = {
         .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO,
