@@ -43,8 +43,8 @@ LUNA_DEFINE_HANDLE(LunaSlangSession);
 static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
 static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
 
-extern const LunaCommandPool LUNA_INTERNAL_GRAPHICS_COMMAND_POOL;
-extern const LunaCommandPool LUNA_INTERNAL_COMPUTE_COMMAND_POOL;
+extern const LunaCommandPool *const LUNA_INTERNAL_GRAPHICS_COMMAND_POOL;
+extern const LunaCommandPool *const LUNA_INTERNAL_COMPUTE_COMMAND_POOL;
 
 typedef VkFlags64 LunaFlags;
 
@@ -99,6 +99,8 @@ typedef struct
         const LunaQueueFamilyProperties *requiredQueueFamilies;
 
         const LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
+
+        VmaAllocatorCreateFlags allocatorCreateFlags; // TODO (0.3.0): Replace this with a proper solution
 } LunaDeviceCreationInfo2;
 
 typedef struct
@@ -486,6 +488,7 @@ typedef struct
         VkDeviceSize size;
         VkBufferCreateFlags flags;
         VkBufferUsageFlags usage;
+        VkDeviceSize alignment;
 
         uint32_t regionCount;
         const VkDeviceSize *regionSizes;
@@ -654,6 +657,7 @@ typedef struct
         LunaFlags sourceAccessMask;
         LunaFlags destinationStageMask;
         LunaFlags destinationAccessMask;
+        bool synchronizeGraphicsToCompute; // TODO (0.3.0): Remove this and replace it with src and dst queue family index fields
         LunaBuffer buffer;
         VkDeviceSize offset;
         VkDeviceSize size;
@@ -691,7 +695,7 @@ typedef struct
 
 typedef struct
 {
-        LunaCommandPool commandPool;
+        const LunaCommandPool *commandPool;
         VkCommandBufferLevel level;
         /// Luna will create an array of command buffers and automatically select the one recorded least recently
         uint32_t arrayCount;

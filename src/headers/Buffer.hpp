@@ -95,7 +95,8 @@ class BufferRegionIndex
                                             size_t bytes,
                                             size_t offset = 0,
                                             VkPipelineStageFlags stageFlags = 0) const;
-        [[nodiscard]] VkResult createBufferView(const LunaBufferViewCreationInfo &creationInfo, LunaBufferView *lunaView);
+        [[nodiscard]] VkResult createBufferView(const LunaBufferViewCreationInfo &creationInfo,
+                                                LunaBufferView *lunaView);
 
         [[nodiscard]] size_t offset() const;
         [[nodiscard]] size_t size() const;
@@ -122,6 +123,9 @@ class Buffer
         Buffer() = default;
         explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo,
                         const VmaAllocationCreateInfo &allocationCreateInfo);
+        explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo,
+                        const VmaAllocationCreateInfo &allocationCreateInfo,
+                        VkDeviceSize alignment);
 
         ~Buffer();
 
@@ -252,11 +256,11 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
                     {
                         index = creationInfos.size();
                         // TODO (0.3.0): Fix this
-                        creationInfos.emplace_back(newSize, flags, usage, 0, nullptr, nullptr, nullptr);
+                        creationInfos.emplace_back(newSize, flags, usage, 0, 0, nullptr, nullptr, nullptr);
                     } else
                     {
                         // TODO (0.3.0): Fix this
-                        creationInfos.emplace_back(region.size, flags, usage, 0, nullptr, nullptr, nullptr);
+                        creationInfos.emplace_back(region.size, flags, usage, 0, 0, nullptr, nullptr, nullptr);
                     }
                 }
                 assert(index != std::numeric_limits<size_t>::max()); // Internal state check

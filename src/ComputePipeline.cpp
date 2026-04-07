@@ -123,11 +123,11 @@ VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info)
     {
         // TODO (0.3.0): If possible, optionally allow the source stage mask
         //  (if not possible to be optional, just use top of pipe)
-        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().compute,
+        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().compute,
                                                               VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT));
     } else if (info->endCommandBuffer)
     {
-        CHECK_RESULT_RETURN(commandBuffer.endCommandBuffer());
+        CHECK_RESULT_RETURN(commandBuffer.end());
     }
     return VK_SUCCESS;
 }

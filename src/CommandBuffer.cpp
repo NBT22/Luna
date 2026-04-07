@@ -86,21 +86,6 @@ VkResult CommandBuffer::resizeArray(const VkCommandBufferLevel commandBufferLeve
     return VK_SUCCESS;
 }
 
-VkResult CommandBuffer::endCommandBuffer()
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.endCommandBuffer();
-        case Type::ARRAY:
-            return commandBufferArray_.endCommandBuffer();
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in submitCommandBuffer!");
-    }
-}
-
 VkResult CommandBuffer::waitForAllFences(const uint64_t timeout) const
 {
     switch (type_)
@@ -174,19 +159,19 @@ VkResult lunaAllocateCommandBuffer(const LunaCommandBufferAllocationInfo *alloca
     assert(allocationInfo);
     assert(allocationInfo->commandPool != LUNA_NULL_HANDLE);
 
-    luna::CommandPool &commandPool = *luna::helpers::fromHandle<luna::CommandPool>(allocationInfo->commandPool);
+    luna::CommandPool &commandPool = *luna::helpers::fromHandle<luna::CommandPool>(*allocationInfo->commandPool);
     const uint32_t arrayCount = allocationInfo->arrayCount == 0 ? 1 : allocationInfo->arrayCount;
     CHECK_RESULT_RETURN(commandPool.allocateCommandBuffer(allocationInfo->level, arrayCount));
-    *commandBuffer = luna::helpers::toHandle(commandPool.commandBuffer());
+    *commandBuffer = luna::helpers::toHandle(&commandPool.commandBuffer(commandPool.commandBufferCount() - 1));
     return VK_SUCCESS;
 }
 
-VkResult lunaBeginCommandBuffer(const LunaCommandBuffer commandBuffer)
+VkResult lunaBeginSingleUseCommandBuffer(const LunaCommandBuffer commandBuffer)
 {
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    // TODO (0.3.0): Implement this
+    CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer());
     return VK_SUCCESS;
 }
 
@@ -195,7 +180,7 @@ VkResult lunaEndCommandBuffer(const LunaCommandBuffer commandBuffer)
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.endCommandBuffer());
+    CHECK_RESULT_RETURN(commandBufferObject.end());
     return VK_SUCCESS;
 }
 
@@ -206,6 +191,12 @@ VkResult lunaResetCommandBuffer(const LunaCommandBuffer commandBuffer, const VkC
     const luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     CHECK_RESULT_RETURN(vkResetCommandBuffer(commandBufferObject, flags));
     return VK_SUCCESS;
+}
+
+VkCommandBuffer lunaGetVkCommandBuffer(const LunaCommandBuffer commandBuffer)
+{
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    return *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
 }
 
 void lunaDestroyCommandBuffer(const LunaCommandBuffer commandBuffer)

@@ -66,4 +66,21 @@ template<HandleData T> [[nodiscard]] HandleType toHandle(const T &value) noexcep
 {
     return toHandle(&value);
 }
+
+template<HandleData T> [[nodiscard]] HandleType *toHandlePtr(T **value) noexcept
+{
+    return reinterpret_cast<HandleType *>(value);
+}
+template<HandleData T> [[nodiscard]] HandleType *toHandlePtr(const T **value) noexcept
+{
+    return toHandlePtr(const_cast<T **>(value));
+}
+template<HandleData T> [[nodiscard]] HandleType *toHandlePtr(T *&value) noexcept
+{
+    return reinterpret_cast<HandleType *>(&value);
+}
+template<HandleData T> [[nodiscard]] HandleType *toHandlePtr(const T *&value) noexcept
+{
+    return toHandlePtr(const_cast<T **>(&value));
+}
 } // namespace luna::helpers

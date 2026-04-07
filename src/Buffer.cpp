@@ -46,11 +46,40 @@ BufferRegion::BufferRegion(const size_t size,
     }
 }
 
+// TODO (0.3.0): This function needs to be properly reworked to consider buffer alignment
 VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &creationInfo,
                                                 Buffer *&outBuffer,
                                                 size_t &outOffset,
                                                 std::list<BufferRegion>::iterator &outIterator)
 {
+    if (creationInfo.alignment != 0)
+    {
+        const VkBufferCreateInfo bufferCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .flags = creationInfo.flags,
+            .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::max(std::ceil(creationInfo.size / BLOCK_SIZE), 1.0L)),
+            .usage = creationInfo.usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            .sharingMode = device.sharingMode(),
+            .queueFamilyIndexCount = device.familyCount(),
+            .pQueueFamilyIndices = device.queueFamilyIndices(),
+        };
+        constexpr VmaAllocationCreateInfo allocationCreateInfo = {
+            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
+                     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                     VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+        };
+        TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo,
+                                                    creationInfo.allocationCreateInfo
+                                                            ? *creationInfo.allocationCreateInfo
+                                                            : allocationCreateInfo,
+                                                    creationInfo.alignment));
+        outBuffer = &buffers.back();
+        outOffset = 0;
+        outIterator = outBuffer->regions_.end();
+        return VK_SUCCESS;
+    }
+
     // TODO (0.3.0): Uniform buffers have alignment requirements, and other buffer types may as well
     for (Buffer &buffer: buffers)
     {
@@ -340,7 +369,7 @@ VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data,
             .size = bytes,
         };
         vkCmdCopyBuffer(commandBuffer, stagingBuffer->buffer(), buffer(), 1, &copyRegion);
-        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics, stageFlags));
+        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics, stageFlags));
     }
     return VK_SUCCESS;
 }
@@ -380,6 +409,27 @@ Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo, const VmaAllocationCr
                                        &buffer_,
                                        &allocation_,
                                        &allocationInfo));
+    data_ = allocationInfo.pMappedData;
+    destroyed_ = false;
+}
+Buffer::Buffer(const VkBufferCreateInfo &bufferCreateInfo,
+               const VmaAllocationCreateInfo &allocationCreateInfo,
+               const VkDeviceSize alignment):
+    creationFlags_(bufferCreateInfo.flags),
+    usageFlags_(bufferCreateInfo.usage),
+    allocationCreateInfo_(allocationCreateInfo),
+    freeBytes_(bufferCreateInfo.size)
+{
+    BufferRegionIndex::waitForCleanupThread();
+
+    VmaAllocationInfo allocationInfo;
+    CHECK_RESULT_THROW(vmaCreateBufferWithAlignment(device.allocator(),
+                                                    &bufferCreateInfo,
+                                                    &allocationCreateInfo,
+                                                    alignment,
+                                                    &buffer_,
+                                                    &allocation_,
+                                                    &allocationInfo));
     data_ = allocationInfo.pMappedData;
     destroyed_ = false;
 }
@@ -440,6 +490,8 @@ VkResult lunaFillBuffer(const LunaBuffer buffer, const uint32_t data)
                     bufferRegionIndex.offset(),
                     bufferRegionIndex.size(),
                     data);
+    // TODO (0.3.0): This is not ideal
+    commandBuffer.endAndSubmit(luna::device.familyQueues().compute, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     return VK_SUCCESS;
 }
 
@@ -516,6 +568,30 @@ void lunaGetBufferCreationInfo(const LunaBuffer buffer,
     {
         bufferRegionIndex->allocationCreateInfo(*allocationCreateInfo);
     }
+}
+
+// Note: This is not guaranteed to work with a sparse buffer
+VkDeviceAddress lunaGetBufferDeviceAddress(const LunaBuffer buffer)
+{
+    assert(buffer != LUNA_NULL_HANDLE);
+    const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
+    const VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = bufferRegionIndex.buffer(),
+    };
+    return vkGetBufferDeviceAddress(luna::device, &bufferDeviceAddressInfo) + bufferRegionIndex.offset();
+}
+
+VkBuffer lunaGetVkBuffer(const LunaBuffer buffer)
+{
+    assert(buffer != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->buffer();
+}
+
+VkDeviceSize lunaGetBufferOffset(const LunaBuffer buffer)
+{
+    assert(buffer != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->offset();
 }
 
 void lunaBindVertexBuffers(const LunaBuffer *buffers, const uint32_t firstBinding, const uint32_t bindingCount)

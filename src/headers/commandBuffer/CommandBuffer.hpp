@@ -23,10 +23,13 @@ class CommandBuffer
         void destroy(VkDevice logicalDevice, VkCommandPool commandPool);
 
         VkResult beginSingleUseCommandBuffer();
-        VkResult submitCommandBuffer(VkQueue queue,
-                                     const VkSubmitInfo &submitInfo,
-                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-        VkResult endCommandBuffer();
+        VkResult end();
+        VkResult submit(VkQueue queue,
+                        const VkSubmitInfo &submitInfo,
+                        VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endAndSubmit(VkQueue queue,
+                              const VkSubmitInfo &submitInfo,
+                              VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
         VkResult resetFence(VkDevice logicalDevice);
@@ -100,14 +103,18 @@ inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
     isRecording_ = true;
     return VK_SUCCESS;
 }
-inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
-                                                   const VkSubmitInfo &submitInfo,
-                                                   const VkPipelineStageFlags stageMask)
+inline VkResult CommandBuffer::end()
 {
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
+    isRecording_ = false;
+    return VK_SUCCESS;
+}
+inline VkResult CommandBuffer::submit(const VkQueue queue,
+                                      const VkSubmitInfo &submitInfo,
+                                      const VkPipelineStageFlags stageMask)
+{
     CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fence_));
     fence_.setWillBeSignaled(true);
-    isRecording_ = false;
     if (submitInfo.signalSemaphoreCount > 0)
     {
         for (uint32_t i = 0; i < submitInfo.signalSemaphoreCount; i++)
@@ -122,10 +129,12 @@ inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
     }
     return VK_SUCCESS;
 }
-inline VkResult CommandBuffer::endCommandBuffer()
+inline VkResult CommandBuffer::endAndSubmit(const VkQueue queue,
+                                            const VkSubmitInfo &submitInfo,
+                                            const VkPipelineStageFlags stageMask)
 {
-    CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
-    isRecording_ = false;
+    CHECK_RESULT_RETURN(end());
+    CHECK_RESULT_RETURN(submit(queue, submitInfo, stageMask));
     return VK_SUCCESS;
 }
 inline bool CommandBuffer::getAndSetIsSignaled(const bool value)

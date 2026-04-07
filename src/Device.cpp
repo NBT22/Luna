@@ -38,10 +38,6 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
             vulkan11Features_ = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
             };
-            features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-                .pNext = &vulkan11Features_,
-            };
             break;
         case 2:
             vulkan12Features_ = {
@@ -50,10 +46,6 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
             vulkan11Features_ = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
                 .pNext = &vulkan12Features_,
-            };
-            features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-                .pNext = &vulkan11Features_,
             };
             break;
         case 3:
@@ -67,10 +59,6 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
             vulkan11Features_ = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
                 .pNext = &vulkan12Features_,
-            };
-            features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-                .pNext = &vulkan11Features_,
             };
             break;
         case 4:
@@ -89,14 +77,22 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
                 .pNext = &vulkan12Features_,
             };
-            features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-                .pNext = &vulkan11Features_,
-            };
             break;
         default:
             assert(1 <= VK_API_VERSION_MINOR(apiVersion) && VK_API_VERSION_MINOR(apiVersion) <= 4);
     }
+    rayTracingPipelineFeatures_ = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+        .pNext = &vulkan11Features_,
+    };
+    accelerationStructureFeatures_ = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+        .pNext = &rayTracingPipelineFeatures_,
+    };
+    features_ = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &accelerationStructureFeatures_,
+    };
     for (const VkPhysicalDevice physicalDevice: devices)
     {
         vkGetPhysicalDeviceFeatures2(physicalDevice, &features_);
@@ -189,7 +185,8 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         // .vkGetMemoryWin32HandleKHR = vkGetMemoryWin32HandleKHR,
     };
     const VmaAllocatorCreateInfo allocationCreateInfo = {
-        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
+        .flags = creationInfo.allocatorCreateFlags == 0 ? VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT
+                                                        : creationInfo.allocatorCreateFlags,
         .physicalDevice = physicalDevice_,
         .device = logicalDevice_,
         .pVulkanFunctions = &vmaVulkanFunctions,
@@ -279,6 +276,30 @@ void lunaGetPhysicalDeviceProperties(VkPhysicalDeviceProperties *properties)
 void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties)
 {
     vkGetPhysicalDeviceProperties2(luna::device, properties);
+}
+
+VkResult lunaSubmitInternalComputeQueue(const LunaCommandBuffer commandBuffer, bool waitForFence)
+{
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    constexpr VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.waitForFence());
+    CHECK_RESULT_RETURN(commandBufferObject.resetFence());
+    const luna::Semaphore &semaphore = commandBufferObject.semaphore();
+    const VkSubmitInfo submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
+        .pWaitSemaphores = &semaphore,
+        .pWaitDstStageMask = &stageMask,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &static_cast<const VkCommandBuffer &>(commandBufferObject),
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &semaphore,
+    };
+    CHECK_RESULT_RETURN(commandBufferObject.submit(luna::device.familyQueues().compute, submitInfo, stageMask));
+    CHECK_RESULT_RETURN(commandBufferObject.waitForFence());
+    return VK_SUCCESS;
 }
 
 // void lunaGetQueue(const LunaQueueProperties *requiredProperties, VkQueue queue){

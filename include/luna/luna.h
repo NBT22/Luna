@@ -110,11 +110,12 @@ VkResult lunaBindComputePipeline(VkCommandBuffer commandBuffer,
 
 /**
  * @brief Insert a pipeline memory dependency
+ * @param commandBuffer
  * @param[in] dependencyInfo
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdPipelineBarrier.html
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdPipelineBarrier2.html
  */
-VkResult lunaPipelineBarrier(const LunaDependencyInfo *dependencyInfo);
+VkResult lunaPipelineBarrier(LunaCommandBuffer commandBuffer, const LunaDependencyInfo *dependencyInfo);
 
 #ifdef __cplusplus
 }

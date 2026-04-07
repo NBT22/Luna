@@ -66,6 +66,9 @@ void lunaGetBufferAllocationCreateInfo(LunaBuffer buffer, VmaAllocationCreateInf
 void lunaGetBufferCreationInfo(LunaBuffer buffer,
                                LunaBufferCreationInfo *creationInfo,
                                VmaAllocationCreateInfo *allocationCreateInfo);
+VkDeviceAddress lunaGetBufferDeviceAddress(LunaBuffer buffer);
+VkBuffer lunaGetVkBuffer(LunaBuffer buffer);
+VkDeviceSize lunaGetBufferOffset(LunaBuffer buffer);
 
 #ifdef __cplusplus
 }

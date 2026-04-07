@@ -27,7 +27,6 @@ class CommandBuffer
         CommandBuffer(VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel, uint32_t arraySize);
 
         operator const VkCommandBuffer &() const;
-        const VkCommandBuffer *operator&() const;
 
         void destroy();
 
@@ -35,11 +34,14 @@ class CommandBuffer
                              uint32_t arraySize,
                              uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
-        VkResult submitCommandBuffer(VkQueue queue, VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-        VkResult submitCommandBuffer(VkQueue queue,
-                                     const VkSubmitInfo &submitInfo,
-                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-        VkResult endCommandBuffer();
+        VkResult end();
+        VkResult submit(VkQueue queue,
+                        const VkSubmitInfo &submitInfo,
+                        VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endAndSubmit(VkQueue queue, VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endAndSubmit(VkQueue queue,
+                              const VkSubmitInfo &submitInfo,
+                              VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
         [[nodiscard]] VkResult waitForAllFences(uint64_t timeout = UINT64_MAX) const;
         [[nodiscard]] VkResult waitForFence(uint64_t timeout = UINT64_MAX) const;
@@ -86,18 +88,6 @@ inline CommandBuffer::operator const VkCommandBuffer &() const
                                      " when used in operator const VkCommandBuffer &");
     }
 }
-inline const VkCommandBuffer *CommandBuffer::operator&() const
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return &commandBuffer_;
-        case Type::ARRAY:
-            return &commandBufferArray_;
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in operator&");
-    }
-}
 
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
 {
@@ -113,7 +103,33 @@ inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
                                      " when used in beginSingleUseCommandBuffer!");
     }
 }
-inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue, VkPipelineStageFlags stageMask)
+inline VkResult CommandBuffer::end()
+{
+    switch (type_)
+    {
+        case Type::SINGLE:
+            return commandBuffer_.end();
+        case Type::ARRAY:
+            return commandBufferArray_.end();
+        default:
+            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in end!");
+    }
+}
+inline VkResult CommandBuffer::submit(const VkQueue queue,
+                                      const VkSubmitInfo &submitInfo,
+                                      const VkPipelineStageFlags stageMask)
+{
+    switch (type_)
+    {
+        case Type::SINGLE:
+            return commandBuffer_.submit(queue, submitInfo, stageMask);
+        case Type::ARRAY:
+            return commandBufferArray_.submit(queue, submitInfo, stageMask);
+        default:
+            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in submit!");
+    }
+}
+inline VkResult CommandBuffer::endAndSubmit(const VkQueue queue, VkPipelineStageFlags stageMask)
 {
     const VkSubmitInfo submitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -125,22 +141,20 @@ inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue, VkPipeli
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = &semaphore(),
     };
-    return submitCommandBuffer(queue, submitInfo, stageMask);
+    return endAndSubmit(queue, submitInfo, stageMask);
 }
-inline VkResult CommandBuffer::submitCommandBuffer(const VkQueue queue,
-                                                   const VkSubmitInfo &submitInfo,
-                                                   const VkPipelineStageFlags stageMask)
+inline VkResult CommandBuffer::endAndSubmit(const VkQueue queue,
+                                            const VkSubmitInfo &submitInfo,
+                                            const VkPipelineStageFlags stageMask)
 {
     switch (type_)
     {
         case Type::SINGLE:
-            return commandBuffer_.submitCommandBuffer(queue, submitInfo, stageMask);
+            return commandBuffer_.endAndSubmit(queue, submitInfo, stageMask);
         case Type::ARRAY:
-            return commandBufferArray_.submitCommandBuffer(queue, submitInfo, stageMask);
+            return commandBufferArray_.endAndSubmit(queue, submitInfo, stageMask);
         default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in submitCommandBuffer!");
+            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in endAndSubmit!");
     }
 }
 inline bool CommandBuffer::getAndSetIsSignaled(const bool value)

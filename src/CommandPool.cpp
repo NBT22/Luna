@@ -34,7 +34,8 @@ void CommandPool::destroy()
     {
         return;
     }
-    for (CommandBuffer &commandBuffer: commandBuffers_)
+    commandBuffers_.clear();
+    for (CommandBuffer &commandBuffer: commandBufferList_)
     {
         commandBuffer.destroy();
     }
@@ -45,7 +46,7 @@ void CommandPool::destroy()
 inline VkResult CommandPool::reset(const VkCommandPoolResetFlags flags, const uint64_t timeout) const
 {
     assert(!isDestroyed_);
-    for (const CommandBuffer &commandBuffer: commandBuffers_)
+    for (const CommandBuffer &commandBuffer: commandBufferList_)
     {
         if (commandBuffer.type() == CommandBuffer::Type::ARRAY)
         {

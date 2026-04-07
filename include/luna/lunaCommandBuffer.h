@@ -41,11 +41,13 @@ VkResult lunaResetCommandPoolWithTimeout(LunaCommandPool commandPool, VkCommandP
 VkResult lunaAllocateCommandBuffer(const LunaCommandBufferAllocationInfo *allocationInfo,
                                    LunaCommandBuffer *commandBuffer);
 
-VkResult lunaBeginCommandBuffer(LunaCommandBuffer commandBuffer);
+VkResult lunaBeginSingleUseCommandBuffer(LunaCommandBuffer commandBuffer);
 
 VkResult lunaEndCommandBuffer(LunaCommandBuffer commandBuffer);
 
 VkResult lunaResetCommandBuffer(LunaCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
+
+VkCommandBuffer lunaGetVkCommandBuffer(LunaCommandBuffer commandBuffer);
 
 void lunaDestroyCommandBuffer(LunaCommandBuffer commandBuffer);
 

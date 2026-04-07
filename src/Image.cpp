@@ -252,7 +252,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
                                  layout_,
                                  image_,
                                  subresourceRange);
-        CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
+        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics,
                                                               writeInfo.destinationStageMask));
         return VK_SUCCESS;
     }
@@ -308,7 +308,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
                                  subresourceRange);
     }
 
-    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics,
+    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics,
                                                           writeInfo.destinationStageMask));
     return VK_SUCCESS;
 }
@@ -570,7 +570,7 @@ VkResult lunaCopyImageToBuffer(const LunaImage image,
                            bufferRegionIndex.buffer(),
                            regionCount,
                            regions);
-    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(luna::device.familyQueues().graphics));
+    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics));
     return VK_SUCCESS;
 }
 

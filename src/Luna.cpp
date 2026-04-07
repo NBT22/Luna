@@ -79,33 +79,12 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     return VK_SUCCESS;
 }
 
-static void checkStageMasks(VkPipelineStageFlags &currentSourceStageMask,
-                            VkPipelineStageFlags &currentDestinationStageMask,
-                            const VkPipelineStageFlags newSourceStageMask,
-                            const VkPipelineStageFlags newDestinationStageMask)
-{
-    if (currentSourceStageMask == VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM)
-    {
-        currentSourceStageMask = newSourceStageMask;
-    } else
-    {
-        assert(currentSourceStageMask == newSourceStageMask);
-    }
-    if (currentDestinationStageMask == VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM)
-    {
-        currentDestinationStageMask = newDestinationStageMask;
-    } else
-    {
-        assert(currentDestinationStageMask == newDestinationStageMask);
-    }
-}
-
 void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyInfo &dependencyInfo)
 {
     if (vkCmdPipelineBarrier2 == nullptr)
     {
-        VkPipelineStageFlags sourceStageMask = VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM;
-        VkPipelineStageFlags destinationStageMask = VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM;
+        VkPipelineStageFlags sourceStageMask{};
+        VkPipelineStageFlags destinationStageMask{};
 
         std::vector<VkMemoryBarrier> memoryBarriers;
         std::vector<VkBufferMemoryBarrier> bufferMemoryBarriers;
@@ -115,10 +94,8 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
         for (uint32_t i = 0; i < dependencyInfo.memoryBarrierCount; i++)
         {
             const LunaMemoryBarrier &memoryBarrier = dependencyInfo.memoryBarriers[i];
-            checkStageMasks(sourceStageMask,
-                            destinationStageMask,
-                            memoryBarrier.sourceStageMask,
-                            memoryBarrier.destinationStageMask);
+            sourceStageMask |= memoryBarrier.sourceStageMask;
+            destinationStageMask |= memoryBarrier.destinationStageMask;
             memoryBarriers.emplace_back(VK_STRUCTURE_TYPE_MEMORY_BARRIER,
                                         nullptr,
                                         memoryBarrier.sourceAccessMask,
@@ -129,32 +106,35 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
         for (uint32_t i = 0; i < dependencyInfo.bufferMemoryBarrierCount; i++)
         {
             const LunaBufferMemoryBarrier &bufferMemoryBarrier = dependencyInfo.bufferMemoryBarriers[i];
-            checkStageMasks(sourceStageMask,
-                            destinationStageMask,
-                            bufferMemoryBarrier.sourceStageMask,
-                            bufferMemoryBarrier.destinationStageMask);
+            sourceStageMask |= bufferMemoryBarrier.sourceStageMask;
+            destinationStageMask |= bufferMemoryBarrier.destinationStageMask;
             assert(bufferMemoryBarrier.buffer);
             const BufferRegionIndex &bufferRegionIndex =
                     *luna::helpers::fromHandle<BufferRegionIndex>(bufferMemoryBarrier.buffer);
+            const uint32_t srcQueueFamilyIndex = bufferMemoryBarrier.synchronizeGraphicsToCompute
+                                                         ? device.familyIndices().graphics
+                                                         : VK_QUEUE_FAMILY_IGNORED;
+            const uint32_t dstQueueFamilyIndex = bufferMemoryBarrier.synchronizeGraphicsToCompute
+                                                         ? device.familyIndices().compute
+                                                         : VK_QUEUE_FAMILY_IGNORED;
             bufferMemoryBarriers.emplace_back(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
                                               nullptr,
                                               bufferMemoryBarrier.sourceAccessMask,
                                               bufferMemoryBarrier.destinationAccessMask,
-                                              VK_QUEUE_FAMILY_IGNORED,
-                                              VK_QUEUE_FAMILY_IGNORED,
+                                              srcQueueFamilyIndex,
+                                              dstQueueFamilyIndex,
                                               bufferRegionIndex.buffer(),
                                               bufferRegionIndex.offset() + bufferMemoryBarrier.offset,
-                                              bufferMemoryBarrier.size);
+                                              bufferMemoryBarrier.size == 0 ? bufferRegionIndex.size()
+                                                                            : bufferMemoryBarrier.size);
         }
 
         imageMemoryBarriers.reserve(dependencyInfo.imageMemoryBarrierCount);
         for (uint32_t i = 0; i < dependencyInfo.imageMemoryBarrierCount; i++)
         {
             const LunaImageMemoryBarrier &imageMemoryBarrier = dependencyInfo.imageMemoryBarriers[i];
-            checkStageMasks(sourceStageMask,
-                            destinationStageMask,
-                            imageMemoryBarrier.sourceStageMask,
-                            imageMemoryBarrier.destinationStageMask);
+            sourceStageMask |= imageMemoryBarrier.sourceStageMask;
+            destinationStageMask |= imageMemoryBarrier.destinationStageMask;
             assert(imageMemoryBarrier.image);
             imageMemoryBarriers.emplace_back(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
                                              nullptr,
@@ -375,13 +355,14 @@ VkResult lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const Luna
     return VK_SUCCESS;
 }
 
-VkResult lunaPipelineBarrier(const LunaDependencyInfo *dependencyInfo)
+VkResult lunaPipelineBarrier(const LunaCommandBuffer commandBuffer, const LunaDependencyInfo *dependencyInfo)
 {
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(dependencyInfo);
 
-    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
-    luna::helpers::pipelineBarrier(commandBuffer, *dependencyInfo);
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(true));
+    luna::helpers::pipelineBarrier(commandBufferObject, *dependencyInfo);
     return VK_SUCCESS;
 }
 
@@ -609,11 +590,11 @@ VkResult lunaEndFrame()
         .pWaitSemaphores = waitSemaphores.data(),
         .pWaitDstStageMask = waitStageMasks.data(),
         .commandBufferCount = 1,
-        .pCommandBuffers = &commandBuffer,
+        .pCommandBuffers = &static_cast<const VkCommandBuffer &>(commandBuffer),
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = &device.renderFinishedSemaphore(swapchain.imageIndex),
     };
-    CHECK_RESULT_RETURN(commandBuffer.submitCommandBuffer(device.familyQueues().graphics, queueSubmitInfo));
+    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(device.familyQueues().graphics, queueSubmitInfo));
 
     const VkPresentInfoKHR presentInfo = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,

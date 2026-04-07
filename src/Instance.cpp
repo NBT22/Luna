@@ -267,9 +267,10 @@ std::list<VkSampler> samplers{};
 std::list<Image> images{};
 } // namespace luna
 
-const LunaCommandPool LUNA_INTERNAL_GRAPHICS_COMMAND_POOL =
-        luna::helpers::toHandle(luna::device.commandPools().graphics);
-const LunaCommandPool LUNA_INTERNAL_COMPUTE_COMMAND_POOL = luna::helpers::toHandle(luna::device.commandPools().compute);
+const LunaCommandPool *const LUNA_INTERNAL_GRAPHICS_COMMAND_POOL =
+        luna::helpers::toHandlePtr(luna::device.commandPools().graphics);
+const LunaCommandPool *const LUNA_INTERNAL_COMPUTE_COMMAND_POOL =
+        luna::helpers::toHandlePtr(luna::device.commandPools().compute);
 
 VkResult lunaInitializeVolk()
 {

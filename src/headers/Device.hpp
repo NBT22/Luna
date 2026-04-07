@@ -49,6 +49,7 @@ class Device
         [[nodiscard]] const uint32_t *queueFamilyIndices() const noexcept;
         [[nodiscard]] VmaAllocator allocator() const noexcept;
         [[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const noexcept;
+        [[nodiscard]] const FamilyValues<uint32_t> &familyIndices() const noexcept;
         [[nodiscard]] FamilyValues<CommandPool *> &commandPools() noexcept;
         [[nodiscard]] const FamilyValues<CommandPool *> &commandPools() const noexcept;
         [[nodiscard]] Semaphore &renderFinishedSemaphore(uint32_t imageIndex);
@@ -64,6 +65,8 @@ class Device
         bool isDestroyed_{true};
         VkPhysicalDevice physicalDevice_{};
         VkDevice logicalDevice_{};
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingPipelineFeatures_{};
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures_{};
         VkPhysicalDeviceVulkan14Features vulkan14Features_{};
         VkPhysicalDeviceVulkan13Features vulkan13Features_{};
         VkPhysicalDeviceVulkan12Features vulkan12Features_{};
@@ -223,6 +226,10 @@ inline const FamilyValues<VkQueue> &Device::familyQueues() const noexcept
 {
     return familyQueues_;
 }
+inline const FamilyValues<uint32_t> &Device::familyIndices() const noexcept
+{
+    return familyIndices_;
+}
 inline FamilyValues<CommandPool *> &Device::commandPools() noexcept
 {
     return internalCommandPools_;
@@ -337,8 +344,8 @@ inline bool Device::checkFeatureSupport_(const VkBool32 *requiredFeatures) const
                   alignof(void *) == alignof(VkPhysicalDeviceVulkan12Features) &&
                   alignof(void *) == alignof(VkPhysicalDeviceVulkan13Features) &&
                   alignof(void *) == alignof(VkPhysicalDeviceVulkan14Features));
-    constexpr size_t offset = 2 * alignof(void *) / sizeof(VkBool32);
-    const VkBool32 *requiredFeatureArray = requiredFeatures + offset;
+    constexpr size_t featuresOffset = 2 * alignof(void *) / sizeof(VkBool32);
+    const VkBool32 *requiredFeatureArray = requiredFeatures + featuresOffset;
     switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
     {
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
@@ -393,6 +400,35 @@ inline bool Device::checkFeatureSupport_(const VkBool32 *requiredFeatures) const
             }
             break;
         }
+        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR:
+        {
+            constexpr size_t rayTracingPipelineFeatureCount = (sizeof(VkPhysicalDeviceRayTracingPipelineFeaturesKHR) -
+                                                               16) /
+                                                              sizeof(VkBool32);
+            const VkBool32 *supportedFeatureArray = &rayTracingPipelineFeatures_.rayTracingPipeline;
+            for (size_t i = 0; i < rayTracingPipelineFeatureCount; i++)
+            {
+                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+                {
+                    return false;
+                }
+            }
+            break;
+        }
+        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR:
+        {
+            constexpr size_t accelerationStructureFeatureCount =
+                    (sizeof(VkPhysicalDeviceAccelerationStructureFeaturesKHR) - 16) / sizeof(VkBool32);
+            const VkBool32 *supportedFeatureArray = &accelerationStructureFeatures_.accelerationStructure;
+            for (size_t i = 0; i < accelerationStructureFeatureCount; i++)
+            {
+                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+                {
+                    return false;
+                }
+            }
+            break;
+        }
         default:
             [[maybe_unused]] const VkStructureType &structureType = static_cast<VkStructureType>(*requiredFeatures);
             assert(structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES ||
@@ -401,7 +437,8 @@ inline bool Device::checkFeatureSupport_(const VkBool32 *requiredFeatures) const
                    structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
     }
 
-    const void *pNext = *reinterpret_cast<const void *const *>(requiredFeatures + 1);
+    constexpr size_t pNextOffset = alignof(void *) / sizeof(VkBool32);
+    const void *pNext = *reinterpret_cast<const void *const *>(requiredFeatures + pNextOffset);
     if (pNext != nullptr)
     {
         return checkFeatureSupport_(static_cast<const VkBool32 *>(pNext));

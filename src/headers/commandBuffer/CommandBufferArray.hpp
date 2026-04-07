@@ -33,10 +33,13 @@ class CommandBufferArray
         void destroy(VkDevice logicalDevice, VkCommandPool commandPool);
 
         VkResult beginSingleUseCommandBuffer();
-        VkResult submitCommandBuffer(VkQueue queue,
-                                     const VkSubmitInfo &submitInfo,
-                                     VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-        VkResult endCommandBuffer();
+        VkResult end();
+        VkResult submit(VkQueue queue,
+                        const VkSubmitInfo &submitInfo,
+                        VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endAndSubmit(VkQueue queue,
+                              const VkSubmitInfo &submitInfo,
+                              VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
         VkResult waitForAllFences(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
         VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
@@ -135,14 +138,18 @@ inline VkResult CommandBufferArray::beginSingleUseCommandBuffer()
     isRecordings_.at(index_) = 1u;
     return VK_SUCCESS;
 }
-inline VkResult CommandBufferArray::submitCommandBuffer(const VkQueue queue,
-                                                        const VkSubmitInfo &submitInfo,
-                                                        const VkPipelineStageFlags stageMask)
+inline VkResult CommandBufferArray::end()
 {
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffers_.at(index_)));
+    isRecordings_.at(index_) = static_cast<uint8_t>(0);
+    return VK_SUCCESS;
+}
+inline VkResult CommandBufferArray::submit(const VkQueue queue,
+                                           const VkSubmitInfo &submitInfo,
+                                           const VkPipelineStageFlags stageMask)
+{
     CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fences_.at(index_)));
     fences_.at(index_).setWillBeSignaled(true);
-    isRecordings_.at(index_) = 0u;
     if (submitInfo.signalSemaphoreCount > 0)
     {
         for (uint32_t i = 0; i < submitInfo.signalSemaphoreCount; i++)
@@ -158,10 +165,12 @@ inline VkResult CommandBufferArray::submitCommandBuffer(const VkQueue queue,
     index_ = (index_ + 1) % commandBuffers_.size();
     return VK_SUCCESS;
 }
-inline VkResult CommandBufferArray::endCommandBuffer()
+inline VkResult CommandBufferArray::endAndSubmit(const VkQueue queue,
+                                                 const VkSubmitInfo &submitInfo,
+                                                 const VkPipelineStageFlags stageMask)
 {
-    CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffers_.at(index_)));
-    isRecordings_.at(index_) = static_cast<uint8_t>(0);
+    CHECK_RESULT_RETURN(end());
+    CHECK_RESULT_RETURN(submit(queue, submitInfo, stageMask));
     return VK_SUCCESS;
 }
 inline bool CommandBufferArray::getAndSetIsSignaled(const bool value)
