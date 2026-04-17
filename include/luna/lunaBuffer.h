@@ -31,14 +31,6 @@ VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer
 void lunaDestroyBuffer(LunaBuffer buffer);
 
 /**
- * @brief Get the list of regions
- * @param[in] buffer The @c LunaBuffer to get the regions of.
- * @param[out] count The size of the @c LunaBufferRegion list returned by the function.
- * @return A list of @code count@endcode @c LunaBufferRegion handles.
- */
-LunaBufferRegion *lunaGetBufferRegions(LunaBuffer buffer, uint32_t *count);
-
-/**
  * @brief Ensure a buffer is at least @c size bytes, resizing if it is not.
  * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
  * @param[in] size The new size to make the buffer.

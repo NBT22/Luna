@@ -14,6 +14,7 @@
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "CommandBuffer.hpp"
+#include "CommandPool.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
@@ -125,28 +126,6 @@ static void blitImage(const VkCommandBuffer commandBuffer,
         vkCmdBlitImage2(commandBuffer, &blitImageInfo);
     }
 }
-
-static VkResult createImage(const LunaImageCreationInfo &creationInfo,
-                            uint32_t depth,
-                            uint32_t arrayLayers,
-                            LunaImage *imageIndex)
-{
-    TRY_CATCH_RESULT(luna::images.emplace_back(creationInfo, depth, arrayLayers));
-    const Image &image = images.back();
-    if (creationInfo.writeInfo.descriptorSet != LUNA_NULL_HANDLE)
-    {
-        image.updateDescriptorBinding(device,
-                                      creationInfo.writeInfo.descriptorSet,
-                                      creationInfo.writeInfo.descriptorLayoutBindingName,
-                                      creationInfo.writeInfo.descriptorArrayElement);
-    }
-
-    if (imageIndex != nullptr)
-    {
-        *imageIndex = toHandle(&images.back());
-    }
-    return VK_SUCCESS;
-}
 } // namespace luna::helpers
 
 namespace luna
@@ -253,7 +232,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
                                  image_,
                                  subresourceRange);
         CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics,
-                                                              writeInfo.destinationStageMask));
+                                                       writeInfo.destinationStageMask));
         return VK_SUCCESS;
     }
     VkExtent3D extent = writeInfo.extent == nullptr ? extent_ : *writeInfo.extent;
@@ -262,8 +241,9 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         extent.depth = 1;
     }
 
-    CHECK_RESULT_RETURN(BufferRegionIndex::resize(stagingBuffer, writeInfo.bytes));
-    CHECK_RESULT_RETURN(stagingBuffer->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels), writeInfo.bytes));
+    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device.stagingBuffer, writeInfo.bytes));
+    CHECK_RESULT_RETURN(device.stagingBuffer->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels),
+                                                           writeInfo.bytes));
     helpers::pipelineBarrier(commandBuffer,
                              writeInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
                                                                                    : writeInfo.sourceStageMask,
@@ -280,13 +260,13 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         .layerCount = arrayLayers_,
     };
     const VkBufferImageCopy bufferCopyInfo = {
-        .bufferOffset = stagingBuffer->offset(),
+        .bufferOffset = device.stagingBuffer->offset(),
         .imageSubresource = writeInfo.subresourceLayers == nullptr ? subresourceLayers : *writeInfo.subresourceLayers,
         .imageOffset = writeInfo.offset == nullptr ? VkOffset3D{} : *writeInfo.offset,
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           stagingBuffer->buffer(),
+                           device.stagingBuffer->buffer(),
                            image_,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,
@@ -309,7 +289,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
     }
 
     CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics,
-                                                          writeInfo.destinationStageMask));
+                                                   writeInfo.destinationStageMask));
     return VK_SUCCESS;
 }
 
@@ -408,64 +388,33 @@ void Image::generateMipmaps_(const CommandBuffer &commandBuffer,
     };
     helpers::pipelineBarrier(commandBuffer, dependencyInfo);
 }
-
 } // namespace luna
 
 VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
 {
     assert(creationInfo);
-    luna::samplers.emplace_back();
-    const VkSamplerCreateInfo createInfo = {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .flags = creationInfo->flags,
-        .magFilter = creationInfo->magFilter,
-        .minFilter = creationInfo->minFilter,
-        .mipmapMode = creationInfo->mipmapMode,
-        .addressModeU = creationInfo->addressModeU,
-        .addressModeV = creationInfo->addressModeV,
-        .addressModeW = creationInfo->addressModeW,
-        .mipLodBias = creationInfo->mipmapLodBias,
-        .anisotropyEnable = static_cast<VkBool32>(creationInfo->anisotropyEnable),
-        .maxAnisotropy = creationInfo->maxAnisotropy,
-        .compareEnable = static_cast<VkBool32>(creationInfo->compareEnable),
-        .compareOp = creationInfo->compareOp,
-        .minLod = creationInfo->minLod,
-        .maxLod = creationInfo->maxLod,
-        .borderColor = creationInfo->borderColor,
-        .unnormalizedCoordinates = static_cast<VkBool32>(creationInfo->unnormalizedCoordinates),
-    };
-    CHECK_RESULT_RETURN(vkCreateSampler(luna::device, &createInfo, nullptr, &luna::samplers.back()));
-    if (sampler != nullptr)
-    {
-        *sampler = luna::helpers::toHandle(&luna::samplers.back());
-    }
+    CHECK_RESULT_RETURN(luna::device.createSampler(*creationInfo, sampler));
     return VK_SUCCESS;
 }
 void lunaDestroySampler(const LunaSampler sampler)
 {
-    if (sampler == LUNA_NULL_HANDLE)
-    {
-        return;
-    }
-    const VkSampler vkSampler = *luna::helpers::fromHandle<VkSampler>(sampler);
-    luna::samplers.remove(vkSampler);
-    vkDestroySampler(luna::device, vkSampler, nullptr);
+    luna::device.destroySampler(sampler);
 }
 
 VkResult lunaCreateImage(const LunaImageCreationInfo *creationInfo, LunaImage *image)
 {
     assert(creationInfo);
-    return luna::helpers::createImage(*creationInfo, 0, 1, image);
+    return luna::device.createImage(*creationInfo, 0, 1, image);
 }
 VkResult lunaCreateImageArray(const LunaImageCreationInfo *creationInfo, const uint32_t arrayLayers, LunaImage *image)
 {
     assert(creationInfo && arrayLayers);
-    return luna::helpers::createImage(*creationInfo, 0, arrayLayers, image);
+    return luna::device.createImage(*creationInfo, 0, arrayLayers, image);
 }
 VkResult lunaCreateImage3D(const LunaImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
 {
     assert(creationInfo);
-    return luna::helpers::createImage(*creationInfo, depth, 1, image);
+    return luna::device.createImage(*creationInfo, depth, 1, image);
 }
 VkResult lunaCreateImage3DArray(const LunaImageCreationInfo *creationInfo,
                                 const uint32_t depth,
@@ -473,7 +422,7 @@ VkResult lunaCreateImage3DArray(const LunaImageCreationInfo *creationInfo,
                                 LunaImage *image)
 {
     assert(creationInfo && arrayLayers);
-    return luna::helpers::createImage(*creationInfo, depth, arrayLayers, image);
+    return luna::device.createImage(*creationInfo, depth, arrayLayers, image);
 }
 
 VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeInfo)
@@ -576,6 +525,5 @@ VkResult lunaCopyImageToBuffer(const LunaImage image,
 
 void lunaDestroyImage(const LunaImage image)
 {
-    // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
-    luna::images.remove(*luna::helpers::fromHandle<luna::Image>(image));
+    luna::device.destroyImage(image);
 }

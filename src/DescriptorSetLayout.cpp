@@ -68,12 +68,7 @@ void DescriptorSetLayout::destroy()
 VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
                                        LunaDescriptorSetLayout *descriptorSetLayout)
 {
-    using namespace luna;
     assert(creationInfo);
-    TRY_CATCH_RESULT(descriptorSetLayouts.emplace_back(*creationInfo));
-    if (descriptorSetLayout != nullptr)
-    {
-        *descriptorSetLayout = helpers::toHandle(&descriptorSetLayouts.back());
-    }
+    CHECK_RESULT_RETURN(luna::device.createDescriptorSetLayout(*creationInfo, descriptorSetLayout));
     return VK_SUCCESS;
 }

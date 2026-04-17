@@ -10,8 +10,14 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
+#include "Buffer.hpp"
 #include "CommandPool.hpp"
+#include "ComputePipeline.hpp"
+#include "DescriptorSetLayout.hpp"
+#include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
+#include "Image.hpp"
+#include "RenderPass.hpp"
 #include "Semaphore.hpp"
 #include "ShaderModule.hpp"
 
@@ -35,11 +41,43 @@ class Device
 
         void destroy();
 
-        VkResult addShaderModule(const LunaShaderModuleCreationInfo &creationInfo, LunaShaderModule *shaderModule);
         VkResult createSemaphores(uint32_t imageCount);
         VkResult createInternalCommandPools();
         VkResult addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
                                            LunaCommandPool *commandPool);
+
+        VkResult createShaderModule(const LunaShaderModuleCreationInfo &creationInfo, LunaShaderModule *shaderModule);
+        VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo, LunaRenderPass *renderPass);
+        VkResult createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo, LunaRenderPass *renderPass);
+        VkResult createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo,
+                                           LunaDescriptorSetLayout *descriptorSetLayout);
+        VkResult createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo,
+                                      LunaDescriptorPool *descriptorPool);
+        VkResult allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
+                                        LunaDescriptorSet *descriptorSets);
+        VkResult createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
+                                        LunaGraphicsPipeline *pipeline);
+        VkResult createComputePipeline(const LunaComputePipelineCreationInfo &creationInfo,
+                                       LunaComputePipeline *pipeline);
+        VkResult createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
+                              const VmaAllocationCreateInfo &allocationCreateInfo,
+                              Buffer *&outBuffer);
+        VkResult createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
+                              const VmaAllocationCreateInfo &allocationCreateInfo,
+                              VkDeviceSize alignment,
+                              Buffer *&outBuffer);
+        VkResult createBufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, LunaBuffer *outBuffer);
+        VkResult createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler);
+        VkResult createImage(const LunaImageCreationInfo &creationInfo,
+                             uint32_t depth,
+                             uint32_t arrayLayers,
+                             LunaImage *image);
+
+        /// Removes a buffer region index from the list. Calling this function with an invalid or null pointer will have no effect
+        void destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex);
+        void destroySampler(const LunaSampler &sampler);
+        // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
+        void destroyImage(const LunaImage &image);
 
         [[nodiscard]] bool isDestroyed() const noexcept;
         [[nodiscard]] VkSharingMode sharingMode() const noexcept;
@@ -54,6 +92,11 @@ class Device
         [[nodiscard]] const FamilyValues<CommandPool *> &commandPools() const noexcept;
         [[nodiscard]] Semaphore &renderFinishedSemaphore(uint32_t imageIndex);
         [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const noexcept;
+        [[nodiscard]] std::list<Buffer> &buffers() noexcept;
+
+        // TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
+        //  that way it can shrink if it grows to an absurd size
+        BufferRegionIndex *stagingBuffer{};
 
     private:
         VkResult findQueueFamilyIndices_(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -79,11 +122,21 @@ class Device
         FamilyValues<bool> hasFamily_{};
         FamilyValues<VkQueue> familyQueues_{};
         FamilyValues<uint32_t> familyIndices_{};
-        std::list<CommandPool> commandPools_{};
+        std::list<CommandPool> commandPools_;
         FamilyValues<CommandPool *> internalCommandPools_{};
-        std::vector<Semaphore> renderFinishedSemaphores_{};
-
-        std::list<ShaderModule> shaderModules_{};
+        std::vector<Semaphore> renderFinishedSemaphores_;
+        std::list<ShaderModule> shaderModules_;
+        std::list<RenderPass> renderPasses_;
+        std::list<DescriptorSetLayout> descriptorSetLayouts_;
+        std::list<VkDescriptorPool> descriptorPools_;
+        std::list<VkDescriptorSet> descriptorSets_;
+        std::list<DescriptorSetIndex> descriptorSetIndices_;
+        std::list<GraphicsPipeline> graphicsPipelines_;
+        std::list<ComputePipeline> computePipelines_;
+        std::list<Buffer> buffers_;
+        std::list<BufferRegionIndex> bufferRegionIndices_;
+        std::list<VkSampler> samplers_;
+        std::list<Image> images_;
 };
 } // namespace luna
 
@@ -103,103 +156,6 @@ inline Device::operator const VkPhysicalDevice &() const
 inline Device::operator const VkDevice &() const
 {
     return logicalDevice_;
-}
-
-inline void Device::destroy()
-{
-    if (isDestroyed_)
-    {
-        return;
-    }
-    shaderModules_.clear();
-    for (CommandPool &commandPool: commandPools_)
-    {
-        commandPool.destroy();
-    }
-    commandPools_.clear();
-    if (internalCommandPools_.graphics != nullptr)
-    {
-        internalCommandPools_.graphics->destroy();
-    }
-    if (internalCommandPools_.compute != nullptr)
-    {
-        internalCommandPools_.compute->destroy();
-    }
-    if (internalCommandPools_.presentation != nullptr)
-    {
-        internalCommandPools_.presentation->destroy();
-    }
-    for (Semaphore &semaphore: renderFinishedSemaphores_)
-    {
-        semaphore.destroy();
-    }
-    renderFinishedSemaphores_.clear();
-    vmaDestroyAllocator(allocator_);
-    vkDestroyDevice(logicalDevice_, nullptr);
-
-    queueFamilyIndices_.clear();
-    queueFamilyIndices_.shrink_to_fit();
-    isDestroyed_ = true;
-}
-
-inline VkResult Device::addShaderModule(const LunaShaderModuleCreationInfo &creationInfo,
-                                        LunaShaderModule *shaderModule)
-{
-    TRY_CATCH_RESULT(shaderModules_.emplace_back(creationInfo));
-    if (shaderModule != nullptr)
-    {
-        *shaderModule = helpers::toHandle(&shaderModules_.back());
-    }
-    return VK_SUCCESS;
-}
-inline VkResult Device::createSemaphores(const uint32_t imageCount)
-{
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-    const uint32_t oldSize = renderFinishedSemaphores_.size();
-    renderFinishedSemaphores_.resize(imageCount);
-    for (uint32_t i = oldSize; i < imageCount; i++)
-    {
-        Semaphore &semaphore = renderFinishedSemaphores_.at(i);
-        CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &semaphore));
-    }
-    return VK_SUCCESS;
-}
-inline VkResult Device::createInternalCommandPools()
-{
-    const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = familyIndices_.graphics,
-    };
-    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &graphicsCommandPoolCreateInfo));
-    internalCommandPools_.graphics = &commandPools_.back();
-
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
-
-    const VkCommandPoolCreateInfo computeCommandPoolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = familyIndices_.compute,
-    };
-    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &computeCommandPoolCreateInfo));
-    internalCommandPools_.compute = &commandPools_.back();
-
-    CHECK_RESULT_RETURN(internalCommandPools_.compute->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
-
-    return VK_SUCCESS;
-}
-inline VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
-                                                  LunaCommandPool *commandPool)
-{
-    TRY_CATCH_RESULT(commandPools_.emplace_back(creationInfo));
-    if (commandPool != nullptr)
-    {
-        *commandPool = helpers::toHandle(&commandPools_.back());
-    }
-    return VK_SUCCESS;
 }
 
 inline bool Device::isDestroyed() const noexcept
@@ -238,13 +194,13 @@ inline const FamilyValues<CommandPool *> &Device::commandPools() const noexcept
 {
     return internalCommandPools_;
 }
-inline Semaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex)
-{
-    return renderFinishedSemaphores_.at(imageIndex);
-}
 inline VkPhysicalDeviceVulkan13Features Device::vulkan13Features() const noexcept
 {
     return vulkan13Features_;
+}
+inline std::list<Buffer> &Device::buffers() noexcept
+{
+    return buffers_;
 }
 
 // TODO: Better family finding logic to allow for

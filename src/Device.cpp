@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <luna/luna.h>
 #include <luna/lunaDevice.h>
@@ -14,10 +15,18 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
+#include "CommandPool.hpp"
+#include "ComputePipeline.hpp"
+#include "DescriptorSetLayout.hpp"
 #include "Device.hpp"
+#include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
+#include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "RenderPass.hpp"
+#include "Semaphore.hpp"
+#include "ShaderModule.hpp"
 
 namespace luna
 {
@@ -185,8 +194,9 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         // .vkGetMemoryWin32HandleKHR = vkGetMemoryWin32HandleKHR,
     };
     const VmaAllocatorCreateInfo allocationCreateInfo = {
-        .flags = creationInfo.allocatorCreateFlags == 0 ? VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT
-                                                        : creationInfo.allocatorCreateFlags,
+        .flags = creationInfo.allocatorCreateFlags == 0
+                         ? static_cast<VmaAllocatorCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT)
+                         : creationInfo.allocatorCreateFlags,
         .physicalDevice = physicalDevice_,
         .device = logicalDevice_,
         .pVulkanFunctions = &vmaVulkanFunctions,
@@ -196,6 +206,354 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
     isDestroyed_ = false;
+}
+
+void Device::destroy()
+{
+    if (isDestroyed_)
+    {
+        return;
+    }
+
+    for (const VkSampler sampler: samplers_)
+    {
+        vkDestroySampler(logicalDevice_, sampler, nullptr);
+    }
+    samplers_.clear();
+    images_.clear();
+
+    for (GraphicsPipeline pipeline: graphicsPipelines_)
+    {
+        pipeline.destroy();
+    }
+    for (RenderPass renderPass: renderPasses_)
+    {
+        renderPass.destroy();
+    }
+
+    computePipelines_.clear();
+
+    for (const VkDescriptorPool descriptorPool: descriptorPools_)
+    {
+        vkDestroyDescriptorPool(logicalDevice_, descriptorPool, nullptr);
+    }
+    for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts_)
+    {
+        descriptorSetLayout.destroy();
+    }
+
+    graphicsPipelines_.clear();
+    renderPasses_.clear();
+
+    descriptorSetIndices_.clear();
+    descriptorPools_.clear();
+    descriptorSetLayouts_.clear();
+    descriptorSets_.clear();
+
+    bufferRegionIndices_.clear();
+    BufferRegionIndex::waitForCleanupThread();
+
+    shaderModules_.clear();
+
+    for (CommandPool &commandPool: commandPools_)
+    {
+        commandPool.destroy();
+    }
+    commandPools_.clear();
+    if (internalCommandPools_.graphics != nullptr)
+    {
+        internalCommandPools_.graphics->destroy();
+    }
+    if (internalCommandPools_.compute != nullptr)
+    {
+        internalCommandPools_.compute->destroy();
+    }
+    if (internalCommandPools_.presentation != nullptr)
+    {
+        internalCommandPools_.presentation->destroy();
+    }
+    for (Semaphore &semaphore: renderFinishedSemaphores_)
+    {
+        semaphore.destroy();
+    }
+    renderFinishedSemaphores_.clear();
+    vmaDestroyAllocator(allocator_);
+    vkDestroyDevice(logicalDevice_, nullptr);
+
+    queueFamilyIndices_.clear();
+    queueFamilyIndices_.shrink_to_fit();
+    isDestroyed_ = true;
+}
+
+VkResult Device::createSemaphores(const uint32_t imageCount)
+{
+    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    const uint32_t oldSize = renderFinishedSemaphores_.size();
+    renderFinishedSemaphores_.resize(imageCount);
+    for (uint32_t i = oldSize; i < imageCount; i++)
+    {
+        Semaphore &semaphore = renderFinishedSemaphores_.at(i);
+        CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &semaphore));
+    }
+    return VK_SUCCESS;
+}
+
+VkResult Device::createInternalCommandPools()
+{
+    const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = familyIndices_.graphics,
+    };
+    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &graphicsCommandPoolCreateInfo));
+    internalCommandPools_.graphics = &commandPools_.back();
+
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+
+    const VkCommandPoolCreateInfo computeCommandPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = familyIndices_.compute,
+    };
+    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &computeCommandPoolCreateInfo));
+    internalCommandPools_.compute = &commandPools_.back();
+
+    CHECK_RESULT_RETURN(internalCommandPools_.compute->allocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY));
+
+    return VK_SUCCESS;
+}
+
+VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
+                                           LunaCommandPool *commandPool)
+{
+    TRY_CATCH_RESULT(commandPools_.emplace_back(creationInfo));
+    if (commandPool != nullptr)
+    {
+        *commandPool = helpers::toHandle(&commandPools_.back());
+    }
+    return VK_SUCCESS;
+}
+
+VkResult Device::createShaderModule(const LunaShaderModuleCreationInfo &creationInfo, LunaShaderModule *shaderModule)
+{
+    TRY_CATCH_RESULT(shaderModules_.emplace_back(creationInfo));
+    if (shaderModule != nullptr)
+    {
+        *shaderModule = helpers::toHandle(&shaderModules_.back());
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createRenderPass(const LunaRenderPassCreationInfo &creationInfo, LunaRenderPass *renderPass)
+{
+    TRY_CATCH_RESULT(renderPasses_.emplace_back(creationInfo));
+    if (renderPass != nullptr)
+    {
+        *renderPass = helpers::toHandle(&renderPasses_.back());
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo, LunaRenderPass *renderPass)
+{
+    TRY_CATCH_RESULT(renderPasses_.emplace_back(creationInfo));
+    if (renderPass != nullptr)
+    {
+        *renderPass = helpers::toHandle(&renderPasses_.back());
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo,
+                                           LunaDescriptorSetLayout *descriptorSetLayout)
+{
+    TRY_CATCH_RESULT(descriptorSetLayouts_.emplace_back(creationInfo));
+    if (descriptorSetLayout != nullptr)
+    {
+        *descriptorSetLayout = helpers::toHandle(&descriptorSetLayouts_.back());
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo,
+                                      LunaDescriptorPool *descriptorPool)
+{
+    VkDescriptorPool &vkDescriptorPool = descriptorPools_.emplace_back();
+    const VkDescriptorPoolCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = creationInfo.flags,
+        .maxSets = creationInfo.maxSets,
+        .poolSizeCount = creationInfo.poolSizeCount,
+        .pPoolSizes = creationInfo.poolSizes,
+    };
+    CHECK_RESULT_RETURN(vkCreateDescriptorPool(logicalDevice_, &createInfo, nullptr, &vkDescriptorPool));
+    if (descriptorPool != nullptr)
+    {
+        *descriptorPool = helpers::toHandle(vkDescriptorPool);
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
+                                        LunaDescriptorSet *descriptorSets)
+{
+    if (allocationInfo.setLayoutCount != 0)
+    {
+        assert(allocationInfo.setLayouts);
+        const VkDescriptorPool *pool = helpers::fromHandle<VkDescriptorPool>(allocationInfo.descriptorPool);
+        for (uint32_t i = 0; i < allocationInfo.setLayoutCount; i++)
+        {
+            const DescriptorSetLayout *layout = helpers::fromHandle<DescriptorSetLayout>(allocationInfo.setLayouts[i]);
+            const VkDescriptorSetLayout vkLayout = *layout;
+
+            VkDescriptorSet *descriptorSet = &descriptorSets_.emplace_back();
+            const VkDescriptorSetAllocateInfo allocateInfo = {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .descriptorPool = *pool,
+                .descriptorSetCount = 1,
+                .pSetLayouts = &vkLayout,
+            };
+            CHECK_RESULT_RETURN(vkAllocateDescriptorSets(logicalDevice_, &allocateInfo, descriptorSet));
+            descriptorSetIndices_.emplace_back(pool, layout, descriptorSet);
+            descriptorSets[i] = helpers::toHandle(&descriptorSetIndices_.back());
+        }
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
+                                        LunaGraphicsPipeline *pipeline)
+{
+    TRY_CATCH_RESULT(graphicsPipelines_.emplace_back(creationInfo));
+    if (pipeline != nullptr)
+    {
+        *pipeline = helpers::toHandle(&graphicsPipelines_.back());
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createComputePipeline(const LunaComputePipelineCreationInfo &creationInfo,
+                                       LunaComputePipeline *pipeline)
+{
+    TRY_CATCH_RESULT(computePipelines_.emplace_back(creationInfo));
+    if (pipeline != nullptr)
+    {
+        *pipeline = helpers::toHandle(&computePipelines_.back());
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
+                              const VmaAllocationCreateInfo &allocationCreateInfo,
+                              Buffer *&outBuffer)
+{
+    TRY_CATCH_RESULT(buffers_.emplace_back(bufferCreateInfo, allocationCreateInfo));
+    outBuffer = &buffers_.back();
+    return VK_SUCCESS;
+}
+VkResult Device::createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
+                              const VmaAllocationCreateInfo &allocationCreateInfo,
+                              VkDeviceSize alignment,
+                              Buffer *&outBuffer)
+{
+    TRY_CATCH_RESULT(buffers_.emplace_back(bufferCreateInfo, allocationCreateInfo, alignment));
+    outBuffer = &buffers_.back();
+    return VK_SUCCESS;
+}
+VkResult Device::createBufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, LunaBuffer *outBuffer)
+{
+    TRY_CATCH_RESULT(bufferRegionIndices_.emplace_back(buffer, bufferRegion));
+    if (outBuffer != nullptr)
+    {
+        *outBuffer = helpers::toHandle(&bufferRegionIndices_.back());
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler)
+{
+    VkSampler &vkSampler = samplers_.emplace_back();
+    const VkSamplerCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .flags = creationInfo.flags,
+        .magFilter = creationInfo.magFilter,
+        .minFilter = creationInfo.minFilter,
+        .mipmapMode = creationInfo.mipmapMode,
+        .addressModeU = creationInfo.addressModeU,
+        .addressModeV = creationInfo.addressModeV,
+        .addressModeW = creationInfo.addressModeW,
+        .mipLodBias = creationInfo.mipmapLodBias,
+        .anisotropyEnable = static_cast<VkBool32>(creationInfo.anisotropyEnable),
+        .maxAnisotropy = creationInfo.maxAnisotropy,
+        .compareEnable = static_cast<VkBool32>(creationInfo.compareEnable),
+        .compareOp = creationInfo.compareOp,
+        .minLod = creationInfo.minLod,
+        .maxLod = creationInfo.maxLod,
+        .borderColor = creationInfo.borderColor,
+        .unnormalizedCoordinates = static_cast<VkBool32>(creationInfo.unnormalizedCoordinates),
+    };
+    CHECK_RESULT_RETURN(vkCreateSampler(logicalDevice_, &createInfo, nullptr, &vkSampler));
+    if (sampler != nullptr)
+    {
+        *sampler = helpers::toHandle(&vkSampler);
+    }
+    return VK_SUCCESS;
+}
+VkResult Device::createImage(const LunaImageCreationInfo &creationInfo,
+                             uint32_t depth,
+                             uint32_t arrayLayers,
+                             LunaImage *image)
+{
+    TRY_CATCH_RESULT(images_.emplace_back(creationInfo, depth, arrayLayers));
+    if (creationInfo.writeInfo.descriptorSet != LUNA_NULL_HANDLE)
+    {
+        images_.back().updateDescriptorBinding(logicalDevice_,
+                                               creationInfo.writeInfo.descriptorSet,
+                                               creationInfo.writeInfo.descriptorLayoutBindingName,
+                                               creationInfo.writeInfo.descriptorArrayElement);
+    }
+
+    if (image != nullptr)
+    {
+        *image = helpers::toHandle(&images_.back());
+    }
+    return VK_SUCCESS;
+}
+
+void Device::destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex)
+{
+    if (bufferRegionIndex == nullptr)
+    {
+        return;
+    }
+    const auto shouldDestroy = [&bufferRegionIndex](const BufferRegionIndex &regionIndex) -> bool {
+        return &regionIndex == bufferRegionIndex;
+    };
+    const size_t removedRegionCount = bufferRegionIndices_.remove_if(shouldDestroy);
+    assert(removedRegionCount == 0 || removedRegionCount == 1);
+    if (removedRegionCount == 1)
+    {
+        bufferRegionIndex = nullptr;
+    }
+}
+void Device::destroySampler(const LunaSampler &sampler)
+{
+    if (sampler == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    const VkSampler vkSampler = *helpers::fromHandle<VkSampler>(sampler);
+    samplers_.remove(vkSampler);
+    vkDestroySampler(logicalDevice_, vkSampler, nullptr);
+}
+void Device::destroyImage(const LunaImage &image)
+{
+    if (image == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    const Image &imageObject = *helpers::fromHandle<Image>(image);
+    images_.remove(imageObject);
+    vkDestroyImage(logicalDevice_, imageObject.image(), nullptr);
+}
+
+Semaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex)
+{
+    return renderFinishedSemaphores_.at(imageIndex);
 }
 } // namespace luna
 
@@ -226,9 +584,9 @@ VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo)
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         .allocationCreateInfo = &allocationCreateInfo,
     };
-    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(luna::stagingBuffer);
+    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(luna::device.stagingBuffer);
     CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-    luna::stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
+    luna::device.stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;
 }
 
@@ -246,9 +604,9 @@ VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo)
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         .allocationCreateInfo = &allocationCreateInfo,
     };
-    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(luna::stagingBuffer);
+    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(luna::device.stagingBuffer);
     CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(bufferCreationInfo, &stagingBufferHandle));
-    luna::stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
+    luna::device.stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;
 }
 
@@ -278,7 +636,7 @@ void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties)
     vkGetPhysicalDeviceProperties2(luna::device, properties);
 }
 
-VkResult lunaSubmitInternalComputeQueue(const LunaCommandBuffer commandBuffer, bool waitForFence)
+VkResult lunaSubmitInternalComputeQueue(const LunaCommandBuffer commandBuffer)
 {
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
@@ -310,7 +668,6 @@ VkResult lunaSubmitInternalComputeQueue(const LunaCommandBuffer commandBuffer, b
 VkResult lunaCreateShaderModule(const LunaShaderModuleCreationInfo *creationInfo, LunaShaderModule *shaderModule)
 {
     assert(creationInfo);
-
-    CHECK_RESULT_RETURN(luna::device.addShaderModule(*creationInfo, shaderModule));
+    CHECK_RESULT_RETURN(luna::device.createShaderModule(*creationInfo, shaderModule));
     return VK_SUCCESS;
 }

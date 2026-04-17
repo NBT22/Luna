@@ -12,6 +12,7 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
+#include "CommandPool.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
@@ -556,6 +557,43 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
     return VK_SUCCESS;
 }
 
+VkResult RenderPass::recreateFramebuffer(const uint32_t width, const uint32_t height)
+{
+    extent_.width = width;
+    extent_.height = height;
+    if (maxExtent_.width < width || maxExtent_.height < height)
+    {
+        maxExtent_.width = maxExtent_.width < width ? width : maxExtent_.width;
+        maxExtent_.height = maxExtent_.height < height ? height : maxExtent_.height;
+
+        vkDestroyImageView(device, colorImageView_, nullptr);
+        vkDestroyImageView(device, depthImageView_, nullptr);
+        vmaDestroyImage(device.allocator(), colorImage_, colorImageAllocation_);
+        vmaDestroyImage(device.allocator(), depthImage_, depthImageAllocation_);
+        CHECK_RESULT_RETURN(createAttachmentImages(depthImage_ != VK_NULL_HANDLE));
+        attachments_.at(attachments_.size() - 3) = depthImageView_;
+        attachments_.at(attachments_.size() - 2) = colorImageView_;
+    }
+    framebuffers_.resize(swapchain.imageCount);
+    for (uint32_t i = 0; i < swapchain.imageCount; i++)
+    {
+        VkFramebuffer &framebuffer = framebuffers_.at(i);
+        vkDestroyFramebuffer(device, framebuffer, nullptr);
+        attachments_.back() = swapchain.imageViews.at(i);
+        const VkFramebufferCreateInfo framebufferCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = renderPass_,
+            .attachmentCount = static_cast<uint32_t>(attachments_.size()),
+            .pAttachments = attachments_.data(),
+            .width = width,
+            .height = height,
+            .layers = 1,
+        };
+        CHECK_RESULT_RETURN(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffer));
+    }
+    return VK_SUCCESS;
+}
+
 VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
 {
     assert(swapchain.imageIndex != -1u);
@@ -594,27 +632,15 @@ VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
 
 VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass)
 {
-    using namespace luna;
     assert(creationInfo);
-
-    TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
-    if (renderPass != nullptr)
-    {
-        *renderPass = helpers::toHandle(&renderPasses.back());
-    }
+    CHECK_RESULT_RETURN(luna::device.createRenderPass(*creationInfo, renderPass));
     return VK_SUCCESS;
 }
 
 VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass)
 {
-    using namespace luna;
     assert(creationInfo);
-
-    TRY_CATCH_RESULT(renderPasses.emplace_back(*creationInfo));
-    if (renderPass != nullptr)
-    {
-        *renderPass = helpers::toHandle(&renderPasses.back());
-    }
+    CHECK_RESULT_RETURN(luna::device.createRenderPass(*creationInfo, renderPass));
     return VK_SUCCESS;
 }
 

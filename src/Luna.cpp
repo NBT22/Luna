@@ -2,6 +2,13 @@
 // Created by NBT22 on 3/1/25.
 //
 
+#define VMA_IMPLEMENTATION
+#define VOLK_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+#include <volk.h>
+#undef VMA_IMPLEMENTATION
+#undef VOLK_IMPLEMENTATION
+
 #include <array>
 #include <cassert>
 #include <cstdint>
@@ -11,17 +18,15 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
+#include "CommandPool.hpp"
 #include "DescriptorSetLayout.hpp"
+#include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "RenderPass.hpp"
 #include "Semaphore.hpp"
-
-#define VMA_IMPLEMENTATION
-#define VOLK_IMPLEMENTATION
-#include <vk_mem_alloc.h>
-#include <volk.h>
 
 namespace luna::helpers
 {
@@ -237,51 +242,16 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
 VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
                                   LunaDescriptorPool *descriptorPool)
 {
-    using namespace luna;
     assert(creationInfo);
-    descriptorPools.emplace_back();
-    const VkDescriptorPoolCreateInfo createInfo = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .flags = creationInfo->flags,
-        .maxSets = creationInfo->maxSets,
-        .poolSizeCount = creationInfo->poolSizeCount,
-        .pPoolSizes = creationInfo->poolSizes,
-    };
-    CHECK_RESULT_RETURN(vkCreateDescriptorPool(device, &createInfo, nullptr, &descriptorPools.back()));
-    if (descriptorPool != nullptr)
-    {
-        *descriptorPool = helpers::toHandle(&descriptorPools.back());
-    }
+    CHECK_RESULT_RETURN(luna::device.createDescriptorPool(*creationInfo, descriptorPool));
     return VK_SUCCESS;
 }
 
 VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
                                     LunaDescriptorSet *descriptorSets)
 {
-    using namespace luna;
     assert(allocationInfo);
-    if (allocationInfo->setLayoutCount != 0)
-    {
-        assert(allocationInfo->setLayouts);
-        const VkDescriptorPool *pool = helpers::fromHandle<VkDescriptorPool>(allocationInfo->descriptorPool);
-        for (uint32_t i = 0; i < allocationInfo->setLayoutCount; i++)
-        {
-            const DescriptorSetLayout *layout = helpers::fromHandle<DescriptorSetLayout>(allocationInfo->setLayouts[i]);
-            const VkDescriptorSetLayout vkLayout = *layout;
-
-            luna::descriptorSets.emplace_back();
-            VkDescriptorSet *descriptorSet = &luna::descriptorSets.back();
-            const VkDescriptorSetAllocateInfo allocateInfo = {
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .descriptorPool = *pool,
-                .descriptorSetCount = 1,
-                .pSetLayouts = &vkLayout,
-            };
-            CHECK_RESULT_RETURN(vkAllocateDescriptorSets(device, &allocateInfo, descriptorSet));
-            descriptorSetIndices.emplace_back(pool, layout, descriptorSet);
-            descriptorSets[i] = helpers::toHandle(&descriptorSetIndices.back());
-        }
-    }
+    CHECK_RESULT_RETURN(luna::device.allocateDescriptorSets(*allocationInfo, descriptorSets));
     return VK_SUCCESS;
 }
 
@@ -526,8 +496,8 @@ VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
         const uint32_t height = renderPassResizeInfo.height == LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT
                                         ? swapchain.extent.height
                                         : renderPassResizeInfo.height;
-        CHECK_RESULT_RETURN(helpers::fromHandle<RenderPass>(renderPassResizeInfo.renderPass)
-                                    ->recreateFramebuffer(device, swapchain, width, height));
+        CHECK_RESULT_RETURN(
+                helpers::fromHandle<RenderPass>(renderPassResizeInfo.renderPass)->recreateFramebuffer(width, height));
     }
     swapchain.safeToUse = true;
     swapchain.safeToUse.notify_all();

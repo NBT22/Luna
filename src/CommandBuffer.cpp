@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
+#include "CommandPool.hpp"
 #include "Fence.hpp"
 #include "helpers/Handle.hpp"
 #include "Instance.hpp"
@@ -18,15 +19,15 @@ namespace luna
 {
 CommandBuffer::CommandBuffer(const VkCommandPool commandPool, const VkCommandBufferLevel commandBufferLevel):
     type_(Type::SINGLE),
-    commandBuffer_(device, commandPool, commandBufferLevel),
-    commandPool_(commandPool)
+    commandPool_(commandPool),
+    commandBuffer_(device, commandPool, commandBufferLevel)
 {}
 CommandBuffer::CommandBuffer(const VkCommandPool commandPool,
                              const VkCommandBufferLevel commandBufferLevel,
                              const uint32_t arraySize):
     type_(Type::ARRAY),
-    commandBufferArray_(device, commandPool, commandBufferLevel, arraySize),
-    commandPool_(commandPool)
+    commandPool_(commandPool),
+    commandBufferArray_(device, commandPool, commandBufferLevel, arraySize)
 {
     assert(arraySize > 1);
 }

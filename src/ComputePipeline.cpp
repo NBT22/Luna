@@ -10,11 +10,13 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
+#include "CommandPool.hpp"
 #include "ComputePipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "ShaderModule.hpp"
 
 namespace luna
 {
@@ -26,7 +28,7 @@ ComputePipeline::ComputePipeline(const LunaComputePipelineCreationInfo &creation
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .flags = creationInfo.shaderStageCreationInfo.flags,
         .stage = creationInfo.shaderStageCreationInfo.stage,
-        .module = *helpers::fromHandle<ShaderModule>(creationInfo.shaderStageCreationInfo.module),
+        .module = helpers::fromHandle<ShaderModule>(creationInfo.shaderStageCreationInfo.module)->module(),
         .pName = creationInfo.shaderStageCreationInfo.entryPoint == nullptr
                          ? "main"
                          : creationInfo.shaderStageCreationInfo.entryPoint,
@@ -80,11 +82,7 @@ VkResult ComputePipeline::bind(const VkCommandBuffer commandBuffer,
 VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creationInfo, LunaComputePipeline *pipeline)
 {
     assert(creationInfo);
-    TRY_CATCH_RESULT(luna::computePipelines.emplace_back(*creationInfo));
-    if (pipeline != nullptr)
-    {
-        *pipeline = luna::helpers::toHandle(&luna::computePipelines.back());
-    }
+    CHECK_RESULT_RETURN(luna::device.createComputePipeline(*creationInfo, pipeline));
     return VK_SUCCESS;
 }
 
@@ -124,7 +122,7 @@ VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info)
         // TODO (0.3.0): If possible, optionally allow the source stage mask
         //  (if not possible to be optional, just use top of pipe)
         CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().compute,
-                                                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT));
+                                                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT));
     } else if (info->endCommandBuffer)
     {
         CHECK_RESULT_RETURN(commandBuffer.end());

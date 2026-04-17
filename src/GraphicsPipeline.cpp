@@ -11,12 +11,14 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
+#include "CommandPool.hpp"
 #include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "RenderPass.hpp"
+#include "ShaderModule.hpp"
 
 #ifdef LUNA_SLANG_SHADERS
 #include <cmath>
@@ -476,7 +478,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
                                   nullptr,
                                   shaderStage.flags,
                                   shaderStage.stage,
-                                  *helpers::fromHandle<ShaderModule>(shaderStage.module),
+                                  helpers::fromHandle<ShaderModule>(shaderStage.module)->module(),
                                   shaderStage.entryPoint == nullptr ? "main" : shaderStage.entryPoint,
                                   shaderStage.specializationInfo);
     }
@@ -521,7 +523,7 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCrea
     for (uint32_t i = 0; i < creationInfo.shaderModuleCreationInfoCount; i++)
     {
         LunaShaderModule module = LUNA_NULL_HANDLE;
-        CHECK_RESULT_THROW(device.addShaderModule(creationInfo.shaderModuleCreationInfos[i], &module));
+        CHECK_RESULT_THROW(device.createShaderModule(creationInfo.shaderModuleCreationInfos[i], &module));
         pipelineShaderModules.emplace_back(helpers::fromHandle<ShaderModule>(module));
     }
     for (uint32_t i = 0; i < creationInfo.shaderModuleCount; i++)
@@ -883,23 +885,19 @@ VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *crea
                                     LunaGraphicsPipeline *pipeline)
 {
     assert(creationInfo);
-    TRY_CATCH_RESULT(luna::graphicsPipelines.emplace_back(*creationInfo));
-    if (pipeline != nullptr)
-    {
-        *pipeline = luna::helpers::toHandle(&luna::graphicsPipelines.back());
-    }
+    CHECK_RESULT_RETURN(luna::device.createGraphicsPipeline(*creationInfo, pipeline));
     return VK_SUCCESS;
 }
 VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsingReflectionCreationInfo *creationInfo,
                                                    LunaGraphicsPipeline *pipeline)
 {
     assert(creationInfo);
-    TRY_CATCH_RESULT(luna::graphicsPipelines.emplace_back(*creationInfo));
-    if (pipeline != nullptr)
-    {
-        *pipeline = luna::helpers::toHandle(&luna::graphicsPipelines.back());
-    }
-    return VK_SUCCESS;
+    // TRY_CATCH_RESULT(luna::device.graphicsPipelines.emplace_back(*creationInfo));
+    // if (pipeline != nullptr)
+    // {
+    //     *pipeline = luna::helpers::toHandle(&luna::device.graphicsPipelines.back());
+    // }
+    return VK_ERROR_UNKNOWN;
 }
 
 void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescriptorSetBindInfo *bindInfo)

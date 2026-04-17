@@ -27,6 +27,7 @@ class Semaphore
 
         [[nodiscard]] bool isSignaled() const;
         [[nodiscard]] const VkPipelineStageFlags &stageMask() const;
+        [[nodiscard]] const VkSemaphore &semaphore() const;
 
     private:
         bool isSignaled_{};
@@ -68,6 +69,10 @@ inline bool Semaphore::isSignaled() const
 inline const VkPipelineStageFlags &Semaphore::stageMask() const
 {
     return stageMask_;
+}
+inline const VkSemaphore &Semaphore::semaphore() const
+{
+    return semaphore_;
 }
 } // namespace luna
 

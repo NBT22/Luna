@@ -5,7 +5,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <list>
 #include <luna/lunaInstance.h>
 #include <luna/lunaTypes.h>
 #include <stdexcept>
@@ -15,15 +14,12 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
-#include "ComputePipeline.hpp"
-#include "DescriptorSetLayout.hpp"
+#include "CommandPool.hpp"
 #include "Device.hpp"
-#include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
-#include "RenderPass.hpp"
 
 #ifdef LUNA_SLANG_SHADERS
 #include "SlangSession.hpp"
@@ -247,24 +243,11 @@ VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
 Device device{};
-BufferRegionIndex *stagingBuffer{};
 
 #ifdef LUNA_SLANG_SHADERS
 slang::IGlobalSession *globalSlangSession{};
 std::list<SlangSession> slangSessions{};
 #endif
-
-std::list<RenderPass> renderPasses{};
-std::list<DescriptorSetLayout> descriptorSetLayouts{};
-std::list<VkDescriptorPool> descriptorPools{};
-std::list<VkDescriptorSet> descriptorSets{};
-std::list<DescriptorSetIndex> descriptorSetIndices{};
-std::list<GraphicsPipeline> graphicsPipelines{};
-std::list<ComputePipeline> computePipelines{};
-std::list<Buffer> buffers{};
-std::list<BufferRegionIndex> bufferRegionIndices{};
-std::list<VkSampler> samplers{};
-std::list<Image> images{};
 } // namespace luna
 
 const LunaCommandPool *const LUNA_INTERNAL_GRAPHICS_COMMAND_POOL =
@@ -329,7 +312,7 @@ VkResult lunaDestroyInstance()
 {
     using namespace luna;
 
-    if (static_cast<VkPhysicalDevice>(device) != VK_NULL_HANDLE)
+    if (static_cast<VkPhysicalDevice>(device) != VK_NULL_HANDLE && !device.isDestroyed())
     {
         BufferRegionIndex::waitForCleanupThread();
         CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
@@ -344,48 +327,10 @@ VkResult lunaDestroyInstance()
             vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
         }
 
-        for (const VkSampler sampler: samplers)
-        {
-            vkDestroySampler(device, sampler, nullptr);
-        }
-        samplers.clear();
-        images.clear();
-
-        for (GraphicsPipeline pipeline: graphicsPipelines)
-        {
-            pipeline.destroy();
-        }
-        for (RenderPass renderPass: renderPasses)
-        {
-            renderPass.destroy();
-        }
-
-        computePipelines.clear();
-
-        for (const VkDescriptorPool descriptorPool: descriptorPools)
-        {
-            vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-        }
-        for (DescriptorSetLayout descriptorSetLayout: descriptorSetLayouts)
-        {
-            descriptorSetLayout.destroy();
-        }
-
         swapchain.images.clear();
         swapchain.images.shrink_to_fit();
         swapchain.imageViews.clear();
         swapchain.imageViews.shrink_to_fit();
-
-        graphicsPipelines.clear();
-        renderPasses.clear();
-
-        descriptorSetIndices.clear();
-        descriptorPools.clear();
-        descriptorSetLayouts.clear();
-        descriptorSets.clear();
-
-        bufferRegionIndices.clear();
-        BufferRegionIndex::waitForCleanupThread();
 
         device.destroy();
     }
@@ -405,7 +350,6 @@ VkResult lunaDestroyInstance()
     apiVersion = 0;
     instance = VK_NULL_HANDLE;
     device = Device();
-    stagingBuffer = nullptr;
 
     return VK_SUCCESS;
 }

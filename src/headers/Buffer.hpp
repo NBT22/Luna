@@ -12,6 +12,7 @@
 #include <map>
 #include <ranges>
 #include <thread>
+#include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 #include "helpers/Handle.hpp"
@@ -23,17 +24,6 @@ class Buffer;
 class BufferRegion
 {
         friend class BufferRegionIndex;
-        class SubRegion
-        {
-            public:
-                constexpr bool operator==(const SubRegion &other) const
-                {
-                    return offset == other.offset && size == other.size;
-                }
-
-                size_t size{}; ///< The sub-region's size
-                size_t offset{}; ///< The sub-region's offset into the buffer region
-        };
 
     public: // BufferRegion public static members
         static VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *outBuffer);
@@ -53,30 +43,20 @@ class BufferRegion
                                                  std::list<BufferRegion>::iterator &outIterator);
 
     public: // BufferRegion public members
-        BufferRegion(size_t size,
-                     uint8_t *data,
-                     size_t offset,
-                     std::map<const char *, SubRegion> &&subRegions,
-                     Buffer *buffer,
-                     LunaBuffer *outBuffer);
+        BufferRegion(size_t size, uint8_t *data, size_t offset, Buffer *buffer, LunaBuffer *outBuffer);
 
         [[nodiscard]] size_t size() const;
-        [[nodiscard]] size_t offset(const SubRegion *subRegion = nullptr) const;
+        [[nodiscard]] size_t offset() const;
 
     private: // BufferRegion private members
         size_t size_{};
         uint8_t *data_{};
         size_t offset_{};
-        std::map<const char *, SubRegion> subRegions_{};
 };
 class BufferRegionIndex
 {
-        using SubRegion = BufferRegion::SubRegion;
-
     public:
         static void waitForCleanupThread();
-        /// Removes a buffer region index from the list. Calling this function with an invalid or null pointer will have no effect
-        static void destroy(BufferRegionIndex *const &bufferRegionIndex);
         /// Removes a buffer region index from the list. Calling this function with an invalid or null pointer will have no effect
         static void destroy(BufferRegionIndex *&bufferRegionIndex);
         [[nodiscard]] static VkResult resize(BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize);
@@ -86,7 +66,7 @@ class BufferRegionIndex
 
     public:
         BufferRegionIndex() = delete;
-        BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, BufferRegion::SubRegion *subRegion = nullptr);
+        BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion);
 
         ~BufferRegionIndex();
 
@@ -110,7 +90,6 @@ class BufferRegionIndex
     private:
         Buffer *buffer_{};
         BufferRegion *bufferRegion_{};
-        BufferRegion::SubRegion *subRegion_{};
         std::list<VkBufferView> views_{};
 };
 // TODO (0.3.0): Buffer writes need synchronization using vkCmdPipelineBarrier
@@ -153,7 +132,6 @@ class Buffer
 
 #include <algorithm>
 #include <cassert>
-#include <stdexcept>
 
 namespace luna
 {
@@ -189,8 +167,6 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
     const size_t sizeChange = growing ? newSize - bufferRegionIndex->size() : bufferRegionIndex->size() - newSize;
     Buffer *buffer = bufferRegionIndex->buffer_;
     BufferRegion *bufferRegion = bufferRegionIndex->bufferRegion_;
-    SubRegion *subRegion = bufferRegionIndex->subRegion_;
-    assert(subRegion != nullptr || bufferRegion->subRegions_.empty()); // Internal state check
 
     if (growing)
     {
@@ -210,27 +186,6 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
         }
         if (regionCanBeResizedIntoFreeBytes || regionCanBeResizedIntoUnusedBytes)
         {
-            if (subRegion != nullptr)
-            {
-                if (subRegion->offset + subRegion->size != bufferRegion->size_)
-                {
-                    if (bufferRegion->data_ != nullptr)
-                    {
-                        const size_t dataOffset = subRegion->offset + subRegion->size;
-                        std::copy_n(bufferRegion->data_ + dataOffset,
-                                    bufferRegion->size_ - dataOffset,
-                                    bufferRegion->data_ + dataOffset + sizeChange);
-                    }
-                    for (SubRegion &region: bufferRegion->subRegions_ | std::views::values)
-                    {
-                        if (subRegion->offset < region.offset)
-                        {
-                            region.offset += sizeChange;
-                        }
-                    }
-                }
-                subRegion->size -= sizeChange;
-            }
             bufferRegion->size_ += sizeChange;
             buffer->usedBytes_ += sizeChange;
             if (regionCanBeResizedIntoFreeBytes)
@@ -243,86 +198,23 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
         } else
         {
             LunaBuffer lunaBuffer = helpers::toHandle(bufferRegionIndex);
-            if (subRegion != nullptr)
+            LunaBufferCreationInfo newCreationInfo;
+            bufferRegionIndex->creationInfo(newCreationInfo);
+            newCreationInfo.size = newSize;
+
+            CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
+
+            if (bufferRegion->data_ != nullptr)
             {
-                const VkBufferCreateFlags flags = buffer->creationFlags_;
-                const VkBufferUsageFlags usage = buffer->usageFlags_;
-                std::vector<LunaBufferCreationInfo> creationInfos;
-                creationInfos.reserve(bufferRegion->subRegions_.size());
-                size_t index = std::numeric_limits<size_t>::max();
-                for (const SubRegion &region: bufferRegion->subRegions_ | std::views::values)
-                {
-                    if (&region == subRegion)
-                    {
-                        index = creationInfos.size();
-                        // TODO (0.3.0): Fix this
-                        creationInfos.emplace_back(newSize, flags, usage, 0, 0, nullptr, nullptr, nullptr);
-                    } else
-                    {
-                        // TODO (0.3.0): Fix this
-                        creationInfos.emplace_back(region.size, flags, usage, 0, 0, nullptr, nullptr, nullptr);
-                    }
-                }
-                assert(index != std::numeric_limits<size_t>::max()); // Internal state check
-                (void)index;
-
-                // TODO (0.3.0): Fix this!!
-                throw std::runtime_error("You hit the branch that doesn't work yet :(");
-
-
-                // Need to be able to
-                //  1. Find a place, in this buffer or another, that can contain the full buffer region with the resized subregion
-                //  2. Update the existing handles for the other subregions of that region, WITHOUT CHANGING THEIR MEMORY LOCATION
-                //  3. Move the data to the new region
-
-
-                // Buffer buffer{};
-                // size_t offset{};
-                // bool usesFreeSpace{};
-                // CHECK_RESULT_RETURN(BufferRegion::findSpaceForBufferRegion(creationInfo, buffer, offset, usesFreeSpace));
-
-                // TODO: Need to not only not add new indices for any sub-region other than the one being resized, but additionally need to update the existing ones
-            } else
-            {
-                LunaBufferCreationInfo newCreationInfo;
-                bufferRegionIndex->creationInfo(newCreationInfo);
-                newCreationInfo.size = newSize;
-
-                CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
-
-                if (bufferRegion->data_ != nullptr)
-                {
-                    uint8_t *newBufferRegionData = helpers::fromHandle<BufferRegionIndex>(lunaBuffer)->data();
-                    assert(newBufferRegionData != nullptr); // Internal state check
-                    std::copy_n(bufferRegion->data_, bufferRegion->size_, newBufferRegionData);
-                }
+                uint8_t *newBufferRegionData = helpers::fromHandle<BufferRegionIndex>(lunaBuffer)->data();
+                assert(newBufferRegionData != nullptr); // Internal state check
+                std::copy_n(bufferRegion->data_, bufferRegion->size_, newBufferRegionData);
             }
             destroy(bufferRegionIndex);
             bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
         }
     } else
     {
-        if (subRegion != nullptr)
-        {
-            if (subRegion->offset + subRegion->size != bufferRegion->size_)
-            {
-                if (bufferRegion->data_ != nullptr)
-                {
-                    const size_t dataOffset = subRegion->offset + subRegion->size;
-                    std::copy_n(bufferRegion->data_ + dataOffset,
-                                bufferRegion->size_ - dataOffset,
-                                bufferRegion->data_ + dataOffset - sizeChange);
-                }
-                for (SubRegion &region: bufferRegion->subRegions_ | std::views::values)
-                {
-                    if (subRegion->offset < region.offset)
-                    {
-                        region.offset -= sizeChange;
-                    }
-                }
-            }
-            subRegion->size -= sizeChange;
-        }
         bufferRegion->size_ -= sizeChange;
         buffer->usedBytes_ -= sizeChange;
         if (bufferRegion == &buffer->regions_.back())
@@ -337,33 +229,21 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
     return VK_SUCCESS;
 }
 
-inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer,
-                                            BufferRegion *bufferRegion,
-                                            BufferRegion::SubRegion *subRegion):
+inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion):
     buffer_(buffer),
-    bufferRegion_(bufferRegion),
-    subRegion_(subRegion)
+    bufferRegion_(bufferRegion)
 {}
 
 inline size_t BufferRegionIndex::offset() const
 {
     assert(bufferRegion_);
-    if (subRegion_ != nullptr)
-    {
-        return bufferRegion_->offset_ + subRegion_->offset;
-    }
     return bufferRegion_->offset_;
 }
 inline size_t BufferRegionIndex::size() const
 {
     if (bufferRegion_ == nullptr)
     {
-        assert(!subRegion_); // Internal state check
         return 0;
-    }
-    if (subRegion_ != nullptr)
-    {
-        return subRegion_->size;
     }
     return bufferRegion_->size_;
 }
@@ -373,10 +253,6 @@ inline uint8_t *BufferRegionIndex::data() const
     if (bufferRegion_->data_ == nullptr)
     {
         return nullptr;
-    }
-    if (subRegion_ != nullptr)
-    {
-        return bufferRegion_->data_ + subRegion_->offset;
     }
     return bufferRegion_->data_;
 }
@@ -408,12 +284,8 @@ inline size_t BufferRegion::size() const
 {
     return size_;
 }
-inline size_t BufferRegion::offset(const SubRegion *subRegion) const
+inline size_t BufferRegion::offset() const
 {
-    if (subRegion != nullptr)
-    {
-        return offset_ + subRegion->offset;
-    }
     return offset_;
 }
 

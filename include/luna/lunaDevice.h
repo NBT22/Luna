@@ -25,7 +25,7 @@ void lunaGetPhysicalDeviceProperties(VkPhysicalDeviceProperties *properties);
 void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties);
 
 // TODO (0.3.0): Remove this and replace with more flexible solution
-VkResult lunaSubmitInternalComputeQueue(LunaCommandBuffer commandBuffer, bool waitForFence);
+VkResult lunaSubmitInternalComputeQueue(LunaCommandBuffer commandBuffer);
 
 void lunaGetQueue(const LunaQueueProperties *requiredProperties, VkQueue queue);
 

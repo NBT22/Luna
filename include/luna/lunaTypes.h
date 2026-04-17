@@ -23,6 +23,7 @@ extern "C"
 
 #define LUNA_NULL_HANDLE 0LL
 
+LUNA_DEFINE_HANDLE(LunaDevice);
 LUNA_DEFINE_HANDLE(LunaRenderPass);
 LUNA_DEFINE_HANDLE(LunaRenderPassSubpass);
 LUNA_DEFINE_HANDLE(LunaDescriptorPool);
@@ -32,7 +33,6 @@ LUNA_DEFINE_HANDLE(LunaShaderModule);
 LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
 LUNA_DEFINE_HANDLE(LunaComputePipeline);
 LUNA_DEFINE_HANDLE(LunaBuffer);
-LUNA_DEFINE_HANDLE(LunaBufferRegion);
 LUNA_DEFINE_HANDLE(LunaBufferView);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
