@@ -156,9 +156,9 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                              dependencyInfo.flags,
                              memoryBarriers.size(),
                              memoryBarriers.data(),
-                             memoryBarriers.size(),
+                             bufferMemoryBarriers.size(),
                              bufferMemoryBarriers.data(),
-                             memoryBarriers.size(),
+                             imageMemoryBarriers.size(),
                              imageMemoryBarriers.data());
     } else
     {

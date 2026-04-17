@@ -52,6 +52,16 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
                                                 size_t &outOffset,
                                                 std::list<BufferRegion>::iterator &outIterator)
 {
+    constexpr VmaAllocationCreateInfo defaultAllocationCreateInfo = {
+        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
+                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                 VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+    };
+    const VmaAllocationCreateInfo allocationCreateInfo = creationInfo.allocationCreateInfo == nullptr
+                                                                 ? defaultAllocationCreateInfo
+                                                                 : *creationInfo.allocationCreateInfo;
+
     if (creationInfo.alignment != 0)
     {
         const VkBufferCreateInfo bufferCreateInfo = {
@@ -63,17 +73,7 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
             .queueFamilyIndexCount = device.familyCount(),
             .pQueueFamilyIndices = device.queueFamilyIndices(),
         };
-        constexpr VmaAllocationCreateInfo allocationCreateInfo = {
-            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                     VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-        };
-        TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo,
-                                                    creationInfo.allocationCreateInfo
-                                                            ? *creationInfo.allocationCreateInfo
-                                                            : allocationCreateInfo,
-                                                    creationInfo.alignment));
+        TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo, allocationCreateInfo, creationInfo.alignment));
         outBuffer = &buffers.back();
         outOffset = 0;
         outIterator = outBuffer->regions_.end();
@@ -95,7 +95,7 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
         }
 
         /// TODO (0.3.0): Properly ensure allocation compatablility
-        if (buffer.allocationCreateInfo_.flags != creationInfo.allocationCreateInfo->flags)
+        if (buffer.allocationCreateInfo_.flags != allocationCreateInfo.flags)
         {
             continue;
         }
@@ -159,15 +159,8 @@ VkResult BufferRegion::findSpaceForBufferRegion(const LunaBufferCreationInfo &cr
         .queueFamilyIndexCount = device.familyCount(),
         .pQueueFamilyIndices = device.queueFamilyIndices(),
     };
-    constexpr VmaAllocationCreateInfo allocationCreateInfo = {
-        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                 VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
-        .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-    };
     TRY_CATCH_RESULT(luna::buffers.emplace_back(bufferCreateInfo,
-                                                creationInfo.allocationCreateInfo ? *creationInfo.allocationCreateInfo
-                                                                                  : allocationCreateInfo));
+                                                allocationCreateInfo));
     outBuffer = &buffers.back();
     outOffset = 0;
     outIterator = outBuffer->regions_.end();
@@ -491,7 +484,8 @@ VkResult lunaFillBuffer(const LunaBuffer buffer, const uint32_t data)
                     bufferRegionIndex.size(),
                     data);
     // TODO (0.3.0): This is not ideal
-    commandBuffer.endAndSubmit(luna::device.familyQueues().compute, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().compute,
+                                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT));
     return VK_SUCCESS;
 }
 

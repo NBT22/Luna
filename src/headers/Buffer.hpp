@@ -90,7 +90,7 @@ class BufferRegionIndex
 
         ~BufferRegionIndex();
 
-        VkResult flushMemory() const;
+        [[nodiscard]] VkResult flushMemory() const;
         [[nodiscard]] VkResult copyToBuffer(const uint8_t *data,
                                             size_t bytes,
                                             size_t offset = 0,
