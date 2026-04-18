@@ -31,11 +31,11 @@ class DescriptorSetLayout
         static bool isDestroyed(const DescriptorSetLayout &layout);
 
         DescriptorSetLayout() = default;
-        explicit DescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo);
+        explicit DescriptorSetLayout(VkDevice device, const LunaDescriptorSetLayoutCreationInfo &creationInfo);
 
         operator const VkDescriptorSetLayout &() const;
 
-        void destroy();
+        void destroy(VkDevice device);
 
         [[nodiscard]] const Binding &binding(const std::string &bindingName) const;
         [[nodiscard]] VkDescriptorSetLayout layout() const;

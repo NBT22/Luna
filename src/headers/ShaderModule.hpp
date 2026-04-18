@@ -27,11 +27,11 @@ class ShaderModule
 #endif
 
     public:
-        explicit ShaderModule(const LunaShaderModuleCreationInfo &creationInfo);
-
-        ~ShaderModule();
+        explicit ShaderModule(VkDevice device, const LunaShaderModuleCreationInfo &creationInfo);
 
         operator const VkShaderModule &() const;
+
+        void destroy(VkDevice device);
 
         [[nodiscard]] size_t size() const;
         [[nodiscard]] const std::vector<uint32_t> &spirv() const;
@@ -52,6 +52,11 @@ class ShaderModule
 
 namespace luna
 {
+inline ShaderModule::operator const VkShaderModule &() const
+{
+    return module_;
+}
+
 inline size_t ShaderModule::size() const
 {
     return size_;

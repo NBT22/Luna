@@ -14,15 +14,19 @@
 #include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
+#include "luna/lunaDevice.h"
 
 namespace luna
 {
-CommandBuffer::CommandBuffer(const VkCommandPool commandPool, const VkCommandBufferLevel commandBufferLevel):
+CommandBuffer::CommandBuffer(const VkDevice device,
+                             const VkCommandPool commandPool,
+                             const VkCommandBufferLevel commandBufferLevel):
     type_(Type::SINGLE),
     commandPool_(commandPool),
     commandBuffer_(device, commandPool, commandBufferLevel)
 {}
-CommandBuffer::CommandBuffer(const VkCommandPool commandPool,
+CommandBuffer::CommandBuffer(const VkDevice device,
+                             const VkCommandPool commandPool,
                              const VkCommandBufferLevel commandBufferLevel,
                              const uint32_t arraySize):
     type_(Type::ARRAY),
@@ -32,7 +36,7 @@ CommandBuffer::CommandBuffer(const VkCommandPool commandPool,
     assert(arraySize > 1);
 }
 
-void CommandBuffer::destroy()
+void CommandBuffer::destroy(const VkDevice device)
 {
     switch (type_)
     {
@@ -48,7 +52,8 @@ void CommandBuffer::destroy()
 }
 
 
-VkResult CommandBuffer::resizeArray(const VkCommandBufferLevel commandBufferLevel,
+VkResult CommandBuffer::resizeArray(const VkDevice device,
+                                    const VkCommandBufferLevel commandBufferLevel,
                                     const uint32_t arraySize,
                                     const uint64_t timeout)
 {
@@ -87,7 +92,7 @@ VkResult CommandBuffer::resizeArray(const VkCommandBufferLevel commandBufferLeve
     return VK_SUCCESS;
 }
 
-VkResult CommandBuffer::waitForAllFences(const uint64_t timeout) const
+VkResult CommandBuffer::waitForAllFences(const VkDevice device, const uint64_t timeout) const
 {
     switch (type_)
     {
@@ -100,7 +105,7 @@ VkResult CommandBuffer::waitForAllFences(const uint64_t timeout) const
     }
 }
 
-VkResult CommandBuffer::waitForFence(const uint64_t timeout) const
+VkResult CommandBuffer::waitForFence(const VkDevice device, const uint64_t timeout) const
 {
     switch (type_)
     {
@@ -113,7 +118,7 @@ VkResult CommandBuffer::waitForFence(const uint64_t timeout) const
     }
 }
 
-VkResult CommandBuffer::resetFence()
+VkResult CommandBuffer::resetFence(const VkDevice device)
 {
     switch (type_)
     {
@@ -126,12 +131,12 @@ VkResult CommandBuffer::resetFence()
     }
 }
 
-VkResult CommandBuffer::recreateSemaphores()
+VkResult CommandBuffer::recreateSemaphores(const VkDevice device)
 {
     switch (type_)
     {
         case Type::ARRAY:
-            return commandBufferArray_.recreateSemaphores();
+            return commandBufferArray_.recreateSemaphores(device);
         default:
             throw std::runtime_error("Invalid command buffer type " +
                                      typeAsString() +
@@ -139,14 +144,14 @@ VkResult CommandBuffer::recreateSemaphores()
     }
 }
 
-VkResult CommandBuffer::ensureIsRecording(const bool shouldResetFence)
+VkResult CommandBuffer::ensureIsRecording(const VkDevice device, const bool shouldResetFence)
 {
     if (!isRecording())
     {
-        CHECK_RESULT_RETURN(waitForFence());
+        CHECK_RESULT_RETURN(waitForFence(device));
         if (shouldResetFence)
         {
-            CHECK_RESULT_RETURN(resetFence());
+            CHECK_RESULT_RETURN(resetFence(device));
         }
         CHECK_RESULT_RETURN(beginSingleUseCommandBuffer());
     }
@@ -154,7 +159,8 @@ VkResult CommandBuffer::ensureIsRecording(const bool shouldResetFence)
 }
 } // namespace luna
 
-VkResult lunaAllocateCommandBuffer(const LunaCommandBufferAllocationInfo *allocationInfo,
+VkResult lunaAllocateCommandBuffer(const LunaDevice device,
+                                   const LunaCommandBufferAllocationInfo *allocationInfo,
                                    LunaCommandBuffer *commandBuffer)
 {
     assert(allocationInfo);
@@ -162,7 +168,7 @@ VkResult lunaAllocateCommandBuffer(const LunaCommandBufferAllocationInfo *alloca
 
     luna::CommandPool &commandPool = *luna::helpers::fromHandle<luna::CommandPool>(*allocationInfo->commandPool);
     const uint32_t arrayCount = allocationInfo->arrayCount == 0 ? 1 : allocationInfo->arrayCount;
-    CHECK_RESULT_RETURN(commandPool.allocateCommandBuffer(allocationInfo->level, arrayCount));
+    CHECK_RESULT_RETURN(commandPool.allocateCommandBuffer(lunaGetVkDevice(device), allocationInfo->level, arrayCount));
     *commandBuffer = luna::helpers::toHandle(&commandPool.commandBuffer(commandPool.commandBufferCount() - 1));
     return VK_SUCCESS;
 }
@@ -200,11 +206,11 @@ VkCommandBuffer lunaGetVkCommandBuffer(const LunaCommandBuffer commandBuffer)
     return *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
 }
 
-void lunaDestroyCommandBuffer(const LunaCommandBuffer commandBuffer)
+void lunaDestroyCommandBuffer(const LunaDevice device, const LunaCommandBuffer commandBuffer)
 {
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    commandBufferObject.destroy();
+    commandBufferObject.destroy(lunaGetVkDevice(device));
     // TODO (0.3.0): Wherever the handle is a pointer to should get freed
 }

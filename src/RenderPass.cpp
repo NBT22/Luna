@@ -240,7 +240,8 @@ static void createAttachments2(const VkSampleCountFlagBits samples,
     }
 }
 
-static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
+static VkResult createRenderPass(const VkDevice device,
+                                 const LunaRenderPassCreationInfo &creationInfo,
                                  const VkSampleCountFlagBits samples,
                                  VkRenderPass &renderPass)
 {
@@ -287,11 +288,12 @@ static VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo,
         .dependencyCount = creationInfo.dependencyCount,
         .pDependencies = creationInfo.dependencies,
     };
-    CHECK_RESULT_RETURN(vkCreateRenderPass(luna::device, &createInfo, nullptr, &renderPass));
+    CHECK_RESULT_RETURN(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass));
 
     return VK_SUCCESS;
 }
-static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInfo,
+static VkResult createRenderPass2(const VkDevice device,
+                                  const LunaRenderPassCreationInfo2 &creationInfo,
                                   const VkSampleCountFlagBits samples,
                                   VkRenderPass &renderPass)
 {
@@ -343,7 +345,7 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
         .correlatedViewMaskCount = creationInfo.correlatedViewMaskCount,
         .pCorrelatedViewMasks = creationInfo.correlatedViewMasks,
     };
-    CHECK_RESULT_RETURN(vkCreateRenderPass2(luna::device, &createInfo, nullptr, &renderPass));
+    CHECK_RESULT_RETURN(vkCreateRenderPass2(device, &createInfo, nullptr, &renderPass));
 
     return VK_SUCCESS;
 }
@@ -351,30 +353,48 @@ static VkResult createRenderPass2(const LunaRenderPassCreationInfo2 &creationInf
 
 namespace luna
 {
-RenderPass::RenderPass(const LunaRenderPassCreationInfo &creationInfo)
+RenderPass::RenderPass(const VkDevice device,
+                       const uint32_t queueFamilyIndexCount,
+                       const uint32_t *queueFamilyIndices,
+                       const VmaAllocator &allocator,
+                       const LunaRenderPassCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
     init_(creationInfo);
-    CHECK_RESULT_THROW(helpers::createRenderPass(creationInfo, samples_, renderPass_));
-    CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
-    CHECK_RESULT_THROW(createFramebuffers(creationInfo.createDepthAttachment,
+    CHECK_RESULT_THROW(helpers::createRenderPass(device, creationInfo, samples_, renderPass_));
+    CHECK_RESULT_THROW(createAttachmentImages(device,
+                                              queueFamilyIndexCount,
+                                              queueFamilyIndices,
+                                              allocator,
+                                              creationInfo.createDepthAttachment));
+    CHECK_RESULT_THROW(createFramebuffers(device,
+                                          creationInfo.createDepthAttachment,
                                           creationInfo.framebufferAttachmentCount,
                                           creationInfo.framebufferAttachments));
     isDestroyed_ = false;
 }
-RenderPass::RenderPass(const LunaRenderPassCreationInfo2 &creationInfo)
+RenderPass::RenderPass(const VkDevice device,
+                       const uint32_t queueFamilyIndexCount,
+                       const uint32_t *queueFamilyIndices,
+                       const VmaAllocator &allocator,
+                       const LunaRenderPassCreationInfo2 &creationInfo)
 {
     assert(isDestroyed_);
     init_(creationInfo);
-    CHECK_RESULT_THROW(helpers::createRenderPass2(creationInfo, samples_, renderPass_));
-    CHECK_RESULT_THROW(createAttachmentImages(creationInfo.createDepthAttachment));
-    CHECK_RESULT_THROW(createFramebuffers(creationInfo.createDepthAttachment,
+    CHECK_RESULT_THROW(helpers::createRenderPass2(device, creationInfo, samples_, renderPass_));
+    CHECK_RESULT_THROW(createAttachmentImages(device,
+                                              queueFamilyIndexCount,
+                                              queueFamilyIndices,
+                                              allocator,
+                                              creationInfo.createDepthAttachment));
+    CHECK_RESULT_THROW(createFramebuffers(device,
+                                          creationInfo.createDepthAttachment,
                                           creationInfo.framebufferAttachmentCount,
                                           creationInfo.framebufferAttachments));
     isDestroyed_ = false;
 }
 
-void RenderPass::destroy()
+void RenderPass::destroy(const VkDevice device, const VmaAllocator &allocator)
 {
     if (isDestroyed_)
     {
@@ -382,8 +402,8 @@ void RenderPass::destroy()
     }
     vkDestroyImageView(device, colorImageView_, nullptr);
     vkDestroyImageView(device, depthImageView_, nullptr);
-    vmaDestroyImage(device.allocator(), colorImage_, colorImageAllocation_);
-    vmaDestroyImage(device.allocator(), depthImage_, depthImageAllocation_);
+    vmaDestroyImage(allocator, colorImage_, colorImageAllocation_);
+    vmaDestroyImage(allocator, depthImage_, depthImageAllocation_);
     vkDestroyRenderPass(device, renderPass_, nullptr);
     for (const VkFramebuffer &framebuffer: framebuffers_)
     {
@@ -398,7 +418,11 @@ void RenderPass::destroy()
     isDestroyed_ = true;
 }
 
-inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
+inline VkResult RenderPass::createAttachmentImages(const VkDevice device,
+                                                   const uint32_t queueFamilyIndexCount,
+                                                   const uint32_t *queueFamilyIndices,
+                                                   const VmaAllocator &allocator,
+                                                   const bool createDepthImage)
 {
     constexpr VmaAllocationCreateInfo allocationCreateInfo = {
         .usage = VMA_MEMORY_USAGE_AUTO,
@@ -422,10 +446,10 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = imageUsage,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = device.queueFamilyIndices(),
+            .queueFamilyIndexCount = queueFamilyIndexCount,
+            .pQueueFamilyIndices = queueFamilyIndices,
         };
-        CHECK_RESULT_RETURN(vmaCreateImage(device.allocator(),
+        CHECK_RESULT_RETURN(vmaCreateImage(allocator,
                                            &colorImageCreateInfo,
                                            &allocationCreateInfo,
                                            &colorImage_,
@@ -452,10 +476,10 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = device.queueFamilyIndices(),
+            .queueFamilyIndexCount = queueFamilyIndexCount,
+            .pQueueFamilyIndices = queueFamilyIndices,
         };
-        CHECK_RESULT_RETURN(vmaCreateImage(device.allocator(),
+        CHECK_RESULT_RETURN(vmaCreateImage(allocator,
                                            &depthImageCreateInfo,
                                            &allocationCreateInfo,
                                            &depthImage_,
@@ -506,7 +530,8 @@ inline VkResult RenderPass::createAttachmentImages(const bool createDepthImage)
     return VK_SUCCESS;
 }
 
-inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
+inline VkResult RenderPass::createFramebuffers(const VkDevice device,
+                                               const bool createDepthAttachment,
                                                const uint32_t framebufferAttachmentCount,
                                                const VkImageView *framebufferAttachments)
 {
@@ -557,7 +582,12 @@ inline VkResult RenderPass::createFramebuffers(const bool createDepthAttachment,
     return VK_SUCCESS;
 }
 
-VkResult RenderPass::recreateFramebuffer(const uint32_t width, const uint32_t height)
+VkResult RenderPass::recreateFramebuffer(const VkDevice device,
+                                         const uint32_t queueFamilyIndexCount,
+                                         const uint32_t *queueFamilyIndices,
+                                         const VmaAllocator &allocator,
+                                         const uint32_t width,
+                                         const uint32_t height)
 {
     extent_.width = width;
     extent_.height = height;
@@ -568,9 +598,13 @@ VkResult RenderPass::recreateFramebuffer(const uint32_t width, const uint32_t he
 
         vkDestroyImageView(device, colorImageView_, nullptr);
         vkDestroyImageView(device, depthImageView_, nullptr);
-        vmaDestroyImage(device.allocator(), colorImage_, colorImageAllocation_);
-        vmaDestroyImage(device.allocator(), depthImage_, depthImageAllocation_);
-        CHECK_RESULT_RETURN(createAttachmentImages(depthImage_ != VK_NULL_HANDLE));
+        vmaDestroyImage(allocator, colorImage_, colorImageAllocation_);
+        vmaDestroyImage(allocator, depthImage_, depthImageAllocation_);
+        CHECK_RESULT_RETURN(createAttachmentImages(device,
+                                                   queueFamilyIndexCount,
+                                                   queueFamilyIndices,
+                                                   allocator,
+                                                   depthImage_ != VK_NULL_HANDLE));
         attachments_.at(attachments_.size() - 3) = depthImageView_;
         attachments_.at(attachments_.size() - 2) = colorImageView_;
     }
@@ -594,12 +628,12 @@ VkResult RenderPass::recreateFramebuffer(const uint32_t width, const uint32_t he
     return VK_SUCCESS;
 }
 
-VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
+VkResult RenderPass::begin(const VkDevice device,
+                           CommandBuffer &commandBuffer,
+                           const LunaRenderPassBeginInfo &beginInfo) const
 {
     assert(swapchain.imageIndex != -1u);
-    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
-
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording());
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
 
     uint32_t clearValueCount = 1;
     std::vector<VkClearValue> clearValues;
@@ -630,17 +664,21 @@ VkResult RenderPass::begin(const LunaRenderPassBeginInfo &beginInfo) const
 } // namespace luna
 
 
-VkResult lunaCreateRenderPass(const LunaRenderPassCreationInfo *creationInfo, LunaRenderPass *renderPass)
+VkResult lunaCreateRenderPass(const LunaDevice device,
+                              const LunaRenderPassCreationInfo *creationInfo,
+                              LunaRenderPass *renderPass)
 {
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.createRenderPass(*creationInfo, renderPass));
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createRenderPass(*creationInfo, renderPass));
     return VK_SUCCESS;
 }
 
-VkResult lunaCreateRenderPass2(const LunaRenderPassCreationInfo2 *creationInfo, LunaRenderPass *renderPass)
+VkResult lunaCreateRenderPass2(const LunaDevice device,
+                               const LunaRenderPassCreationInfo2 *creationInfo,
+                               LunaRenderPass *renderPass)
 {
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.createRenderPass(*creationInfo, renderPass));
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createRenderPass(*creationInfo, renderPass));
     return VK_SUCCESS;
 }
 
@@ -654,23 +692,31 @@ LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass render
             luna::helpers::fromHandle<luna::RenderPass>(renderPass)->getSubpassIndexByName(name));
 }
 
-VkResult lunaBeginRenderPass(const LunaRenderPass renderPass, const LunaRenderPassBeginInfo *beginInfo)
+VkResult lunaBeginRenderPass(const LunaDevice device,
+                             const LunaCommandBuffer commandBuffer,
+                             const LunaRenderPass renderPass,
+                             const LunaRenderPassBeginInfo *beginInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(renderPass);
     assert(beginInfo);
-    return luna::helpers::fromHandle<luna::RenderPass>(renderPass)->begin(*beginInfo);
+    return luna::helpers::fromHandle<luna::RenderPass>(renderPass)
+            ->begin(static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+                    *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+                    *beginInfo);
 }
 
-void lunaNextSubpass()
+void lunaNextSubpass(const LunaCommandBuffer commandBuffer)
 {
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    assert(commandBuffer.isRecording());
-    vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer)->isRecording());
+    vkCmdNextSubpass(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer), VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void lunaEndRenderPass()
+void lunaEndRenderPass(const LunaCommandBuffer commandBuffer)
 {
-    const luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    assert(commandBuffer.isRecording());
-    vkCmdEndRenderPass(commandBuffer);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer)->isRecording());
+    vkCmdEndRenderPass(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer));
 }

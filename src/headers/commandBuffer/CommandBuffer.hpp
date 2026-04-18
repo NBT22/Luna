@@ -15,12 +15,12 @@ class CommandBuffer
 {
     public:
         CommandBuffer() = default;
-        CommandBuffer(VkDevice logicalDevice, VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
+        CommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
 
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
-        void destroy(VkDevice logicalDevice, VkCommandPool commandPool);
+        void destroy(VkDevice device, VkCommandPool commandPool);
 
         VkResult beginSingleUseCommandBuffer();
         VkResult end();
@@ -31,8 +31,8 @@ class CommandBuffer
                               const VkSubmitInfo &submitInfo,
                               VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
-        VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout) const;
-        VkResult resetFence(VkDevice logicalDevice);
+        VkResult waitForFence(VkDevice device, uint64_t timeout) const;
+        VkResult resetFence(VkDevice device);
 
         [[nodiscard]] bool isRecording() const;
         [[nodiscard]] const Semaphore &semaphore() const;
@@ -52,16 +52,18 @@ class CommandBuffer
 
 namespace luna::commandBuffer
 {
-inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
+inline CommandBuffer::CommandBuffer(const VkDevice device,
                                     const VkCommandPool commandPool,
                                     const VkCommandBufferLevel commandBufferLevel):
-    fence_(VkFenceCreateInfo{
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    }),
-    semaphore_(VkSemaphoreCreateInfo{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    })
+    fence_(device,
+           VkFenceCreateInfo{
+               .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+               .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+           }),
+    semaphore_(device,
+               VkSemaphoreCreateInfo{
+                   .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+               })
 {
     const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -69,7 +71,7 @@ inline CommandBuffer::CommandBuffer(const VkDevice logicalDevice,
         .level = commandBufferLevel,
         .commandBufferCount = 1,
     };
-    CHECK_RESULT_THROW(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, &commandBuffer_));
+    CHECK_RESULT_THROW(vkAllocateCommandBuffers(device, &allocateInfo, &commandBuffer_));
 }
 
 inline CommandBuffer::operator const VkCommandBuffer &() const
@@ -81,12 +83,12 @@ inline const VkCommandBuffer *CommandBuffer::operator&() const
     return &commandBuffer_;
 }
 
-inline void CommandBuffer::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool)
+inline void CommandBuffer::destroy(const VkDevice device, const VkCommandPool commandPool)
 {
     assert(!isRecording_);
-    fence_.destroy();
-    semaphore_.destroy();
-    vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer_);
+    fence_.destroy(device);
+    semaphore_.destroy(device);
+    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer_);
     commandBuffer_ = VK_NULL_HANDLE;
 }
 
@@ -143,7 +145,7 @@ inline bool CommandBuffer::getAndSetIsSignaled(const bool value)
     semaphore_.setIsSignaled(value);
     return oldValue;
 }
-inline VkResult CommandBuffer::waitForFence(const VkDevice logicalDevice, const uint64_t timeout = UINT64_MAX) const
+inline VkResult CommandBuffer::waitForFence(const VkDevice device, const uint64_t timeout = UINT64_MAX) const
 {
     if (!fence_.willBeSignaled())
     {
@@ -152,12 +154,12 @@ inline VkResult CommandBuffer::waitForFence(const VkDevice logicalDevice, const 
     // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
     //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
     //  all usages of this method currently use the default timeout.
-    return vkWaitForFences(logicalDevice, 1, &fence_, VK_TRUE, timeout);
+    return vkWaitForFences(device, 1, &fence_, VK_TRUE, timeout);
 }
-inline VkResult CommandBuffer::resetFence(const VkDevice logicalDevice)
+inline VkResult CommandBuffer::resetFence(const VkDevice device)
 {
     fence_.setWillBeSignaled(false);
-    return vkResetFences(logicalDevice, 1, &fence_);
+    return vkResetFences(device, 1, &fence_);
 }
 
 inline bool CommandBuffer::isRecording() const

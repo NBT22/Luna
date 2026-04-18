@@ -17,38 +17,42 @@ extern "C"
 
 /**
  * @brief Create a new buffer, optionally with dedicated regions.
+ * @param device
  * @param[in] creationInfo A pointer to the @c LunaBufferCreationInfo structure containing information about how to create the buffer.
  * @param[out] buffer A pointer to the @c LunaBuffer handle in which the resulting buffer will be returned.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
  */
-VkResult lunaCreateBuffer(const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);
+VkResult lunaCreateBuffer(LunaDevice device, const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer);
 
 /**
  * @brief Destroy a buffer.
+ * @param device
  * @param[in] buffer The @c LunaBuffer handle to destroy.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkDestroyBuffer.html
  */
-void lunaDestroyBuffer(LunaBuffer buffer);
+void lunaDestroyBuffer(LunaDevice device, LunaBuffer buffer);
 
 /**
  * @brief Ensure a buffer is at least @c size bytes, resizing if it is not.
  * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
  * @param[in] size The new size to make the buffer.
  */
-VkResult lunaGrowBuffer(LunaBuffer *buffer, VkDeviceSize size);
+VkResult lunaGrowBuffer(LunaDevice device, LunaBuffer *buffer, VkDeviceSize size);
 
 /**
  * @brief Resize a buffer, keeping the contents intact.
  * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
  * @param[in] newSize The new size to make the buffer.
  */
-VkResult lunaResizeBuffer(LunaBuffer *buffer, VkDeviceSize newSize);
+VkResult lunaResizeBuffer(LunaDevice device, LunaBuffer *buffer, VkDeviceSize newSize);
 
-VkResult lunaFillBuffer(LunaBuffer buffer, uint32_t data);
+VkResult lunaFillBuffer(LunaDevice device, LunaBuffer buffer, uint32_t data);
 
-VkResult lunaCreateBufferView(const LunaBufferViewCreationInfo *creationInfo, LunaBufferView *bufferView);
+VkResult lunaCreateBufferView(LunaDevice device,
+                              const LunaBufferViewCreationInfo *creationInfo,
+                              LunaBufferView *bufferView);
 
-VkResult lunaWriteDataToBuffer(LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo);
+VkResult lunaWriteDataToBuffer(LunaDevice device, LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo);
 void *lunaGetBufferDataPointer(LunaBuffer buffer);
 
 VkDeviceSize lunaGetBufferSize(LunaBuffer buffer);
@@ -58,7 +62,7 @@ void lunaGetBufferAllocationCreateInfo(LunaBuffer buffer, VmaAllocationCreateInf
 void lunaGetBufferCreationInfo(LunaBuffer buffer,
                                LunaBufferCreationInfo *creationInfo,
                                VmaAllocationCreateInfo *allocationCreateInfo);
-VkDeviceAddress lunaGetBufferDeviceAddress(LunaBuffer buffer);
+VkDeviceAddress lunaGetBufferDeviceAddress(LunaDevice device, LunaBuffer buffer);
 VkBuffer lunaGetVkBuffer(LunaBuffer buffer);
 VkDeviceSize lunaGetBufferOffset(LunaBuffer buffer);
 

@@ -12,15 +12,15 @@ class Semaphore
 {
     public:
         Semaphore() = default;
-        explicit Semaphore(const VkSemaphoreCreateInfo &semaphoreCreateInfo);
+        explicit Semaphore(VkDevice device, const VkSemaphoreCreateInfo &semaphoreCreateInfo);
 
         operator const VkSemaphore &() const;
         const VkSemaphore *operator&() const;
         VkSemaphore *operator&();
 
-        void destroy();
+        void destroy(VkDevice device);
 
-        VkResult create();
+        VkResult create(VkDevice device);
 
         void setIsSignaled(bool value);
         void setStageMask(VkPipelineStageFlags value);

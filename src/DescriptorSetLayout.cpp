@@ -16,7 +16,7 @@
 
 namespace luna
 {
-DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo)
+DescriptorSetLayout::DescriptorSetLayout(const VkDevice device, const LunaDescriptorSetLayoutCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
     std::vector<VkDescriptorBindingFlags> bindingFlags;
@@ -53,7 +53,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
     isDestroyed_ = false;
 }
 
-void DescriptorSetLayout::destroy()
+void DescriptorSetLayout::destroy(const VkDevice device)
 {
     if (isDestroyed_)
     {
@@ -65,10 +65,14 @@ void DescriptorSetLayout::destroy()
 }
 } // namespace luna
 
-VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
+VkResult lunaCreateDescriptorSetLayout(const LunaDevice device,
+                                       const LunaDescriptorSetLayoutCreationInfo *creationInfo,
                                        LunaDescriptorSetLayout *descriptorSetLayout)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.createDescriptorSetLayout(*creationInfo, descriptorSetLayout));
+    CHECK_RESULT_RETURN(
+            luna::helpers::fromHandle<luna::Device>(device)->createDescriptorSetLayout(*creationInfo,
+                                                                                       descriptorSetLayout));
     return VK_SUCCESS;
 }

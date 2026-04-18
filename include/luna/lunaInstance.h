@@ -16,19 +16,19 @@ extern "C"
 
 VkResult lunaInitializeVolk(void);
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
-VkResult lunaDestroyInstance(void);
+VkResult lunaDestroyInstance();
 VkInstance lunaGetInstance(void);
 
 bool lunaIsInstanceExtensionAvailable(const char *extensionName);
 bool lunaIsInstanceExtensionVersionAvailable(const char *extensionName, uint32_t extensionVersion);
 
-VkResult lunaGetSurfaceCapabilities(VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
+VkResult lunaGetSurfaceCapabilities(LunaDevice device, VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 
-VkResult lunaCreateSwapchain(const LunaSwapchainCreationInfo *creationInfo);
+VkResult lunaCreateSwapchain(LunaDevice device, const LunaSwapchainCreationInfo *creationInfo);
 VkFormat lunaGetSwapchainFormat(void);
 VkExtent2D lunaGetSwapchainExtent(void);
 
-VkResult lunaSetDepthImageFormat(uint32_t formatCount, const VkFormat *formatPriorityList);
+VkResult lunaSetDepthImageFormat(LunaDevice device, uint32_t formatCount, const VkFormat *formatPriorityList);
 VkFormat lunaGetDepthImageFormat(void);
 
 #ifdef __cplusplus

@@ -203,7 +203,7 @@ int main(void)
         lunaWriteFramebufferToDescriptor(descriptorSet);
         CHECK_RESULT(lunaDispatch(&dispatchComputeInfo));
         lunaTransitionColorImageLayout(VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        CHECK_RESULT(lunaEndFrame());
+        CHECK_RESULT(lunaEndFrame(TODO));
     }
     CHECK_RESULT(lunaDestroyInstance());
     return 0;

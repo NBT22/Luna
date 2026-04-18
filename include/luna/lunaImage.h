@@ -14,28 +14,49 @@ extern "C"
 #include <stdint.h>
 #include <vulkan/vulkan_core.h>
 
-VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler);
-void lunaDestroySampler(LunaSampler sampler);
+VkResult lunaCreateSampler(LunaDevice device, const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler);
+void lunaDestroySampler(LunaDevice device, LunaSampler sampler);
 
-VkResult lunaCreateImage(const LunaImageCreationInfo *creationInfo, LunaImage *image);
-VkResult lunaCreateImageArray(const LunaImageCreationInfo *creationInfo, uint32_t arrayLayers, LunaImage *image);
-VkResult lunaCreateImage3D(const LunaImageCreationInfo *creationInfo, uint32_t depth, LunaImage *image);
-VkResult lunaCreateImage3DArray(const LunaImageCreationInfo *creationInfo,
+VkResult lunaCreateImage(LunaDevice device,
+                         LunaCommandBuffer commandBuffer,
+                         const LunaImageCreationInfo *creationInfo,
+                         LunaImage *image);
+VkResult lunaCreateImageArray(LunaDevice device,
+                              LunaCommandBuffer commandBuffer,
+                              const LunaImageCreationInfo *creationInfo,
+                              uint32_t arrayLayers,
+                              LunaImage *image);
+VkResult lunaCreateImage3D(LunaDevice device,
+                           LunaCommandBuffer commandBuffer,
+                           const LunaImageCreationInfo *creationInfo,
+                           uint32_t depth,
+                           LunaImage *image);
+VkResult lunaCreateImage3DArray(LunaDevice device,
+                                LunaCommandBuffer commandBuffer,
+                                const LunaImageCreationInfo *creationInfo,
                                 uint32_t depth,
                                 uint32_t arrayLayers,
                                 LunaImage *image);
 
-VkResult lunaUpdateImage(LunaImage image, const LunaImageWriteInfo *writeInfo);
+VkResult lunaUpdateImage(LunaDevice device,
+                         LunaCommandBuffer commandBuffer,
+                         LunaImage image,
+                         const LunaImageWriteInfo *writeInfo);
 
 // TODO (0.3.0): Finalize this function (maybe allow for taking multiple images and regions)
-VkResult lunaBlitImageToSwapchain(LunaImage image, const VkImageBlit2 *blitRegion);
+VkResult lunaBlitImageToSwapchain(LunaDevice device,
+                                  LunaCommandBuffer commandBuffer,
+                                  LunaImage image,
+                                  const VkImageBlit2 *blitRegion);
 
-VkResult lunaCopyImageToBuffer(LunaImage image,
+VkResult lunaCopyImageToBuffer(LunaDevice device,
+                               LunaCommandBuffer commandBuffer,
+                               LunaImage image,
                                LunaBuffer buffer,
                                uint32_t regionCount,
                                const VkBufferImageCopy *regions);
 
-void lunaDestroyImage(LunaImage image);
+void lunaDestroyImage(LunaDevice device, LunaImage image);
 
 #ifdef __cplusplus
 }

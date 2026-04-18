@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <list>
 #include <luna/lunaTypes.h>
@@ -17,15 +18,19 @@ class CommandPool
 {
     public:
         CommandPool() = default;
-        explicit CommandPool(VkDevice logicalDevice, const VkCommandPoolCreateInfo *poolCreateInfo);
-        explicit CommandPool(const LunaCommandPoolCreationInfo &creationInfo);
+        explicit CommandPool(VkDevice device, const VkCommandPoolCreateInfo *poolCreateInfo);
+        explicit CommandPool(VkDevice device, const LunaCommandPoolCreationInfo &creationInfo);
 
         operator const VkCommandPool &() const;
 
-        void destroy();
+        void destroy(VkDevice device);
 
-        [[nodiscard]] VkResult allocateCommandBuffer(VkCommandBufferLevel commandBufferLevel, uint32_t arraySize = 1);
-        [[nodiscard]] VkResult reset(VkCommandPoolResetFlags flags, uint64_t timeout = UINT64_MAX) const;
+        [[nodiscard]] VkResult allocateCommandBuffer(VkDevice device,
+                                                     VkCommandBufferLevel commandBufferLevel,
+                                                     uint32_t arraySize = 1);
+        [[nodiscard]] VkResult reset(VkDevice device,
+                                     VkCommandPoolResetFlags flags,
+                                     uint64_t timeout = UINT64_MAX) const;
 
         [[nodiscard]] size_t commandBufferCount() const;
         [[nodiscard]] const CommandBuffer &commandBuffer(uint32_t index = 0) const;
@@ -47,9 +52,9 @@ class CommandPool
 
 namespace luna
 {
-inline CommandPool::CommandPool(const VkDevice logicalDevice, const VkCommandPoolCreateInfo *poolCreateInfo)
+inline CommandPool::CommandPool(const VkDevice device, const VkCommandPoolCreateInfo *poolCreateInfo)
 {
-    CHECK_RESULT_THROW(vkCreateCommandPool(logicalDevice, poolCreateInfo, nullptr, &commandPool_));
+    CHECK_RESULT_THROW(vkCreateCommandPool(device, poolCreateInfo, nullptr, &commandPool_));
     isDestroyed_ = false;
 }
 
@@ -59,16 +64,20 @@ inline CommandPool::operator const VkCommandPool &() const
     return commandPool_;
 }
 
-inline VkResult CommandPool::allocateCommandBuffer(VkCommandBufferLevel commandBufferLevel, const uint32_t arraySize)
+inline VkResult CommandPool::allocateCommandBuffer(const VkDevice device,
+                                                   VkCommandBufferLevel commandBufferLevel,
+                                                   const uint32_t arraySize)
 {
     assert(!isDestroyed_);
     if (arraySize == 1)
     {
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(commandPool_,
+        TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
+                                                                                       commandPool_,
                                                                                        commandBufferLevel)));
     } else
     {
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(commandPool_,
+        TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
+                                                                                       commandPool_,
                                                                                        commandBufferLevel,
                                                                                        arraySize)));
     }

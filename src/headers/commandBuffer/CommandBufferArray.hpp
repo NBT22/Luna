@@ -22,7 +22,7 @@ class CommandBufferArray
 {
     public:
         CommandBufferArray() = default;
-        CommandBufferArray(VkDevice logicalDevice,
+        CommandBufferArray(VkDevice device,
                            VkCommandPool commandPool,
                            VkCommandBufferLevel commandBufferLevel,
                            uint32_t count);
@@ -30,7 +30,7 @@ class CommandBufferArray
         operator const VkCommandBuffer &() const;
         const VkCommandBuffer *operator&() const;
 
-        void destroy(VkDevice logicalDevice, VkCommandPool commandPool);
+        void destroy(VkDevice device, VkCommandPool commandPool);
 
         VkResult beginSingleUseCommandBuffer();
         VkResult end();
@@ -41,10 +41,10 @@ class CommandBufferArray
                               const VkSubmitInfo &submitInfo,
                               VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
-        VkResult waitForAllFences(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
-        VkResult waitForFence(VkDevice logicalDevice, uint64_t timeout = UINT64_MAX) const;
-        VkResult resetFence(VkDevice logicalDevice);
-        VkResult recreateSemaphores();
+        VkResult waitForAllFences(VkDevice device, uint64_t timeout = UINT64_MAX) const;
+        VkResult waitForFence(VkDevice device, uint64_t timeout = UINT64_MAX) const;
+        VkResult resetFence(VkDevice device);
+        VkResult recreateSemaphores(VkDevice device);
 
         [[nodiscard]] size_t size() const;
         [[nodiscard]] bool isRecording() const;
@@ -69,7 +69,7 @@ class CommandBufferArray
 
 namespace luna::commandBuffer
 {
-inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
+inline CommandBufferArray::CommandBufferArray(const VkDevice device,
                                               const VkCommandPool commandPool,
                                               const VkCommandBufferLevel commandBufferLevel,
                                               const uint32_t count)
@@ -82,7 +82,7 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
         .level = commandBufferLevel,
         .commandBufferCount = count,
     };
-    CHECK_RESULT_THROW(vkAllocateCommandBuffers(logicalDevice, &allocateInfo, commandBuffers_.data()));
+    CHECK_RESULT_THROW(vkAllocateCommandBuffers(device, &allocateInfo, commandBuffers_.data()));
 
     fences_.reserve(count);
     semaphores_.reserve(count);
@@ -95,8 +95,8 @@ inline CommandBufferArray::CommandBufferArray(const VkDevice logicalDevice,
     };
     for (uint32_t i = 0; i < count; i++)
     {
-        fences_.emplace_back(fenceCreateInfo);
-        semaphores_.emplace_back(semaphoreCreateInfo);
+        fences_.emplace_back(device, fenceCreateInfo);
+        semaphores_.emplace_back(device, semaphoreCreateInfo);
     }
 }
 
@@ -109,20 +109,20 @@ inline const VkCommandBuffer *CommandBufferArray::operator&() const
     return &commandBuffers_.at(index_);
 }
 
-inline void CommandBufferArray::destroy(const VkDevice logicalDevice, const VkCommandPool commandPool)
+inline void CommandBufferArray::destroy(const VkDevice device, const VkCommandPool commandPool)
 {
     assert(std::ranges::all_of(isRecordings_, [](const uint8_t val) -> bool { return val == 0; }));
     for (Fence &fence: fences_)
     {
-        fence.destroy();
+        fence.destroy(device);
     }
     fences_.clear();
     for (Semaphore &semaphore: semaphores_)
     {
-        semaphore.destroy();
+        semaphore.destroy(device);
     }
     semaphores_.clear();
-    vkFreeCommandBuffers(logicalDevice, commandPool, commandBuffers_.size(), commandBuffers_.data());
+    vkFreeCommandBuffers(device, commandPool, commandBuffers_.size(), commandBuffers_.data());
 }
 
 inline VkResult CommandBufferArray::beginSingleUseCommandBuffer()
@@ -179,7 +179,7 @@ inline bool CommandBufferArray::getAndSetIsSignaled(const bool value)
     semaphores_.at(index_).setIsSignaled(value);
     return oldValue;
 }
-inline VkResult CommandBufferArray::waitForAllFences(const VkDevice logicalDevice, const uint64_t timeout) const
+inline VkResult CommandBufferArray::waitForAllFences(const VkDevice device, const uint64_t timeout) const
 {
     std::vector<VkFence> fences;
     fences.reserve(fences_.size());
@@ -196,9 +196,9 @@ inline VkResult CommandBufferArray::waitForAllFences(const VkDevice logicalDevic
     {
         return VK_SUCCESS;
     }
-    return vkWaitForFences(logicalDevice, waitCount, fences.data(), VK_TRUE, timeout);
+    return vkWaitForFences(device, waitCount, fences.data(), VK_TRUE, timeout);
 }
-inline VkResult CommandBufferArray::waitForFence(const VkDevice logicalDevice, const uint64_t timeout) const
+inline VkResult CommandBufferArray::waitForFence(const VkDevice device, const uint64_t timeout) const
 {
     if (!fences_.at(index_).willBeSignaled())
     {
@@ -207,21 +207,21 @@ inline VkResult CommandBufferArray::waitForFence(const VkDevice logicalDevice, c
     // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
     //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
     //  all usages of this method currently use the default timeout.
-    return vkWaitForFences(logicalDevice, 1, &fences_.at(index_), VK_TRUE, timeout);
+    return vkWaitForFences(device, 1, &fences_.at(index_), VK_TRUE, timeout);
 }
-inline VkResult CommandBufferArray::resetFence(const VkDevice logicalDevice)
+inline VkResult CommandBufferArray::resetFence(const VkDevice device)
 {
     fences_.at(index_).setWillBeSignaled(false);
-    return vkResetFences(logicalDevice, 1, &fences_.at(index_));
+    return vkResetFences(device, 1, &fences_.at(index_));
 }
-inline VkResult CommandBufferArray::recreateSemaphores()
+inline VkResult CommandBufferArray::recreateSemaphores(const VkDevice device)
 {
     const size_t count = semaphores_.size();
     semaphores_.clear();
     for (size_t i = 0; i < count; i++)
     {
         semaphores_.emplace_back();
-        CHECK_RESULT_RETURN(semaphores_.back().create());
+        CHECK_RESULT_RETURN(semaphores_.back().create(device));
     }
     return VK_SUCCESS;
 }

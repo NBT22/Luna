@@ -30,8 +30,9 @@
 
 namespace luna::helpers
 {
-static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
+static VkResult recreateSwapchain(Device &device, const VkSurfaceCapabilitiesKHR &capabilities)
 {
+    const VkDevice vkDevice = static_cast<VkDevice>(device);
     const VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = swapchain.surface,
@@ -49,15 +50,15 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
         .presentMode = swapchain.presentMode,
         .clipped = VK_TRUE,
     };
-    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(luna::device, &createInfo, nullptr, &luna::swapchain.swapchain));
+    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(vkDevice, &createInfo, nullptr, &luna::swapchain.swapchain));
 
-    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(luna::device,
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(vkDevice,
                                                 luna::swapchain.swapchain,
                                                 &luna::swapchain.imageCount,
                                                 nullptr));
 
     swapchain.images.resize(swapchain.imageCount);
-    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(luna::device,
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(vkDevice,
                                                 luna::swapchain.swapchain,
                                                 &luna::swapchain.imageCount,
                                                 luna::swapchain.images.data()));
@@ -65,7 +66,7 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     swapchain.imageViews.resize(swapchain.imageCount);
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
-        CHECK_RESULT_RETURN(createImageView(luna::device,
+        CHECK_RESULT_RETURN(createImageView(vkDevice,
                                             luna::swapchain.images.at(i),
                                             luna::swapchain.format.format,
                                             VK_IMAGE_ASPECT_COLOR_BIT,
@@ -74,11 +75,11 @@ static VkResult recreateSwapchain(const VkSurfaceCapabilitiesKHR &capabilities)
     }
     assert(capabilities.minImageCount <= luna::swapchain.imageCount &&
            luna::swapchain.imageCount <= capabilities.maxImageCount);
-    CHECK_RESULT_RETURN(luna::device.createSemaphores(luna::swapchain.imageCount));
+    CHECK_RESULT_RETURN(device.createSemaphores(luna::swapchain.imageCount));
 
-    CHECK_RESULT_RETURN(
-            luna::device.commandPools().graphics->commandBuffer().resizeArray(VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                              luna::swapchain.imageCount));
+    CHECK_RESULT_RETURN(device.commandPools().graphics->commandBuffer().resizeArray(vkDevice,
+                                                                                    VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                                    luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;
     return VK_SUCCESS;
@@ -116,18 +117,12 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
             assert(bufferMemoryBarrier.buffer);
             const BufferRegionIndex &bufferRegionIndex =
                     *luna::helpers::fromHandle<BufferRegionIndex>(bufferMemoryBarrier.buffer);
-            const uint32_t srcQueueFamilyIndex = bufferMemoryBarrier.synchronizeGraphicsToCompute
-                                                         ? device.familyIndices().graphics
-                                                         : VK_QUEUE_FAMILY_IGNORED;
-            const uint32_t dstQueueFamilyIndex = bufferMemoryBarrier.synchronizeGraphicsToCompute
-                                                         ? device.familyIndices().compute
-                                                         : VK_QUEUE_FAMILY_IGNORED;
             bufferMemoryBarriers.emplace_back(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
                                               nullptr,
                                               bufferMemoryBarrier.sourceAccessMask,
                                               bufferMemoryBarrier.destinationAccessMask,
-                                              srcQueueFamilyIndex,
-                                              dstQueueFamilyIndex,
+                                              VK_QUEUE_FAMILY_IGNORED,
+                                              VK_QUEUE_FAMILY_IGNORED,
                                               bufferRegionIndex.buffer(),
                                               bufferRegionIndex.offset() + bufferMemoryBarrier.offset,
                                               bufferMemoryBarrier.size == 0 ? bufferRegionIndex.size()
@@ -239,23 +234,30 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
 }
 } // namespace luna::helpers
 
-VkResult lunaCreateDescriptorPool(const LunaDescriptorPoolCreationInfo *creationInfo,
+VkResult lunaCreateDescriptorPool(const LunaDevice device,
+                                  const LunaDescriptorPoolCreationInfo *creationInfo,
                                   LunaDescriptorPool *descriptorPool)
 {
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.createDescriptorPool(*creationInfo, descriptorPool));
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createDescriptorPool(*creationInfo,
+                                                                                              descriptorPool));
     return VK_SUCCESS;
 }
 
-VkResult lunaAllocateDescriptorSets(const LunaDescriptorSetAllocationInfo *allocationInfo,
+VkResult lunaAllocateDescriptorSets(const LunaDevice device,
+                                    const LunaDescriptorSetAllocationInfo *allocationInfo,
                                     LunaDescriptorSet *descriptorSets)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(allocationInfo);
-    CHECK_RESULT_RETURN(luna::device.allocateDescriptorSets(*allocationInfo, descriptorSets));
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->allocateDescriptorSets(*allocationInfo,
+                                                                                                descriptorSets));
     return VK_SUCCESS;
 }
 
-VkResult lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const LunaWriteDescriptorSet *descriptorWrites)
+VkResult lunaWriteDescriptorSets(const LunaDevice device,
+                                 const uint32_t descriptorWriteCount,
+                                 const LunaWriteDescriptorSet *descriptorWrites)
 {
     using namespace luna;
     std::list<VkDescriptorImageInfo> descriptorImageInfos;
@@ -321,29 +323,39 @@ VkResult lunaWriteDescriptorSets(const uint32_t descriptorWriteCount, const Luna
                                 helpers::fromHandle<VkBufferView>(descriptorWrite.texelBufferView));
         }
     }
-    vkUpdateDescriptorSets(device, writes.size(), writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(static_cast<VkDevice>(*luna::helpers::fromHandle<Device>(device)),
+                           writes.size(),
+                           writes.data(),
+                           0,
+                           nullptr);
     return VK_SUCCESS;
 }
 
-VkResult lunaPipelineBarrier(const LunaCommandBuffer commandBuffer, const LunaDependencyInfo *dependencyInfo)
+VkResult lunaPipelineBarrier(const LunaDevice device,
+                             const LunaCommandBuffer commandBuffer,
+                             const LunaDependencyInfo *dependencyInfo)
 {
     assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(dependencyInfo);
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(true));
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(*luna::helpers::fromHandle<
+                                                                                    luna::Device>(device)),
+                                                              true));
     luna::helpers::pipelineBarrier(commandBufferObject, *dependencyInfo);
     return VK_SUCCESS;
 }
 
-VkResult lunaDraw(const LunaDrawInfo *drawInfo)
+VkResult lunaDraw(const LunaDevice device, const LunaCommandBuffer commandBuffer, const LunaDrawInfo *drawInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
-                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
-                                                                             : *drawInfo->pipelineBindInfo));
-    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
-    vkCmdDraw(luna::device.commandPools().graphics->commandBuffer(),
+    CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
+                                                     commandBuffer,
+                                                     drawInfo->pipeline,
+                                                     drawInfo->pipelineBindInfo));
+    vkCmdDraw(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
               drawInfo->vertexCount,
               drawInfo->instanceCount,
               drawInfo->firstVertex,
@@ -351,16 +363,20 @@ VkResult lunaDraw(const LunaDrawInfo *drawInfo)
     return VK_SUCCESS;
 }
 
-VkResult lunaDrawIndirect(const LunaDrawIndirectInfo *drawInfo)
+VkResult lunaDrawIndirect(const LunaDevice device,
+                          const LunaCommandBuffer commandBuffer,
+                          const LunaDrawIndirectInfo *drawInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE && drawInfo->buffer != LUNA_NULL_HANDLE);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
-                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
-                                                                             : *drawInfo->pipelineBindInfo));
-    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
+                                                     commandBuffer,
+                                                     drawInfo->pipeline,
+                                                     drawInfo->pipelineBindInfo));
     const luna::BufferRegionIndex *bufferRegionIndex =
             luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
-    vkCmdDrawIndirect(luna::device.commandPools().graphics->commandBuffer(),
+    vkCmdDrawIndirect(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                       bufferRegionIndex->buffer(),
                       bufferRegionIndex->offset(),
                       drawInfo->drawCount,
@@ -368,21 +384,25 @@ VkResult lunaDrawIndirect(const LunaDrawIndirectInfo *drawInfo)
     return VK_SUCCESS;
 }
 
-VkResult lunaDrawIndirectCount(const LunaDrawIndirectCountInfo *drawInfo)
+VkResult lunaDrawIndirectCount(const LunaDevice device,
+                               const LunaCommandBuffer commandBuffer,
+                               const LunaDrawIndirectCountInfo *drawInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(drawInfo &&
            drawInfo->pipeline != LUNA_NULL_HANDLE &&
            drawInfo->buffer != LUNA_NULL_HANDLE &&
            drawInfo->countBuffer != LUNA_NULL_HANDLE);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
-                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
-                                                                             : *drawInfo->pipelineBindInfo));
+    CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
+                                                     commandBuffer,
+                                                     drawInfo->pipeline,
+                                                     drawInfo->pipelineBindInfo));
     const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
             luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
     const luna::BufferRegionIndex *countBufferRegionIndex =
             luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->countBuffer);
-    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
-    vkCmdDrawIndirectCount(luna::device.commandPools().graphics->commandBuffer(),
+    vkCmdDrawIndirectCount(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                            drawParameterBufferRegionIndex->buffer(),
                            drawParameterBufferRegionIndex->offset(),
                            countBufferRegionIndex->buffer(),
@@ -392,14 +412,18 @@ VkResult lunaDrawIndirectCount(const LunaDrawIndirectCountInfo *drawInfo)
     return VK_SUCCESS;
 }
 
-VkResult lunaDrawIndexed(const LunaDrawIndexedInfo *drawInfo)
+VkResult lunaDrawIndexed(const LunaDevice device,
+                         const LunaCommandBuffer commandBuffer,
+                         const LunaDrawIndexedInfo *drawInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
-                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
-                                                                             : *drawInfo->pipelineBindInfo));
-    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
-    vkCmdDrawIndexed(luna::device.commandPools().graphics->commandBuffer(),
+    CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
+                                                     commandBuffer,
+                                                     drawInfo->pipeline,
+                                                     drawInfo->pipelineBindInfo));
+    vkCmdDrawIndexed(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                      drawInfo->indexCount,
                      drawInfo->instanceCount,
                      drawInfo->firstIndex,
@@ -408,16 +432,20 @@ VkResult lunaDrawIndexed(const LunaDrawIndexedInfo *drawInfo)
     return VK_SUCCESS;
 }
 
-VkResult lunaDrawIndexedIndirect(const LunaDrawIndexedIndirectInfo *drawInfo)
+VkResult lunaDrawIndexedIndirect(const LunaDevice device,
+                                 const LunaCommandBuffer commandBuffer,
+                                 const LunaDrawIndexedIndirectInfo *drawInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE && drawInfo->buffer != LUNA_NULL_HANDLE);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
-                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
-                                                                             : *drawInfo->pipelineBindInfo));
-    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
+                                                     commandBuffer,
+                                                     drawInfo->pipeline,
+                                                     drawInfo->pipelineBindInfo));
     const luna::BufferRegionIndex *bufferRegionIndex =
             luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
-    vkCmdDrawIndexedIndirect(luna::device.commandPools().graphics->commandBuffer(),
+    vkCmdDrawIndexedIndirect(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                              bufferRegionIndex->buffer(),
                              bufferRegionIndex->offset(),
                              drawInfo->drawCount,
@@ -425,21 +453,25 @@ VkResult lunaDrawIndexedIndirect(const LunaDrawIndexedIndirectInfo *drawInfo)
     return VK_SUCCESS;
 }
 
-VkResult lunaDrawIndexedIndirectCount(const LunaDrawIndexedIndirectCountInfo *drawInfo)
+VkResult lunaDrawIndexedIndirectCount(const LunaDevice device,
+                                      const LunaCommandBuffer commandBuffer,
+                                      const LunaDrawIndexedIndirectCountInfo *drawInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(drawInfo &&
            drawInfo->pipeline != LUNA_NULL_HANDLE &&
            drawInfo->buffer != LUNA_NULL_HANDLE &&
            drawInfo->countBuffer != LUNA_NULL_HANDLE);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(drawInfo->pipeline)
-                                ->bind(drawInfo->pipelineBindInfo == nullptr ? LunaGraphicsPipelineBindInfo{}
-                                                                             : *drawInfo->pipelineBindInfo));
-    assert(luna::device.commandPools().graphics->commandBuffer().isRecording()); // Internal state check
+    CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
+                                                     commandBuffer,
+                                                     drawInfo->pipeline,
+                                                     drawInfo->pipelineBindInfo));
     const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
             luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
     const luna::BufferRegionIndex *countBufferRegionIndex =
             luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->countBuffer);
-    vkCmdDrawIndexedIndirectCount(luna::device.commandPools().graphics->commandBuffer(),
+    vkCmdDrawIndexedIndirectCount(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                                   drawParameterBufferRegionIndex->buffer(),
                                   drawParameterBufferRegionIndex->offset(),
                                   countBufferRegionIndex->buffer(),
@@ -449,77 +481,96 @@ VkResult lunaDrawIndexedIndirectCount(const LunaDrawIndexedIndirectCountInfo *dr
     return VK_SUCCESS;
 }
 
-VkResult lunaResizeSwapchain(const uint32_t renderPassResizeInfoCount,
+VkResult lunaResizeSwapchain(const LunaDevice device,
+                             const LunaCommandBuffer commandBuffer,
+                             const uint32_t renderPassResizeInfoCount,
                              const LunaRenderPassResizeInfo *renderPassResizeInfos,
                              const VkExtent2D *targetExtent,
                              VkExtent2D *newSwapchainExtent)
 {
-    using namespace luna;
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    const VkDevice vkDevice = static_cast<VkDevice>(deviceObject);
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
 
     VkSurfaceCapabilitiesKHR capabilities;
-    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, swapchain.surface, &capabilities));
+    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(static_cast<VkPhysicalDevice>(deviceObject),
+                                                                  luna::swapchain.surface,
+                                                                  &capabilities));
     capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
-    swapchain.safeToUse.wait(false);
-    swapchain.safeToUse = false;
+    luna::swapchain.safeToUse.wait(false);
+    luna::swapchain.safeToUse = false;
     if (targetExtent != nullptr)
     {
         assert(capabilities.minImageExtent.width <= targetExtent->width &&
                targetExtent->width <= capabilities.maxImageExtent.width);
         assert(capabilities.minImageExtent.height <= targetExtent->height &&
                targetExtent->height <= capabilities.maxImageExtent.height);
-        swapchain.extent = *targetExtent;
+        luna::swapchain.extent = *targetExtent;
     } else
     {
-        swapchain.extent = capabilities.currentExtent;
+        luna::swapchain.extent = capabilities.currentExtent;
     }
-    assert(capabilities.minImageExtent.width <= swapchain.extent.width &&
-           swapchain.extent.width <= capabilities.maxImageExtent.width);
-    assert(capabilities.minImageExtent.height <= swapchain.extent.height &&
-           swapchain.extent.height <= capabilities.maxImageExtent.height);
+    assert(capabilities.minImageExtent.width <= luna::swapchain.extent.width &&
+           luna::swapchain.extent.width <= capabilities.maxImageExtent.width);
+    assert(capabilities.minImageExtent.height <= luna::swapchain.extent.height &&
+           luna::swapchain.extent.height <= capabilities.maxImageExtent.height);
 
-    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.waitForAllFences());
-    CHECK_RESULT_RETURN(commandBuffer.recreateSemaphores());
-    for (uint32_t i = 0; i < swapchain.imageCount; i++)
+    CHECK_RESULT_RETURN(commandBufferObject.waitForAllFences(vkDevice));
+    CHECK_RESULT_RETURN(commandBufferObject.recreateSemaphores(vkDevice));
+    for (uint32_t i = 0; i < luna::swapchain.imageCount; i++)
     {
-        vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
+        vkDestroyImageView(vkDevice, luna::swapchain.imageViews.at(i), nullptr);
     }
-    vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
+    vkDestroySwapchainKHR(vkDevice, luna::swapchain.swapchain, nullptr);
 
-    CHECK_RESULT_RETURN(luna::helpers::recreateSwapchain(capabilities));
+    CHECK_RESULT_RETURN(luna::helpers::recreateSwapchain(deviceObject, capabilities));
     for (uint32_t i = 0; i < renderPassResizeInfoCount; i++)
     {
         const LunaRenderPassResizeInfo &renderPassResizeInfo = renderPassResizeInfos[i];
         const uint32_t width = renderPassResizeInfo.width == LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH
-                                       ? swapchain.extent.width
+                                       ? luna::swapchain.extent.width
                                        : renderPassResizeInfo.width;
         const uint32_t height = renderPassResizeInfo.height == LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT
-                                        ? swapchain.extent.height
+                                        ? luna::swapchain.extent.height
                                         : renderPassResizeInfo.height;
-        CHECK_RESULT_RETURN(
-                helpers::fromHandle<RenderPass>(renderPassResizeInfo.renderPass)->recreateFramebuffer(width, height));
+        CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::RenderPass>(renderPassResizeInfo.renderPass)
+                                    ->recreateFramebuffer(vkDevice,
+                                                          deviceObject.familyCount(),
+                                                          deviceObject.queueFamilyIndices(),
+                                                          deviceObject.allocator(),
+                                                          width,
+                                                          height));
     }
-    swapchain.safeToUse = true;
-    swapchain.safeToUse.notify_all();
+    luna::swapchain.safeToUse = true;
+    luna::swapchain.safeToUse.notify_all();
 
     if (newSwapchainExtent != nullptr)
     {
-        *newSwapchainExtent = swapchain.extent;
+        *newSwapchainExtent = luna::swapchain.extent;
     }
 
     return VK_SUCCESS;
 }
 
-VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
+VkResult lunaBeginFrame(const LunaDevice device,
+                        const LunaCommandBuffer commandBuffer,
+                        const bool allowSuboptimalSwapchain)
 {
-    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    const VkDevice vkDevice = static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device));
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
-    CHECK_RESULT_RETURN(commandBuffer.waitForFence());
-    CHECK_RESULT_RETURN(commandBuffer.resetFence());
-    const VkResult acquireImageResult = vkAcquireNextImageKHR(luna::device,
+    CHECK_RESULT_RETURN(commandBufferObject.waitForFence(vkDevice));
+    CHECK_RESULT_RETURN(commandBufferObject.resetFence(vkDevice));
+    const VkResult acquireImageResult = vkAcquireNextImageKHR(vkDevice,
                                                               luna::swapchain.swapchain,
                                                               UINT64_MAX,
-                                                              commandBuffer.semaphore(),
+                                                              commandBufferObject.semaphore(),
                                                               VK_NULL_HANDLE,
                                                               &luna::swapchain.imageIndex);
     switch (acquireImageResult)
@@ -539,42 +590,46 @@ VkResult lunaBeginFrame(const bool allowSuboptimalSwapchain)
             return acquireImageResult;
     }
 
-    CHECK_RESULT_RETURN(commandBuffer.beginSingleUseCommandBuffer());
+    CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer());
 
     return VK_SUCCESS;
 }
 
-VkResult lunaEndFrame()
+VkResult lunaEndFrame(const LunaDevice device)
 {
-    using namespace luna;
-    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
+    assert(device != LUNA_NULL_HANDLE);
+
+    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    luna::CommandBuffer &commandBuffer = deviceObject.commandPools().graphics->commandBuffer();
     assert(commandBuffer.isRecording());
 
-    const Semaphore &secondaryGraphicsSemaphore = device.commandPools().graphics->commandBuffer(1).semaphore();
+    const luna::Semaphore &secondaryGraphicsSemaphore =
+            deviceObject.commandPools().graphics->commandBuffer(1).semaphore();
     const std::array<VkSemaphore, 2> waitSemaphores = {commandBuffer.semaphore(), secondaryGraphicsSemaphore};
     const std::array<VkPipelineStageFlags, 2> waitStageMasks = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                                                 secondaryGraphicsSemaphore.stageMask()};
     const VkSubmitInfo queueSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = device.commandPools().graphics->commandBuffer(1).getAndSetIsSignaled(false) ? 2u : 1u,
+        .waitSemaphoreCount = deviceObject.commandPools().graphics->commandBuffer(1).getAndSetIsSignaled(false) ? 2u
+                                                                                                                : 1u,
         .pWaitSemaphores = waitSemaphores.data(),
         .pWaitDstStageMask = waitStageMasks.data(),
         .commandBufferCount = 1,
         .pCommandBuffers = &static_cast<const VkCommandBuffer &>(commandBuffer),
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &device.renderFinishedSemaphore(swapchain.imageIndex),
+        .pSignalSemaphores = &deviceObject.renderFinishedSemaphore(luna::swapchain.imageIndex),
     };
-    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(device.familyQueues().graphics, queueSubmitInfo));
+    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(deviceObject.familyQueues().graphics, queueSubmitInfo));
 
     const VkPresentInfoKHR presentInfo = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &device.renderFinishedSemaphore(swapchain.imageIndex),
+        .pWaitSemaphores = &deviceObject.renderFinishedSemaphore(luna::swapchain.imageIndex),
         .swapchainCount = 1,
-        .pSwapchains = &swapchain.swapchain,
-        .pImageIndices = &swapchain.imageIndex,
+        .pSwapchains = &luna::swapchain.swapchain,
+        .pImageIndices = &luna::swapchain.imageIndex,
     };
-    const VkResult presentationResult = vkQueuePresentKHR(device.familyQueues().presentation, &presentInfo);
+    const VkResult presentationResult = vkQueuePresentKHR(deviceObject.familyQueues().presentation, &presentInfo);
     switch (presentationResult)
     {
         case VK_SUCCESS:
@@ -585,6 +640,6 @@ VkResult lunaEndFrame()
             return presentationResult;
     }
 
-    swapchain.imageIndex = -1u;
+    luna::swapchain.imageIndex = -1u;
     return presentationResult;
 }

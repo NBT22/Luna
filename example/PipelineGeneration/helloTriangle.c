@@ -100,7 +100,7 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
         .dependencies = &dependency,
         .extent = extent,
     };
-    return lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
+    return lunaCreateRenderPass(TODO, &renderPassCreationInfo, renderPass);
 }
 
 static VkResult createGraphicsPipeline(const LunaRenderPassSubpass subpass, LunaGraphicsPipeline *pipeline)
@@ -171,7 +171,7 @@ int main(void)
         .surface = surface,
         .physicalDevicePreferenceDefinition = &physicalDevicePreferenceDefinition,
     };
-    CHECK_RESULT(lunaCreateDevice(&deviceCreationInfo));
+    CHECK_RESULT(lunaCreateDevice(&deviceCreationInfo, TODO));
 
     const VkExtent3D extent = {
         .width = 1080,
@@ -224,8 +224,8 @@ int main(void)
                                     1,
                                     0,
                                     0));
-        lunaEndRenderPass();
-        CHECK_RESULT(lunaEndFrame());
+        lunaEndRenderPass(TODO);
+        CHECK_RESULT(lunaEndFrame(TODO));
     }
     CHECK_RESULT(lunaDestroyInstance());
     return 0;

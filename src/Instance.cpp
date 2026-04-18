@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <list>
 #include <luna/lunaInstance.h>
 #include <luna/lunaTypes.h>
 #include <stdexcept>
@@ -138,12 +139,12 @@ static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
     return VK_SUCCESS;
 }
 
-static VkResult createSwapchainImages(const VkDevice logicalDevice)
+static VkResult createSwapchainImages(const VkDevice device)
 {
-    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice, swapchain.swapchain, &swapchain.imageCount, nullptr));
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(device, swapchain.swapchain, &swapchain.imageCount, nullptr));
 
     swapchain.images.resize(swapchain.imageCount);
-    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(logicalDevice,
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(device,
                                                 swapchain.swapchain,
                                                 &swapchain.imageCount,
                                                 swapchain.images.data()));
@@ -151,7 +152,7 @@ static VkResult createSwapchainImages(const VkDevice logicalDevice)
     swapchain.imageViews.resize(swapchain.imageCount);
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
-        CHECK_RESULT_RETURN(createImageView(logicalDevice,
+        CHECK_RESULT_RETURN(createImageView(device,
                                             swapchain.images.at(i),
                                             swapchain.format.format,
                                             VK_IMAGE_ASPECT_COLOR_BIT,
@@ -161,18 +162,19 @@ static VkResult createSwapchainImages(const VkDevice logicalDevice)
     return VK_SUCCESS;
 }
 
-static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
+static VkResult createSwapchain(Device &device, const LunaSwapchainCreationInfo &creationInfo)
 {
     assert(!luna::swapchain.safeToUse);
+
     swapchain.surface = creationInfo.surface;
 
     VkSurfaceCapabilitiesKHR capabilities;
-    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::device,
+    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(static_cast<VkPhysicalDevice>(device),
                                                                   luna::swapchain.surface,
                                                                   &capabilities));
     capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
 
-    CHECK_RESULT_RETURN(helpers::findSwapchainFormat(luna::device,
+    CHECK_RESULT_RETURN(helpers::findSwapchainFormat(static_cast<VkPhysicalDevice>(device),
                                                      luna::swapchain.surface,
                                                      creationInfo.formatCount,
                                                      creationInfo.formatPriorityList,
@@ -189,7 +191,7 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
     assert(capabilities.minImageExtent.height <= luna::swapchain.extent.height &&
            luna::swapchain.extent.height <= capabilities.maxImageExtent.height);
 
-    CHECK_RESULT_RETURN(helpers::getSwapchainPresentMode(luna::device,
+    CHECK_RESULT_RETURN(helpers::getSwapchainPresentMode(static_cast<VkPhysicalDevice>(device),
                                                          luna::swapchain.surface,
                                                          creationInfo.presentModeCount,
                                                          creationInfo.presentModePriorityList,
@@ -218,16 +220,19 @@ static VkResult createSwapchain(const LunaSwapchainCreationInfo &creationInfo)
         .clipped = static_cast<VkBool32>(swapchain.clipped),
         .oldSwapchain = swapchain.swapchain,
     };
-    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(luna::device, &createInfo, nullptr, &luna::swapchain.swapchain));
+    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(static_cast<VkDevice>(device),
+                                             &createInfo,
+                                             nullptr,
+                                             &luna::swapchain.swapchain));
 
-    CHECK_RESULT_RETURN(helpers::createSwapchainImages(luna::device));
+    CHECK_RESULT_RETURN(helpers::createSwapchainImages(static_cast<VkDevice>(device)));
     assert(capabilities.minImageCount <= luna::swapchain.imageCount &&
            luna::swapchain.imageCount <= capabilities.maxImageCount);
-    CHECK_RESULT_RETURN(luna::device.createSemaphores(luna::swapchain.imageCount));
+    CHECK_RESULT_RETURN(device.createSemaphores(luna::swapchain.imageCount));
 
-    CHECK_RESULT_RETURN(
-            luna::device.commandPools().graphics->commandBuffer().resizeArray(VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                              luna::swapchain.imageCount));
+    CHECK_RESULT_RETURN(device.commandPools().graphics->commandBuffer().resizeArray(static_cast<VkDevice>(device),
+                                                                                    VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                                                    luna::swapchain.imageCount));
 
     swapchain.imageIndex = -1u;
     swapchain.safeToUse = true;
@@ -242,18 +247,13 @@ Swapchain swapchain{};
 VkFormat depthImageFormat{};
 uint32_t apiVersion{};
 VkInstance instance{};
-Device device{};
+std::list<Device> devices{};
 
 #ifdef LUNA_SLANG_SHADERS
 slang::IGlobalSession *globalSlangSession{};
 std::list<SlangSession> slangSessions{};
 #endif
 } // namespace luna
-
-const LunaCommandPool *const LUNA_INTERNAL_GRAPHICS_COMMAND_POOL =
-        luna::helpers::toHandlePtr(luna::device.commandPools().graphics);
-const LunaCommandPool *const LUNA_INTERNAL_COMPUTE_COMMAND_POOL =
-        luna::helpers::toHandlePtr(luna::device.commandPools().compute);
 
 VkResult lunaInitializeVolk()
 {
@@ -310,46 +310,48 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
 }
 VkResult lunaDestroyInstance()
 {
-    using namespace luna;
-
-    if (static_cast<VkPhysicalDevice>(device) != VK_NULL_HANDLE && !device.isDestroyed())
+    for (luna::Device &device: luna::devices)
     {
-        BufferRegionIndex::waitForCleanupThread();
-        CHECK_RESULT_RETURN(vkDeviceWaitIdle(device));
-
-
-        for (uint32_t i = 0; i < swapchain.imageCount; i++)
+        if (static_cast<VkPhysicalDevice>(device) == VK_NULL_HANDLE || device.isDestroyed())
         {
-            vkDestroyImageView(device, swapchain.imageViews.at(i), nullptr);
+            continue;
         }
-        if (swapchain.swapchain != VK_NULL_HANDLE)
-        {
-            vkDestroySwapchainKHR(device, swapchain.swapchain, nullptr);
-        }
+        CHECK_RESULT_RETURN(vkDeviceWaitIdle(static_cast<VkDevice>(device)));
 
-        swapchain.images.clear();
-        swapchain.images.shrink_to_fit();
-        swapchain.imageViews.clear();
-        swapchain.imageViews.shrink_to_fit();
+
+        for (uint32_t i = 0; i < luna::swapchain.imageCount; i++)
+        {
+            vkDestroyImageView(static_cast<VkDevice>(device), luna::swapchain.imageViews.at(i), nullptr);
+        }
+        if (luna::swapchain.swapchain != VK_NULL_HANDLE)
+        {
+            vkDestroySwapchainKHR(static_cast<VkDevice>(device), luna::swapchain.swapchain, nullptr);
+        }
 
         device.destroy();
     }
 
-    if (instance != VK_NULL_HANDLE)
+    luna::devices.clear();
+
+    luna::swapchain.images.clear();
+    luna::swapchain.images.shrink_to_fit();
+    luna::swapchain.imageViews.clear();
+    luna::swapchain.imageViews.shrink_to_fit();
+
+    if (luna::instance != VK_NULL_HANDLE)
     {
-        if (swapchain.surface != VK_NULL_HANDLE)
+        if (luna::swapchain.surface != VK_NULL_HANDLE)
         {
-            vkDestroySurfaceKHR(instance, swapchain.surface, nullptr);
+            vkDestroySurfaceKHR(luna::instance, luna::swapchain.surface, nullptr);
         }
-        vkDestroyInstance(instance, nullptr);
+        vkDestroyInstance(luna::instance, nullptr);
     }
 
-    swapchain.surface = VK_NULL_HANDLE;
-    swapchain.swapchain = VK_NULL_HANDLE;
-    depthImageFormat = VK_FORMAT_UNDEFINED;
-    apiVersion = 0;
-    instance = VK_NULL_HANDLE;
-    device = Device();
+    luna::swapchain.surface = VK_NULL_HANDLE;
+    luna::swapchain.swapchain = VK_NULL_HANDLE;
+    luna::depthImageFormat = VK_FORMAT_UNDEFINED;
+    luna::apiVersion = 0;
+    luna::instance = VK_NULL_HANDLE;
 
     return VK_SUCCESS;
 }
@@ -365,10 +367,11 @@ bool lunaIsInstanceExtensionVersionAvailable(const char *extensionName, const ui
 {
     return luna::helpers::isInstanceExtensionAvailable(extensionName, extensionVersion);
 }
-VkResult lunaCreateSwapchain(const LunaSwapchainCreationInfo *creationInfo)
+VkResult lunaCreateSwapchain(const LunaDevice device, const LunaSwapchainCreationInfo *creationInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    return luna::helpers::createSwapchain(*creationInfo);
+    return luna::helpers::createSwapchain(*luna::helpers::fromHandle<luna::Device>(device), *creationInfo);
 }
 VkFormat lunaGetSwapchainFormat()
 {
@@ -378,20 +381,30 @@ VkExtent2D lunaGetSwapchainExtent()
 {
     return luna::swapchain.extent;
 }
-VkResult lunaGetSurfaceCapabilities(const VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities)
+VkResult lunaGetSurfaceCapabilities(const LunaDevice device,
+                                    const VkSurfaceKHR surface,
+                                    VkSurfaceCapabilitiesKHR *capabilities)
 {
     assert(capabilities);
-    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(luna::device, surface, capabilities));
+    CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+            static_cast<VkPhysicalDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+            surface,
+            capabilities));
     capabilities->maxImageCount = capabilities->maxImageCount == 0 ? UINT32_MAX : capabilities->maxImageCount;
     return VK_SUCCESS;
 }
-VkResult lunaSetDepthImageFormat(const uint32_t formatCount, const VkFormat *formatPriorityList)
+VkResult lunaSetDepthImageFormat(const LunaDevice device,
+                                 const uint32_t formatCount,
+                                 const VkFormat *formatPriorityList)
 {
     assert(formatPriorityList);
     VkFormatProperties properties;
     for (uint32_t i = 0; i < formatCount; i++)
     {
-        vkGetPhysicalDeviceFormatProperties(luna::device, formatPriorityList[i], &properties);
+        vkGetPhysicalDeviceFormatProperties(static_cast<
+                                                    VkPhysicalDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+                                            formatPriorityList[i],
+                                            &properties);
         if ((properties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) ==
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {

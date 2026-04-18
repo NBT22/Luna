@@ -10,25 +10,20 @@
 
 namespace luna
 {
-Semaphore::Semaphore(const VkSemaphoreCreateInfo &semaphoreCreateInfo)
+Semaphore::Semaphore(const VkDevice device, const VkSemaphoreCreateInfo &semaphoreCreateInfo)
 {
-    assert(!device.isDestroyed());
     CHECK_RESULT_THROW(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore_));
 }
 
-void Semaphore::destroy()
+void Semaphore::destroy(const VkDevice device)
 {
-    if (device.isDestroyed() || semaphore_ == VK_NULL_HANDLE)
-    {
-        return;
-    }
     vkDestroySemaphore(device, semaphore_, nullptr);
     semaphore_ = VK_NULL_HANDLE;
 }
 
-VkResult Semaphore::create()
+VkResult Semaphore::create(const VkDevice device)
 {
-    assert(!device.isDestroyed() && semaphore_ == VK_NULL_HANDLE);
+    assert(semaphore_ == VK_NULL_HANDLE);
 
     constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,

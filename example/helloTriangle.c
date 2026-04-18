@@ -159,7 +159,7 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
         .dependencies = &dependency,
         .extent = extent,
     };
-    return lunaCreateRenderPass(&renderPassCreationInfo, renderPass);
+    return lunaCreateRenderPass(TODO, &renderPassCreationInfo, renderPass);
 }
 
 static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphicsPipeline *pipeline)
@@ -173,7 +173,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .creationInfoUnion.spirv.size = sizeof(VERTEX_SHADER_SPIRV),
         .creationInfoUnion.spirv.spirv = VERTEX_SHADER_SPIRV,
     };
-    VkResult vertexShaderCreationResult = lunaCreateShaderModule(&vertexShaderCreationInfo, &vertexShaderModule);
+    VkResult vertexShaderCreationResult = lunaCreateShaderModule(TODO, &vertexShaderCreationInfo, &vertexShaderModule);
     if (vertexShaderCreationResult != VK_SUCCESS)
     {
         return vertexShaderCreationResult;
@@ -183,7 +183,9 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .creationInfoUnion.spirv.size = sizeof(FRAGMENT_SHADER_SPIRV),
         .creationInfoUnion.spirv.spirv = FRAGMENT_SHADER_SPIRV,
     };
-    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(&fragmentShaderCreationInfo, &fragmentShaderModule);
+    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(TODO,
+                                                                   &fragmentShaderCreationInfo,
+                                                                   &fragmentShaderModule);
     if (fragmentShaderCreationResult != VK_SUCCESS)
     {
         return fragmentShaderCreationResult;
@@ -278,7 +280,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .colorBlendState = &colorBlending,
         .subpass = subpass,
     };
-    return lunaCreateGraphicsPipeline(&pipelineCreationInfo, pipeline);
+    return lunaCreateGraphicsPipeline(TODO, &pipelineCreationInfo, pipeline);
 }
 
 int main(void)
@@ -380,7 +382,7 @@ int main(void)
         CHECK_RESULT(lunaBeginFrame(false));
         CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
         CHECK_RESULT(lunaDrawBuffer(vertexBuffer, &drawInfo));
-        lunaEndRenderPass();
+        lunaEndRenderPass(TODO);
         CHECK_RESULT(lunaEndFrame());
     }
     CHECK_RESULT(lunaDestroyInstance());

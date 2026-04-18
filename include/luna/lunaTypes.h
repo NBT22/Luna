@@ -43,9 +43,6 @@ LUNA_DEFINE_HANDLE(LunaSlangSession);
 static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
 static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
 
-extern const LunaCommandPool *const LUNA_INTERNAL_GRAPHICS_COMMAND_POOL;
-extern const LunaCommandPool *const LUNA_INTERNAL_COMPUTE_COMMAND_POOL;
-
 typedef VkFlags64 LunaFlags;
 
 typedef struct

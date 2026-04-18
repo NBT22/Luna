@@ -10,19 +10,20 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
-#include "CommandPool.hpp"
 #include "ComputePipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
-#include "Instance.hpp"
 #include "Luna.hpp"
 #include "ShaderModule.hpp"
 
 namespace luna
 {
-ComputePipeline::ComputePipeline(const LunaComputePipelineCreationInfo &creationInfo)
+ComputePipeline::ComputePipeline(const VkDevice device, const LunaComputePipelineCreationInfo &creationInfo)
 {
-    CHECK_RESULT_THROW(helpers::createPipelineLayout(creationInfo.layoutCreationInfo, pushConstantsRanges_, &layout_));
+    CHECK_RESULT_THROW(helpers::createPipelineLayout(device,
+                                                     creationInfo.layoutCreationInfo,
+                                                     pushConstantsRanges_,
+                                                     &layout_));
 
     const VkPipelineShaderStageCreateInfo shaderStageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -44,7 +45,7 @@ ComputePipeline::ComputePipeline(const LunaComputePipelineCreationInfo &creation
     vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline_);
 }
 
-ComputePipeline::~ComputePipeline()
+void ComputePipeline::destroy(const VkDevice device)
 {
     vkDestroyPipeline(device, pipeline_, nullptr);
     vkDestroyPipelineLayout(device, layout_, nullptr);
@@ -79,14 +80,20 @@ VkResult ComputePipeline::bind(const VkCommandBuffer commandBuffer,
 }
 } // namespace luna
 
-VkResult lunaCreateComputePipeline(const LunaComputePipelineCreationInfo *creationInfo, LunaComputePipeline *pipeline)
+VkResult lunaCreateComputePipeline(const LunaDevice device,
+                                   const LunaComputePipelineCreationInfo *creationInfo,
+                                   LunaComputePipeline *pipeline)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.createComputePipeline(*creationInfo, pipeline));
+    luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    CHECK_RESULT_RETURN(deviceObject.createComputePipeline(static_cast<VkDevice>(deviceObject),
+                                                           *creationInfo,
+                                                           pipeline));
     return VK_SUCCESS;
 }
 
-VkResult lunaDispatch(const LunaDispatchInfo *info)
+VkResult lunaDispatch(const LunaDevice device, const LunaCommandBuffer commandBuffer, const LunaDispatchInfo *info)
 {
     assert(info);
     const LunaDispatchBaseInfo baseInfo = {
@@ -98,19 +105,25 @@ VkResult lunaDispatch(const LunaDispatchInfo *info)
         .endCommandBuffer = info->endCommandBuffer,
         .submitQueue = info->submitQueue,
     };
-    return lunaDispatchBase(&baseInfo);
+    return lunaDispatchBase(device, commandBuffer, &baseInfo);
 }
-VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info)
+VkResult lunaDispatchBase(const LunaDevice device,
+                          const LunaCommandBuffer commandBuffer,
+                          const LunaDispatchBaseInfo *info)
 {
-    assert(info);
-    assert(info->pipeline != LUNA_NULL_HANDLE);
-    luna::CommandBuffer &commandBuffer = luna::device.commandPools().compute->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(info && info->pipeline != LUNA_NULL_HANDLE);
+
+    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject), true));
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::ComputePipeline>(info->pipeline)
-                                ->bind(commandBuffer,
+                                ->bind(commandBufferObject,
                                        info->descriptorSetBindInfo == nullptr ? LunaDescriptorSetBindInfo{}
                                                                               : *info->descriptorSetBindInfo));
-    vkCmdDispatchBase(commandBuffer,
+    vkCmdDispatchBase(commandBufferObject,
                       info->baseGroupX,
                       info->baseGroupY,
                       info->baseGroupZ,
@@ -121,11 +134,11 @@ VkResult lunaDispatchBase(const LunaDispatchBaseInfo *info)
     {
         // TODO (0.3.0): If possible, optionally allow the source stage mask
         //  (if not possible to be optional, just use top of pipe)
-        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().compute,
-                                                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT));
+        CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(deviceObject.familyQueues().compute,
+                                                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT));
     } else if (info->endCommandBuffer)
     {
-        CHECK_RESULT_RETURN(commandBuffer.end());
+        CHECK_RESULT_RETURN(commandBufferObject.end());
     }
     return VK_SUCCESS;
 }

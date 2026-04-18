@@ -11,11 +11,9 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
-#include "CommandPool.hpp"
 #include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
-#include "Instance.hpp"
 #include "Luna.hpp"
 #include "RenderPass.hpp"
 #include "ShaderModule.hpp"
@@ -458,14 +456,32 @@ static inline bool parameterIsInput(slang::VariableLayoutReflection *variableLay
 
 namespace luna
 {
-// TODO (0.3.0): Base pipeline & SPIRV reflection
-GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo)
+VkResult GraphicsPipeline::bind(const LunaDevice device,
+                                const LunaCommandBuffer commandBuffer,
+                                const LunaGraphicsPipeline pipeline,
+                                const LunaGraphicsPipelineBindInfo *bindInfo)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->bind(
+            static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+            bindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *bindInfo));
+    assert(luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer)->isRecording()); // Internal state check
+    return VK_SUCCESS;
+}
+
+// TODO (0.3.0): Base pipeline
+GraphicsPipeline::GraphicsPipeline(const VkDevice device, const LunaGraphicsPipelineCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
     assert(!(creationInfo.shaderStageCount > 0 && // NOLINT(*-simplify-boolean-expr) In order to preserve clarity
              creationInfo.shaderStages == nullptr));
 
-    CHECK_RESULT_THROW(helpers::createPipelineLayout(creationInfo.layoutCreationInfo, pushConstantsRanges_, &layout_));
+    CHECK_RESULT_THROW(helpers::createPipelineLayout(device,
+                                                     creationInfo.layoutCreationInfo,
+                                                     pushConstantsRanges_,
+                                                     &layout_));
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
     shaderStages.reserve(creationInfo.shaderStageCount);
@@ -506,7 +522,8 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creat
 
     isDestroyed_ = false;
 }
-GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCreationInfo &creationInfo)
+GraphicsPipeline::GraphicsPipeline(const VkDevice device,
+                                   const LunaGraphicsPipelineUsingReflectionCreationInfo &creationInfo)
 {
 #ifdef LUNA_SLANG_SHADERS
     // TODO (0.3.0): Support for using a binding name to refer to a descriptor set in the shader
@@ -796,11 +813,12 @@ GraphicsPipeline::GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCrea
     };
     CHECK_RESULT_THROW(vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline_));
 #else
+    (void)device;
     (void)creationInfo;
     throw std::runtime_error("Unable to create shader using reflection without source shader!");
 #endif
 }
-void GraphicsPipeline::destroy()
+void GraphicsPipeline::destroy(const VkDevice device)
 {
     if (isDestroyed_)
     {
@@ -813,11 +831,10 @@ void GraphicsPipeline::destroy()
     pushConstantsRanges_.shrink_to_fit();
     isDestroyed_ = true;
 }
-VkResult GraphicsPipeline::pushConstants() const
+VkResult GraphicsPipeline::pushConstants(const VkDevice device, CommandBuffer &commandBuffer) const
 {
     const std::vector<LunaPushConstantsRange> &pushConstantsRanges = pushConstantsRanges_;
-    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording());
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
     uint32_t offset = 0;
     for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
     {
@@ -833,10 +850,11 @@ VkResult GraphicsPipeline::pushConstants() const
     }
     return VK_SUCCESS;
 }
-VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) const
+VkResult GraphicsPipeline::bind(const VkDevice device,
+                                CommandBuffer &commandBuffer,
+                                const LunaGraphicsPipelineBindInfo &bindInfo) const
 {
-    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording());
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
     for (uint32_t i = 0; i < bindInfo.dynamicStateCount; i++)
     {
         const LunaDynamicStateBindInfo &dynamicState = bindInfo.dynamicStates[i];
@@ -881,17 +899,22 @@ VkResult GraphicsPipeline::bind(const LunaGraphicsPipelineBindInfo &bindInfo) co
 }
 } // namespace luna
 
-VkResult lunaCreateGraphicsPipeline(const LunaGraphicsPipelineCreationInfo *creationInfo,
+VkResult lunaCreateGraphicsPipeline(const LunaDevice device,
+                                    const LunaGraphicsPipelineCreationInfo *creationInfo,
                                     LunaGraphicsPipeline *pipeline)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.createGraphicsPipeline(*creationInfo, pipeline));
+
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createGraphicsPipeline(*creationInfo,
+                                                                                                pipeline));
     return VK_SUCCESS;
 }
 VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsingReflectionCreationInfo *creationInfo,
                                                    LunaGraphicsPipeline *pipeline)
 {
     assert(creationInfo);
+    (void)pipeline;
     // TRY_CATCH_RESULT(luna::device.graphicsPipelines.emplace_back(*creationInfo));
     // if (pipeline != nullptr)
     // {
@@ -900,8 +923,12 @@ VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsi
     return VK_ERROR_UNKNOWN;
 }
 
-void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescriptorSetBindInfo *bindInfo)
+void lunaBindDescriptorSets(const LunaCommandBuffer commandBuffer,
+                            const LunaGraphicsPipeline pipeline,
+                            const LunaDescriptorSetBindInfo *bindInfo)
 {
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
     std::vector<VkDescriptorSet> descriptorSets;
     descriptorSets.reserve(bindInfo->descriptorSetCount);
     for (uint32_t i = 0; i < bindInfo->descriptorSetCount; i++)
@@ -909,7 +936,7 @@ void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescr
         descriptorSets.emplace_back(
                 *luna::helpers::fromHandle<luna::DescriptorSetIndex>(bindInfo->descriptorSets[i])->set);
     }
-    vkCmdBindDescriptorSets(luna::device.commandPools().graphics->commandBuffer(),
+    vkCmdBindDescriptorSets(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
                             luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->layout(),
                             bindInfo->firstSet,
@@ -919,7 +946,14 @@ void lunaBindDescriptorSets(const LunaGraphicsPipeline pipeline, const LunaDescr
                             bindInfo->dynamicOffsets);
 }
 
-VkResult lunaPushConstants(const LunaGraphicsPipeline pipeline)
+VkResult lunaPushConstants(const LunaDevice device,
+                           const LunaCommandBuffer commandBuffer,
+                           const LunaGraphicsPipeline pipeline)
 {
-    return luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->pushConstants();
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    return luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->pushConstants(
+            static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer));
 }

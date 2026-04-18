@@ -9,12 +9,10 @@
 #include <cstdint>
 #include <list>
 #include <luna/lunaTypes.h>
-#include <map>
-#include <ranges>
 #include <thread>
-#include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
+#include "Device.hpp"
 #include "helpers/Handle.hpp"
 #include "Luna.hpp"
 
@@ -26,24 +24,28 @@ class BufferRegion
         friend class BufferRegionIndex;
 
     public: // BufferRegion public static members
-        static VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *outBuffer);
+        static VkResult createBufferRegion(Device &device,
+                                           const LunaBufferCreationInfo &creationInfo,
+                                           LunaBuffer *outBuffer);
 
     private: // BufferRegion private static members
         /**
          * Find space for a buffer region, creating a new @c Buffer if needed
+         * @param device
          * @param[in] creationInfo The creation information for the buffer region
          * @param[out] outBuffer The buffer to place the region in
          * @param[out] outOffset The offset into the buffer at which to place the region
          * @param[out] outIterator An iterator to the buffer region that the new buffer region should be placed before
          * @return @c VK_SUCCESS if space was found for the region, or a meaningful result code otherwise
          */
-        static VkResult findSpaceForBufferRegion(const LunaBufferCreationInfo &creationInfo,
+        static VkResult findSpaceForBufferRegion(Device &device,
+                                                 const LunaBufferCreationInfo &creationInfo,
                                                  Buffer *&outBuffer,
                                                  size_t &outOffset,
                                                  std::list<BufferRegion>::iterator &outIterator);
 
     public: // BufferRegion public members
-        BufferRegion(size_t size, uint8_t *data, size_t offset, Buffer *buffer, LunaBuffer *outBuffer);
+        BufferRegion(Device &device, size_t size, uint8_t *data, size_t offset, Buffer *buffer, LunaBuffer *outBuffer);
 
         [[nodiscard]] size_t size() const;
         [[nodiscard]] size_t offset() const;
@@ -56,26 +58,24 @@ class BufferRegion
 class BufferRegionIndex
 {
     public:
-        static void waitForCleanupThread();
-        /// Removes a buffer region index from the list. Calling this function with an invalid or null pointer will have no effect
-        static void destroy(BufferRegionIndex *&bufferRegionIndex);
-        [[nodiscard]] static VkResult resize(BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize);
-
-    private:
-        static inline std::thread cleanupThread_{}; // NOLINT(*-identifier-naming)
+        [[nodiscard]] static VkResult resize(Device &device,
+                                             BufferRegionIndex *&bufferRegionIndex,
+                                             VkDeviceSize newSize);
 
     public:
         BufferRegionIndex() = delete;
         BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion);
 
-        ~BufferRegionIndex();
+        void destroy(VkDevice device, const VmaAllocator &allocator);
 
-        [[nodiscard]] VkResult flushMemory() const;
-        [[nodiscard]] VkResult copyToBuffer(const uint8_t *data,
+        [[nodiscard]] VkResult flushMemory(const VmaAllocator &allocator) const;
+        [[nodiscard]] VkResult copyToBuffer(Device &device,
+                                            const uint8_t *data,
                                             size_t bytes,
                                             size_t offset = 0,
                                             VkPipelineStageFlags stageFlags = 0) const;
-        [[nodiscard]] VkResult createBufferView(const LunaBufferViewCreationInfo &creationInfo,
+        [[nodiscard]] VkResult createBufferView(VkDevice device,
+                                                const LunaBufferViewCreationInfo &creationInfo,
                                                 LunaBufferView *lunaView);
 
         [[nodiscard]] size_t offset() const;
@@ -100,18 +100,20 @@ class Buffer
 
     public:
         Buffer() = default;
-        explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo,
+        explicit Buffer(const VmaAllocator &allocator,
+                        const VkBufferCreateInfo &bufferCreateInfo,
                         const VmaAllocationCreateInfo &allocationCreateInfo);
-        explicit Buffer(const VkBufferCreateInfo &bufferCreateInfo,
+        explicit Buffer(const VmaAllocator &allocator,
+                        const VkBufferCreateInfo &bufferCreateInfo,
                         const VmaAllocationCreateInfo &allocationCreateInfo,
                         VkDeviceSize alignment);
-
-        ~Buffer();
 
         operator const VkBuffer &() const;
         operator const VkBuffer *() const;
 
         bool operator==(const Buffer &other) const;
+
+        void destroy(VkDevice device, const VmaAllocator &allocator);
 
     private: // Buffer private members
         std::atomic_bool destroyed_{true};
@@ -135,14 +137,9 @@ class Buffer
 
 namespace luna
 {
-inline void BufferRegionIndex::waitForCleanupThread()
-{
-    if (cleanupThread_.joinable())
-    {
-        cleanupThread_.join();
-    }
-}
-inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex, const VkDeviceSize newSize)
+inline VkResult BufferRegionIndex::resize(Device &device,
+                                          BufferRegionIndex *&bufferRegionIndex,
+                                          const VkDeviceSize newSize)
 {
     if (bufferRegionIndex->size() == newSize)
     {
@@ -157,9 +154,9 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
             .flags = bufferRegionIndex->buffer_->creationFlags_,
             .usage = bufferRegionIndex->buffer_->usageFlags_,
         };
-        CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
+        CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
 
-        destroy(bufferRegionIndex);
+        bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
         bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
     }
 
@@ -202,7 +199,7 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
             bufferRegionIndex->creationInfo(newCreationInfo);
             newCreationInfo.size = newSize;
 
-            CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(newCreationInfo, &lunaBuffer));
+            CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
 
             if (bufferRegion->data_ != nullptr)
             {
@@ -210,7 +207,7 @@ inline VkResult BufferRegionIndex::resize(BufferRegionIndex *&bufferRegionIndex,
                 assert(newBufferRegionData != nullptr); // Internal state check
                 std::copy_n(bufferRegion->data_, bufferRegion->size_, newBufferRegionData);
             }
-            destroy(bufferRegionIndex);
+            bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
             bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
         }
     } else

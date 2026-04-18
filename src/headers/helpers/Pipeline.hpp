@@ -15,7 +15,8 @@
 
 namespace luna::helpers
 {
-static inline VkResult createPipelineLayout(const LunaPipelineLayoutCreationInfo &layoutCreationInfo,
+static inline VkResult createPipelineLayout(const VkDevice device,
+                                            const LunaPipelineLayoutCreationInfo &layoutCreationInfo,
                                             std::vector<LunaPushConstantsRange> &pushConstantsRanges,
                                             VkPipelineLayout *layout)
 {

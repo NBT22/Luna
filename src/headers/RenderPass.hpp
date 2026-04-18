@@ -28,19 +28,39 @@ class RenderPass
         static bool isDestroyed(const RenderPass &renderPass);
 
         RenderPass() = default;
-        explicit RenderPass(const LunaRenderPassCreationInfo &creationInfo);
-        explicit RenderPass(const LunaRenderPassCreationInfo2 &creationInfo);
+        explicit RenderPass(VkDevice device,
+                            uint32_t queueFamilyIndexCount,
+                            const uint32_t *queueFamilyIndices,
+                            const VmaAllocator &allocator,
+                            const LunaRenderPassCreationInfo &creationInfo);
+        explicit RenderPass(VkDevice device,
+                            uint32_t queueFamilyIndexCount,
+                            const uint32_t *queueFamilyIndices,
+                            const VmaAllocator &allocator,
+                            const LunaRenderPassCreationInfo2 &creationInfo);
 
         operator const VkRenderPass &() const;
 
-        void destroy();
+        void destroy(VkDevice device, const VmaAllocator &allocator);
 
-        [[nodiscard]] VkResult createAttachmentImages(bool createDepthImage);
-        [[nodiscard]] VkResult createFramebuffers(bool createDepthAttachment,
+        [[nodiscard]] VkResult createAttachmentImages(VkDevice device,
+                                                      uint32_t queueFamilyIndexCount,
+                                                      const uint32_t *queueFamilyIndices,
+                                                      const VmaAllocator &allocator,
+                                                      bool createDepthImage);
+        [[nodiscard]] VkResult createFramebuffers(VkDevice device,
+                                                  bool createDepthAttachment,
                                                   uint32_t framebufferAttachmentCount,
                                                   const VkImageView *framebufferAttachments);
-        [[nodiscard]] VkResult recreateFramebuffer(uint32_t width, uint32_t height);
-        [[nodiscard]] VkResult begin(const LunaRenderPassBeginInfo &beginInfo) const;
+        [[nodiscard]] VkResult recreateFramebuffer(VkDevice device,
+                                                   uint32_t queueFamilyIndexCount,
+                                                   const uint32_t *queueFamilyIndices,
+                                                   const VmaAllocator &allocator,
+                                                   uint32_t width,
+                                                   uint32_t height);
+        [[nodiscard]] VkResult begin(VkDevice device,
+                                     CommandBuffer &commandBuffer,
+                                     const LunaRenderPassBeginInfo &beginInfo) const;
 
         [[nodiscard]] const RenderPassSubpassIndex &getUnnamedSubpass() const;
         [[nodiscard]] RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name);

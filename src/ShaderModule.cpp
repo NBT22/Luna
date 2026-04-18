@@ -20,7 +20,7 @@
 
 namespace luna
 {
-ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo)
+ShaderModule::ShaderModule(const VkDevice device, const LunaShaderModuleCreationInfo &creationInfo)
 {
     if (creationInfo.creationInfoType == LUNA_SHADER_MODULE_CREATION_INFO_TYPE_SPIRV)
     {
@@ -153,12 +153,9 @@ ShaderModule::ShaderModule(const LunaShaderModuleCreationInfo &creationInfo)
 #endif
 }
 
-ShaderModule::~ShaderModule()
+void ShaderModule::destroy(const VkDevice device)
 {
     vkDestroyShaderModule(device, module_, nullptr);
-}
-ShaderModule::operator const VkShaderModule &() const
-{
-    return module_;
+    module_ = VK_NULL_HANDLE;
 }
 } // namespace luna

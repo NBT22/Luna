@@ -10,7 +10,6 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
-#include "Buffer.hpp"
 #include "CommandPool.hpp"
 #include "ComputePipeline.hpp"
 #include "DescriptorSetLayout.hpp"
@@ -23,6 +22,9 @@
 
 namespace luna
 {
+class Buffer;
+class BufferRegion;
+
 template<typename T> struct FamilyValues
 {
         T graphics{};
@@ -36,8 +38,8 @@ class Device
         Device() = default;
         explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
 
-        operator const VkPhysicalDevice &() const;
-        operator const VkDevice &() const;
+        explicit operator const VkPhysicalDevice &() const;
+        explicit operator const VkDevice &() const;
 
         void destroy();
 
@@ -57,7 +59,8 @@ class Device
                                         LunaDescriptorSet *descriptorSets);
         VkResult createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
                                         LunaGraphicsPipeline *pipeline);
-        VkResult createComputePipeline(const LunaComputePipelineCreationInfo &creationInfo,
+        VkResult createComputePipeline(VkDevice device,
+                                       const LunaComputePipelineCreationInfo &creationInfo,
                                        LunaComputePipeline *pipeline);
         VkResult createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
                               const VmaAllocationCreateInfo &allocationCreateInfo,
@@ -68,7 +71,8 @@ class Device
                               Buffer *&outBuffer);
         VkResult createBufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, LunaBuffer *outBuffer);
         VkResult createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler);
-        VkResult createImage(const LunaImageCreationInfo &creationInfo,
+        VkResult createImage(CommandBuffer &commandBuffer,
+                             const LunaImageCreationInfo &creationInfo,
                              uint32_t depth,
                              uint32_t arrayLayers,
                              LunaImage *image);
@@ -90,7 +94,7 @@ class Device
         [[nodiscard]] const FamilyValues<uint32_t> &familyIndices() const noexcept;
         [[nodiscard]] FamilyValues<CommandPool *> &commandPools() noexcept;
         [[nodiscard]] const FamilyValues<CommandPool *> &commandPools() const noexcept;
-        [[nodiscard]] Semaphore &renderFinishedSemaphore(uint32_t imageIndex);
+        [[nodiscard]] const Semaphore &renderFinishedSemaphore(uint32_t imageIndex) const;
         [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const noexcept;
         [[nodiscard]] std::list<Buffer> &buffers() noexcept;
 

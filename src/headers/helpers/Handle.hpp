@@ -10,6 +10,7 @@
 
 namespace luna
 {
+class Device;
 class RenderPass;
 struct RenderPassSubpassIndex;
 class DescriptorSetLayout;
@@ -25,7 +26,8 @@ class SlangSession;
 
 LUNA_DEFINE_HANDLE(HandleType);
 
-template<typename T> concept HandleData = std::same_as<T, RenderPass> ||
+template<typename T> concept HandleData = std::same_as<T, Device> ||
+                                          std::same_as<T, RenderPass> ||
                                           std::same_as<T, RenderPassSubpassIndex> ||
                                           std::same_as<T, VkDescriptorPool> ||
                                           std::same_as<T, DescriptorSetLayout> ||

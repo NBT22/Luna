@@ -14,7 +14,7 @@
 namespace luna::helpers
 {
 // TODO: VkImageViewCreateInfo can be extended with structs in the core spec
-VkResult createImageView(VkDevice logicalDevice,
+VkResult createImageView(VkDevice device,
                          VkImage image,
                          VkFormat format,
                          VkImageAspectFlags aspectMask,
@@ -28,14 +28,20 @@ namespace luna
 class Image
 {
     public:
-        Image(const LunaImageCreationInfo &creationInfo, uint32_t depth, uint32_t arrayLayers);
-
-        ~Image();
+        Image(Device &device,
+              CommandBuffer &commandBuffer,
+              const LunaImageCreationInfo &creationInfo,
+              uint32_t depth,
+              uint32_t arrayLayers);
 
         constexpr bool operator==(const Image &other) const;
 
-        [[nodiscard]] VkResult write(const LunaImageWriteInfo &writeInfo) const;
-        void updateDescriptorBinding(VkDevice logicalDevice,
+        void destroy(VkDevice device, const VmaAllocator &allocator) const;
+
+        [[nodiscard]] VkResult write(Device &device,
+                                     CommandBuffer &commandBuffer,
+                                     const LunaImageWriteInfo &writeInfo) const;
+        void updateDescriptorBinding(VkDevice device,
                                      LunaDescriptorSet descriptorSet,
                                      const char *descriptorLayoutBindingName,
                                      uint32_t descriptorArrayElement) const;
@@ -72,7 +78,7 @@ class Image
 
 namespace luna::helpers
 {
-inline VkResult createImageView(const VkDevice logicalDevice,
+inline VkResult createImageView(const VkDevice device,
                                 const VkImage image,
                                 const VkFormat format,
                                 const VkImageAspectFlags aspectMask,
@@ -98,7 +104,7 @@ inline VkResult createImageView(const VkDevice logicalDevice,
         .components = componentMapping,
         .subresourceRange = subresourceRange,
     };
-    CHECK_RESULT_RETURN(vkCreateImageView(logicalDevice, &createInfo, nullptr, imageView));
+    CHECK_RESULT_RETURN(vkCreateImageView(device, &createInfo, nullptr, imageView));
     return VK_SUCCESS;
 }
 } // namespace luna::helpers
@@ -119,7 +125,13 @@ constexpr bool Image::operator==(const Image &other) const
            sampler_ == other.sampler_;
 }
 
-inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
+inline void Image::destroy(const VkDevice device, const VmaAllocator &allocator) const
+{
+    vkDestroyImageView(device, imageView_, nullptr);
+    vmaDestroyImage(allocator, image_, allocation_);
+}
+
+inline void Image::updateDescriptorBinding(const VkDevice device,
                                            const LunaDescriptorSet descriptorSet,
                                            const char *descriptorLayoutBindingName,
                                            const uint32_t descriptorArrayElement) const
@@ -143,7 +155,7 @@ inline void Image::updateDescriptorBinding(const VkDevice logicalDevice,
         .descriptorType = binding.type,
         .pImageInfo = &imageInfo,
     };
-    vkUpdateDescriptorSets(logicalDevice, 1, &writeDescriptor, 0, nullptr);
+    vkUpdateDescriptorSets(device, 1, &writeDescriptor, 0, nullptr);
 }
 
 inline VkImage Image::image() const

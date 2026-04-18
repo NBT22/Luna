@@ -6,18 +6,19 @@
 #include <cstddef>
 #include <cstdint>
 #include <luna/lunaCommandBuffer.h>
+#include <luna/lunaDevice.h>
 #include <luna/lunaTypes.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
 #include "CommandPool.hpp"
+#include "Device.hpp"
 #include "helpers/Handle.hpp"
-#include "Instance.hpp"
 #include "Luna.hpp"
 
 namespace luna
 {
-CommandPool::CommandPool(const LunaCommandPoolCreationInfo &creationInfo)
+CommandPool::CommandPool(const VkDevice device, const LunaCommandPoolCreationInfo &creationInfo)
 {
     const VkCommandPoolCreateInfo poolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -28,7 +29,7 @@ CommandPool::CommandPool(const LunaCommandPoolCreationInfo &creationInfo)
     isDestroyed_ = false;
 }
 
-void CommandPool::destroy()
+void CommandPool::destroy(const VkDevice device)
 {
     if (isDestroyed_)
     {
@@ -37,13 +38,15 @@ void CommandPool::destroy()
     commandBuffers_.clear();
     for (CommandBuffer &commandBuffer: commandBufferList_)
     {
-        commandBuffer.destroy();
+        commandBuffer.destroy(device);
     }
     vkDestroyCommandPool(device, commandPool_, nullptr);
     isDestroyed_ = true;
 }
 
-inline VkResult CommandPool::reset(const VkCommandPoolResetFlags flags, const uint64_t timeout) const
+inline VkResult CommandPool::reset(const VkDevice device,
+                                   const VkCommandPoolResetFlags flags,
+                                   const uint64_t timeout) const
 {
     assert(!isDestroyed_);
     for (const CommandBuffer &commandBuffer: commandBufferList_)
@@ -62,23 +65,39 @@ inline VkResult CommandPool::reset(const VkCommandPoolResetFlags flags, const ui
 }
 } // namespace luna
 
-VkResult lunaCreateCommandPool(const LunaCommandPoolCreationInfo *creationInfo, LunaCommandPool *commandPool)
+LunaCommandBuffer lunaGetInternalGraphicsCommandBuffer(const LunaDevice device)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    return luna::helpers::toHandle(
+            luna::helpers::fromHandle<luna::Device>(device)->commandPools().graphics->commandBuffer());
+}
+
+VkResult lunaCreateCommandPool(const LunaDevice device,
+                               const LunaCommandPoolCreationInfo *creationInfo,
+                               LunaCommandPool *commandPool)
+{
+    assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.addApplicationCommandPool(*creationInfo, commandPool));
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->addApplicationCommandPool(*creationInfo,
+                                                                                                   commandPool));
     return VK_SUCCESS;
 }
 
-VkResult lunaResetCommandPool(const LunaCommandPool commandPool, const VkCommandPoolResetFlags flags)
+VkResult lunaResetCommandPool(const LunaDevice device,
+                              const LunaCommandPool commandPool,
+                              const VkCommandPoolResetFlags flags)
 {
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::CommandPool>(commandPool)->reset(flags));
+    CHECK_RESULT_RETURN(
+            luna::helpers::fromHandle<luna::CommandPool>(commandPool)->reset(lunaGetVkDevice(device), flags));
     return VK_SUCCESS;
 }
 
-VkResult lunaResetCommandPoolWithTimeout(const LunaCommandPool commandPool,
+VkResult lunaResetCommandPoolWithTimeout(const LunaDevice device,
+                                         const LunaCommandPool commandPool,
                                          const VkCommandPoolResetFlags flags,
                                          const size_t timeout)
 {
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::CommandPool>(commandPool)->reset(flags, timeout));
+    CHECK_RESULT_RETURN(
+            luna::helpers::fromHandle<luna::CommandPool>(commandPool)->reset(lunaGetVkDevice(device), flags, timeout));
     return VK_SUCCESS;
 }

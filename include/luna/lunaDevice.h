@@ -13,19 +13,19 @@ extern "C"
 #include <luna/lunaTypes.h>
 #include <vulkan/vulkan_core.h>
 
-VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo);
-VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo);
+VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo, LunaDevice *device);
+VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo, LunaDevice *device);
 
-VkDevice lunaGetDevice(void);
-VkPhysicalDevice lunaGetPhysicalDevice(void);
+VkDevice lunaGetVkDevice(LunaDevice device);
+VkPhysicalDevice lunaGetPhysicalDevice(LunaDevice device);
 
-VkResult lunaDeviceWaitIdle(void);
+VkResult lunaDeviceWaitIdle(LunaDevice device);
 
-void lunaGetPhysicalDeviceProperties(VkPhysicalDeviceProperties *properties);
-void lunaGetPhysicalDeviceProperties2(VkPhysicalDeviceProperties2 *properties);
+void lunaGetPhysicalDeviceProperties(LunaDevice device, VkPhysicalDeviceProperties *properties);
+void lunaGetPhysicalDeviceProperties2(LunaDevice device, VkPhysicalDeviceProperties2 *properties);
 
 // TODO (0.3.0): Remove this and replace with more flexible solution
-VkResult lunaSubmitInternalComputeQueue(LunaCommandBuffer commandBuffer);
+VkResult lunaSubmitInternalComputeQueue(LunaDevice device, LunaCommandBuffer commandBuffer);
 
 void lunaGetQueue(const LunaQueueProperties *requiredProperties, VkQueue queue);
 

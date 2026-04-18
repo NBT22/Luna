@@ -12,13 +12,13 @@ class Fence
 {
     public:
         Fence() = default;
-        explicit Fence(const VkFenceCreateInfo &fenceCreateInfo);
+        explicit Fence(VkDevice device, const VkFenceCreateInfo &fenceCreateInfo);
 
         operator const VkFence &() const;
         const VkFence *operator&() const;
         VkFence *operator&();
 
-        void destroy();
+        void destroy(VkDevice device);
 
         void setWillBeSignaled(bool value);
 

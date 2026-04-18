@@ -6,7 +6,6 @@
 #include <bit>
 #include <cassert>
 #include <cstdint>
-#include <list>
 #include <luna/lunaImage.h>
 #include <luna/lunaTypes.h>
 #include <vector>
@@ -14,7 +13,6 @@
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "CommandBuffer.hpp"
-#include "CommandPool.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"
@@ -130,7 +128,11 @@ static void blitImage(const VkCommandBuffer commandBuffer,
 
 namespace luna
 {
-Image::Image(const LunaImageCreationInfo &creationInfo, const uint32_t depth, const uint32_t arrayLayers)
+Image::Image(Device &device,
+             CommandBuffer &commandBuffer,
+             const LunaImageCreationInfo &creationInfo,
+             const uint32_t depth,
+             const uint32_t arrayLayers)
 {
     assert(creationInfo.sampler == LUNA_NULL_HANDLE || creationInfo.samplerCreationInfo == nullptr);
     if (creationInfo.sampler != LUNA_NULL_HANDLE)
@@ -139,7 +141,7 @@ Image::Image(const LunaImageCreationInfo &creationInfo, const uint32_t depth, co
     } else if (creationInfo.samplerCreationInfo != nullptr)
     {
         LunaSampler sampler = LUNA_NULL_HANDLE;
-        CHECK_RESULT_THROW(lunaCreateSampler(creationInfo.samplerCreationInfo, &sampler));
+        CHECK_RESULT_THROW(device.createSampler(*creationInfo.samplerCreationInfo, &sampler));
         sampler_ = *helpers::fromHandle<VkSampler>(sampler);
     }
     extent_.width = creationInfo.width;
@@ -191,8 +193,8 @@ Image::Image(const LunaImageCreationInfo &creationInfo, const uint32_t depth, co
             aspectMask_ = VK_IMAGE_ASPECT_COLOR_BIT;
         }
     }
-    CHECK_RESULT_THROW(write(creationInfo.writeInfo));
-    CHECK_RESULT_THROW(helpers::createImageView(device,
+    CHECK_RESULT_THROW(write(device, commandBuffer, creationInfo.writeInfo));
+    CHECK_RESULT_THROW(helpers::createImageView(static_cast<VkDevice>(device),
                                                 image_,
                                                 creationInfo.format,
                                                 aspectMask_,
@@ -200,13 +202,7 @@ Image::Image(const LunaImageCreationInfo &creationInfo, const uint32_t depth, co
                                                 &imageView_));
 }
 
-Image::~Image()
-{
-    vkDestroyImageView(device, imageView_, nullptr);
-    vmaDestroyImage(device.allocator(), image_, allocation_);
-}
-
-VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
+VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaImageWriteInfo &writeInfo) const
 {
     const uint32_t mipmapLevels = writeInfo.mipmapLevels == 0 ? 1 : writeInfo.mipmapLevels;
     const VkImageSubresourceRange subresourceRange = {
@@ -214,9 +210,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         .levelCount = mipmapLevels,
         .layerCount = arrayLayers_,
     };
-
-    CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer(1);
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device), true));
 
     if (writeInfo.bytes == 0 || writeInfo.pixels == nullptr)
     {
@@ -231,8 +225,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
                                  layout_,
                                  image_,
                                  subresourceRange);
-        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics,
-                                                       writeInfo.destinationStageMask));
+        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(device.familyQueues().graphics, writeInfo.destinationStageMask));
         return VK_SUCCESS;
     }
     VkExtent3D extent = writeInfo.extent == nullptr ? extent_ : *writeInfo.extent;
@@ -241,8 +234,9 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
         extent.depth = 1;
     }
 
-    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device.stagingBuffer, writeInfo.bytes));
-    CHECK_RESULT_RETURN(device.stagingBuffer->copyToBuffer(static_cast<const uint8_t *>(writeInfo.pixels),
+    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device, device.stagingBuffer, writeInfo.bytes));
+    CHECK_RESULT_RETURN(device.stagingBuffer->copyToBuffer(device,
+                                                           static_cast<const uint8_t *>(writeInfo.pixels),
                                                            writeInfo.bytes));
     helpers::pipelineBarrier(commandBuffer,
                              writeInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
@@ -288,8 +282,7 @@ VkResult Image::write(const LunaImageWriteInfo &writeInfo) const
                                  subresourceRange);
     }
 
-    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics,
-                                                   writeInfo.destinationStageMask));
+    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(device.familyQueues().graphics, writeInfo.destinationStageMask));
     return VK_SUCCESS;
 }
 
@@ -390,51 +383,105 @@ void Image::generateMipmaps_(const CommandBuffer &commandBuffer,
 }
 } // namespace luna
 
-VkResult lunaCreateSampler(const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
+VkResult lunaCreateSampler(const LunaDevice device, const LunaSamplerCreationInfo *creationInfo, LunaSampler *sampler)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::device.createSampler(*creationInfo, sampler));
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createSampler(*creationInfo, sampler));
     return VK_SUCCESS;
 }
-void lunaDestroySampler(const LunaSampler sampler)
+void lunaDestroySampler(const LunaDevice device, const LunaSampler sampler)
 {
-    luna::device.destroySampler(sampler);
+    assert(device != LUNA_NULL_HANDLE);
+    luna::helpers::fromHandle<luna::Device>(device)->destroySampler(sampler);
 }
 
-VkResult lunaCreateImage(const LunaImageCreationInfo *creationInfo, LunaImage *image)
+VkResult lunaCreateImage(const LunaDevice device,
+                         const LunaCommandBuffer commandBuffer,
+                         const LunaImageCreationInfo *creationInfo,
+                         LunaImage *image)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    return luna::device.createImage(*creationInfo, 0, 1, image);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+            *creationInfo,
+            0,
+            1,
+            image));
+    return VK_SUCCESS;
 }
-VkResult lunaCreateImageArray(const LunaImageCreationInfo *creationInfo, const uint32_t arrayLayers, LunaImage *image)
+VkResult lunaCreateImageArray(const LunaDevice device,
+                              const LunaCommandBuffer commandBuffer,
+                              const LunaImageCreationInfo *creationInfo,
+                              const uint32_t arrayLayers,
+                              LunaImage *image)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(creationInfo && arrayLayers);
-    return luna::device.createImage(*creationInfo, 0, arrayLayers, image);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+            *creationInfo,
+            0,
+            arrayLayers,
+            image));
+    return VK_SUCCESS;
 }
-VkResult lunaCreateImage3D(const LunaImageCreationInfo *creationInfo, const uint32_t depth, LunaImage *image)
+VkResult lunaCreateImage3D(const LunaDevice device,
+                           const LunaCommandBuffer commandBuffer,
+                           const LunaImageCreationInfo *creationInfo,
+                           const uint32_t depth,
+                           LunaImage *image)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    return luna::device.createImage(*creationInfo, depth, 1, image);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+            *creationInfo,
+            depth,
+            1,
+            image));
+    return VK_SUCCESS;
 }
-VkResult lunaCreateImage3DArray(const LunaImageCreationInfo *creationInfo,
+VkResult lunaCreateImage3DArray(const LunaDevice device,
+                                const LunaCommandBuffer commandBuffer,
+                                const LunaImageCreationInfo *creationInfo,
                                 const uint32_t depth,
                                 const uint32_t arrayLayers,
                                 LunaImage *image)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(creationInfo && arrayLayers);
-    return luna::device.createImage(*creationInfo, depth, arrayLayers, image);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+            *creationInfo,
+            depth,
+            arrayLayers,
+            image));
+    return VK_SUCCESS;
 }
 
-VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeInfo)
+VkResult lunaUpdateImage(const LunaDevice device,
+                         const LunaCommandBuffer commandBuffer,
+                         const LunaImage image,
+                         const LunaImageWriteInfo *writeInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(image);
     assert(writeInfo);
 
     const luna::Image *imageObject = luna::helpers::fromHandle<luna::Image>(image);
-    CHECK_RESULT_RETURN(imageObject->write(*writeInfo));
+    CHECK_RESULT_RETURN(imageObject->write(*luna::helpers::fromHandle<luna::Device>(device),
+                                           *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+                                           *writeInfo));
     if (writeInfo->descriptorSet != LUNA_NULL_HANDLE)
     {
-        imageObject->updateDescriptorBinding(luna::device,
+        imageObject->updateDescriptorBinding(static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
                                              writeInfo->descriptorSet,
                                              writeInfo->descriptorLayoutBindingName,
                                              writeInfo->descriptorArrayElement);
@@ -442,13 +489,20 @@ VkResult lunaUpdateImage(const LunaImage image, const LunaImageWriteInfo *writeI
     return VK_SUCCESS;
 }
 
-VkResult lunaBlitImageToSwapchain(const LunaImage image, const VkImageBlit2 *blitRegion)
+VkResult lunaBlitImageToSwapchain(const LunaDevice device,
+                                  const LunaCommandBuffer commandBuffer,
+                                  const LunaImage image,
+                                  const VkImageBlit2 *blitRegion)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(image);
     assert(blitRegion);
 
-    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer();
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(*luna::helpers::fromHandle<
+                                                                                    luna::Device>(device)),
+                                                              true));
 
     constexpr VkImageSubresourceRange subresourceRange = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -458,7 +512,7 @@ VkResult lunaBlitImageToSwapchain(const LunaImage image, const VkImageBlit2 *bli
 
     const VkImage swapchainImage = luna::swapchain.images.at(luna::swapchain.imageIndex);
 
-    luna::helpers::pipelineBarrier(commandBuffer,
+    luna::helpers::pipelineBarrier(commandBufferObject,
                                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                    VK_ACCESS_2_NONE,
                                    VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -467,7 +521,7 @@ VkResult lunaBlitImageToSwapchain(const LunaImage image, const VkImageBlit2 *bli
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                    swapchainImage,
                                    subresourceRange);
-    luna::helpers::blitImage(commandBuffer,
+    luna::helpers::blitImage(commandBufferObject,
                              luna::helpers::fromHandle<luna::Image>(image)->image(),
                              VK_IMAGE_LAYOUT_GENERAL,
                              swapchainImage,
@@ -475,7 +529,7 @@ VkResult lunaBlitImageToSwapchain(const LunaImage image, const VkImageBlit2 *bli
                              1,
                              blitRegion,
                              VK_FILTER_NEAREST);
-    luna::helpers::pipelineBarrier(commandBuffer,
+    luna::helpers::pipelineBarrier(commandBufferObject,
                                    VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                                    VK_ACCESS_2_TRANSFER_WRITE_BIT,
                                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -488,15 +542,20 @@ VkResult lunaBlitImageToSwapchain(const LunaImage image, const VkImageBlit2 *bli
     return VK_SUCCESS;
 }
 
-VkResult lunaCopyImageToBuffer(const LunaImage image,
+VkResult lunaCopyImageToBuffer(const LunaDevice device,
+                               const LunaCommandBuffer commandBuffer,
+                               const LunaImage image,
                                const LunaBuffer buffer,
                                const uint32_t regionCount,
                                const VkBufferImageCopy *regions)
 {
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(image != LUNA_NULL_HANDLE && buffer != LUNA_NULL_HANDLE);
 
-    luna::CommandBuffer &commandBuffer = luna::device.commandPools().graphics->commandBuffer(1);
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(true));
+    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject), true));
     const luna::Image &imageObject = *luna::helpers::fromHandle<luna::Image>(image);
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
 
@@ -513,17 +572,18 @@ VkResult lunaCopyImageToBuffer(const LunaImage image,
                                    region.imageExtent);
     }
 
-    vkCmdCopyImageToBuffer(commandBuffer,
+    vkCmdCopyImageToBuffer(commandBufferObject,
                            imageObject.image(),
                            imageObject.layout(),
                            bufferRegionIndex.buffer(),
                            regionCount,
                            regions);
-    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(luna::device.familyQueues().graphics));
+    CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(deviceObject.familyQueues().graphics));
     return VK_SUCCESS;
 }
 
-void lunaDestroyImage(const LunaImage image)
+void lunaDestroyImage(const LunaDevice device, const LunaImage image)
 {
-    luna::device.destroyImage(image);
+    assert(device != LUNA_NULL_HANDLE);
+    luna::helpers::fromHandle<luna::Device>(device)->destroyImage(image);
 }

@@ -23,14 +23,18 @@ class CommandBuffer
             ARRAY,
         };
 
-        CommandBuffer(VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
-        CommandBuffer(VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel, uint32_t arraySize);
+        CommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
+        CommandBuffer(VkDevice device,
+                      VkCommandPool commandPool,
+                      VkCommandBufferLevel commandBufferLevel,
+                      uint32_t arraySize);
 
         operator const VkCommandBuffer &() const;
 
-        void destroy();
+        void destroy(VkDevice device);
 
-        VkResult resizeArray(VkCommandBufferLevel commandBufferLevel,
+        VkResult resizeArray(VkDevice device,
+                             VkCommandBufferLevel commandBufferLevel,
                              uint32_t arraySize,
                              uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
@@ -43,11 +47,11 @@ class CommandBuffer
                               const VkSubmitInfo &submitInfo,
                               VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
-        [[nodiscard]] VkResult waitForAllFences(uint64_t timeout = UINT64_MAX) const;
-        [[nodiscard]] VkResult waitForFence(uint64_t timeout = UINT64_MAX) const;
-        VkResult resetFence();
-        VkResult recreateSemaphores();
-        VkResult ensureIsRecording(bool shouldResetFence = false);
+        [[nodiscard]] VkResult waitForAllFences(VkDevice device, uint64_t timeout = UINT64_MAX) const;
+        [[nodiscard]] VkResult waitForFence(VkDevice device, uint64_t timeout = UINT64_MAX) const;
+        VkResult resetFence(VkDevice device);
+        VkResult recreateSemaphores(VkDevice device);
+        VkResult ensureIsRecording(VkDevice device, bool shouldResetFence = false);
 
         [[nodiscard]] bool isRecording() const;
         [[nodiscard]] const Semaphore &semaphore() const;
@@ -137,7 +141,7 @@ inline VkResult CommandBuffer::endAndSubmit(const VkQueue queue, VkPipelineStage
         .pWaitSemaphores = &semaphore(),
         .pWaitDstStageMask = &stageMask,
         .commandBufferCount = 1,
-        .pCommandBuffers = &commandBuffer(),
+        .pCommandBuffers = &static_cast<const VkCommandBuffer &>(*this),
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = &semaphore(),
     };

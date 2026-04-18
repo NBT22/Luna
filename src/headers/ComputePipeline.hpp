@@ -13,12 +13,10 @@ namespace luna
 class ComputePipeline
 {
     public:
-        // static bool isDestroyed(const ComputePipeline &computePipeline);
-
         ComputePipeline() = default;
-        explicit ComputePipeline(const LunaComputePipelineCreationInfo &creationInfo);
+        explicit ComputePipeline(VkDevice device, const LunaComputePipelineCreationInfo &creationInfo);
 
-        ~ComputePipeline();
+        void destroy(VkDevice device);
 
         [[nodiscard]] VkResult bind(VkCommandBuffer commandBuffer,
                                     const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const;

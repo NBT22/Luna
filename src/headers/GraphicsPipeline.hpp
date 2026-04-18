@@ -15,15 +15,21 @@ class GraphicsPipeline
 {
     public:
         static bool isDestroyed(const GraphicsPipeline &graphicsPipeline);
+        [[nodiscard]] static VkResult bind(LunaDevice device,
+                                           LunaCommandBuffer commandBuffer,
+                                           LunaGraphicsPipeline pipeline,
+                                           const LunaGraphicsPipelineBindInfo *bindInfo);
 
         GraphicsPipeline() = default;
-        explicit GraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo);
-        explicit GraphicsPipeline(const LunaGraphicsPipelineUsingReflectionCreationInfo &creationInfo);
+        explicit GraphicsPipeline(VkDevice device, const LunaGraphicsPipelineCreationInfo &creationInfo);
+        explicit GraphicsPipeline(VkDevice device, const LunaGraphicsPipelineUsingReflectionCreationInfo &creationInfo);
 
-        void destroy();
+        void destroy(VkDevice device);
 
-        [[nodiscard]] VkResult pushConstants() const;
-        [[nodiscard]] VkResult bind(const LunaGraphicsPipelineBindInfo &bindInfo) const;
+        [[nodiscard]] VkResult pushConstants(VkDevice device, CommandBuffer &commandBuffer) const;
+        [[nodiscard]] VkResult bind(VkDevice device,
+                                    CommandBuffer &commandBuffer,
+                                    const LunaGraphicsPipelineBindInfo &bindInfo) const;
 
         [[nodiscard]] VkPipelineLayout layout() const;
 
