@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <list>
 #include <luna/lunaBuffer.h>
+#include <luna/lunaCommandBuffer.h>
 #include <luna/lunaDrawing.h>
 #include <luna/lunaTypes.h>
 #include <vector>
@@ -337,7 +338,7 @@ VkResult BufferRegionIndex::copyToBuffer(Device &device,
     } else
     {
         assert(this != device.stagingBuffer);
-        CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device), true));
+        CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device)));
         CHECK_RESULT_RETURN(resize(device, device.stagingBuffer, bytes));
         assert(device.stagingBuffer->data() != nullptr);
         // ReSharper disable once CppDFANullDereference
@@ -476,7 +477,7 @@ VkResult lunaFillBuffer(const LunaDevice device,
 
     const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject), true));
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject)));
 
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
     vkCmdFillBuffer(commandBufferObject,
@@ -484,7 +485,9 @@ VkResult lunaFillBuffer(const LunaDevice device,
                     bufferRegionIndex.offset(),
                     bufferRegionIndex.size(),
                     data);
-    CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(deviceObject), submissionQueue, stageFlags));
+    CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(deviceObject),
+                                                         submissionQueue,
+                                                         stageFlags));
     return VK_SUCCESS;
 }
 

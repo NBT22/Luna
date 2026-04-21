@@ -15,6 +15,7 @@
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
+#include "CommandBuffer.hpp"
 #include "CommandPool.hpp"
 #include "DescriptorSetLayout.hpp"
 #include "Device.hpp"
@@ -553,18 +554,15 @@ uint32_t Device::findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredP
             .height = std::max(requiredProperties.queueFamilyProperties.minImageTransferGranularity.height, 1u),
             .depth = std::max(requiredProperties.queueFamilyProperties.minImageTransferGranularity.depth, 1u),
         };
-        if (minImageTransferGranularity.width <
-            properties.queueFamilyProperties.minImageTransferGranularity.width)
+        if (minImageTransferGranularity.width < properties.queueFamilyProperties.minImageTransferGranularity.width)
         {
             continue;
         }
-        if (minImageTransferGranularity.height <
-            properties.queueFamilyProperties.minImageTransferGranularity.height)
+        if (minImageTransferGranularity.height < properties.queueFamilyProperties.minImageTransferGranularity.height)
         {
             continue;
         }
-        if (minImageTransferGranularity.depth <
-            properties.queueFamilyProperties.minImageTransferGranularity.depth)
+        if (minImageTransferGranularity.depth < properties.queueFamilyProperties.minImageTransferGranularity.depth)
         {
             continue;
         }

@@ -52,7 +52,7 @@ VkResult lunaAllocateCommandBuffer(LunaDevice device,
                                    VkCommandBufferLevel level,
                                    LunaCommandBuffer *commandBuffer);
 
-VkResult lunaBeginSingleUseCommandBuffer(LunaCommandBuffer commandBuffer);
+VkResult lunaBeginSingleUseCommandBuffer(LunaDevice device, LunaCommandBuffer commandBuffer);
 
 VkResult lunaEndCommandBuffer(LunaCommandBuffer commandBuffer);
 

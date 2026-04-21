@@ -18,6 +18,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
+#include "CommandBuffer.hpp"
 #include "CommandPool.hpp"
 #include "DescriptorSetLayout.hpp"
 #include "GraphicsPipeline.hpp"
@@ -350,8 +351,7 @@ VkResult lunaPipelineBarrier(const LunaDevice device,
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(*luna::helpers::fromHandle<
-                                                                                    luna::Device>(device)),
-                                                              true));
+                                                                                    luna::Device>(device))));
     luna::helpers::pipelineBarrier(commandBufferObject, *dependencyInfo);
     return VK_SUCCESS;
 }
@@ -574,7 +574,7 @@ VkResult lunaBeginFrame(const LunaDevice device,
             return acquireImageResult;
     }
 
-    CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer());
+    CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer(vkDevice));
 
     return VK_SUCCESS;
 }

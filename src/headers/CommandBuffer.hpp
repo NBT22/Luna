@@ -8,6 +8,7 @@
 #include <vulkan/vulkan_core.h>
 #include "Fence.hpp"
 #include "helpers/Handle.hpp"
+#include "Instance.hpp"
 #include "Semaphore.hpp"
 
 namespace luna
@@ -21,7 +22,7 @@ class CommandBuffer
 
         void destroy(VkDevice device);
 
-        VkResult beginSingleUseCommandBuffer();
+        VkResult beginSingleUseCommandBuffer(VkDevice device);
         VkResult end();
         VkResult submit(VkDevice device,
                         VkQueue queue,
@@ -37,7 +38,7 @@ class CommandBuffer
         bool getAndSetIsSignaled(bool value);
         VkResult waitForFence(VkDevice device, uint64_t timeout = UINT64_MAX) const;
         VkResult resetFence(VkDevice device);
-        VkResult ensureIsRecording(VkDevice device, bool shouldResetFence = false);
+        VkResult ensureIsRecording(VkDevice device);
 
         [[nodiscard]] bool isRecording() const;
 
@@ -94,9 +95,11 @@ inline void CommandBuffer::destroy(const VkDevice device)
     commandBuffer_ = VK_NULL_HANDLE;
 }
 
-inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
+inline VkResult CommandBuffer::beginSingleUseCommandBuffer(const VkDevice device)
 {
     assert(!isRecording_);
+    CHECK_RESULT_RETURN(waitForFence(device));
+    CHECK_RESULT_RETURN(resetFence(device));
     CHECK_RESULT_RETURN(vkResetCommandBuffer(commandBuffer_, 0));
 
     constexpr VkCommandBufferBeginInfo commandBufferBeginInfo = {
@@ -118,25 +121,74 @@ inline VkResult CommandBuffer::submit(const VkDevice device,
                                       const VkSubmitInfo &submitInfo,
                                       const VkPipelineStageFlags stageMask)
 {
+    std::vector<VkSemaphore> waitSemaphores{};
+    std::vector<uint32_t> stageMasks{};
+    if (submitInfo.waitSemaphoreCount > 0)
+    {
+        waitSemaphores.insert(waitSemaphores.end(),
+                              submitInfo.pWaitSemaphores,
+                              submitInfo.pWaitSemaphores + submitInfo.waitSemaphoreCount);
+        stageMasks.insert(stageMasks.end(),
+                          submitInfo.pWaitDstStageMask,
+                          submitInfo.pWaitDstStageMask + submitInfo.waitSemaphoreCount);
+        if (std::ranges::find(waitSemaphores, semaphore_) == waitSemaphores.end())
+        {
+            waitSemaphores.push_back(semaphore_);
+            stageMasks.emplace_back(stageMask);
+        }
+    } else
+    {
+        waitSemaphores.push_back(semaphore_);
+        stageMasks.emplace_back(stageMask);
+    }
+    std::vector<VkSemaphore> signalSemaphores{};
+    if (submitInfo.signalSemaphoreCount > 0)
+    {
+        signalSemaphores.insert(signalSemaphores.end(),
+                                submitInfo.pSignalSemaphores,
+                                submitInfo.pSignalSemaphores + submitInfo.signalSemaphoreCount);
+        if (std::ranges::find(signalSemaphores, semaphore_) == signalSemaphores.end())
+        {
+            signalSemaphores.push_back(semaphore_);
+        }
+    } else
+    {
+        signalSemaphores.push_back(semaphore_);
+    }
+
+    const VkSubmitInfo finalSubmitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = submitInfo.pNext,
+        .waitSemaphoreCount = !semaphore_.isSignaled() ? 0 : static_cast<uint32_t>(waitSemaphores.size()),
+        .pWaitSemaphores = waitSemaphores.data(),
+        .pWaitDstStageMask = stageMasks.data(),
+        .commandBufferCount = 1,
+        .pCommandBuffers = &commandBuffer_,
+        .signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
+        .pSignalSemaphores = signalSemaphores.data(),
+    };
+
     if (fence_.willBeSignaled())
     {
         CHECK_RESULT_RETURN(waitForFence(device));
         CHECK_RESULT_RETURN(resetFence(device));
     }
-    CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fence_));
+    CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &finalSubmitInfo, fence_));
     fence_.setWillBeSignaled(true);
-    if (submitInfo.signalSemaphoreCount > 0)
-    {
-        for (uint32_t i = 0; i < submitInfo.signalSemaphoreCount; i++)
-        {
-            if (submitInfo.pSignalSemaphores[i] == semaphore_)
-            {
-                semaphore_.setIsSignaled(true);
-                semaphore_.setStageMask(stageMask);
-                break;
-            }
-        }
-    }
+    semaphore_.setIsSignaled(true);
+    semaphore_.setStageMask(stageMask);
+    // if (submitInfo.signalSemaphoreCount > 0)
+    // {
+    //     for (uint32_t i = 0; i < submitInfo.signalSemaphoreCount; i++)
+    //     {
+    //         if (submitInfo.pSignalSemaphores[i] == semaphore_)
+    //         {
+    //             semaphore_.setIsSignaled(true);
+    //             semaphore_.setStageMask(stageMask);
+    //             break;
+    //         }
+    //     }
+    // }
     return VK_SUCCESS;
 }
 inline VkResult CommandBuffer::endAndSubmit(const VkDevice device, const VkQueue queue, VkPipelineStageFlags stageMask)
@@ -184,16 +236,11 @@ inline VkResult CommandBuffer::resetFence(const VkDevice device)
     fence_.setWillBeSignaled(false);
     return vkResetFences(device, 1, &fence_);
 }
-inline VkResult CommandBuffer::ensureIsRecording(const VkDevice device, const bool shouldResetFence)
+inline VkResult CommandBuffer::ensureIsRecording(const VkDevice device)
 {
     if (!isRecording())
     {
-        CHECK_RESULT_RETURN(waitForFence(device));
-        if (shouldResetFence)
-        {
-            CHECK_RESULT_RETURN(resetFence(device));
-        }
-        CHECK_RESULT_RETURN(beginSingleUseCommandBuffer());
+        CHECK_RESULT_RETURN(beginSingleUseCommandBuffer(device));
     }
     return VK_SUCCESS;
 }

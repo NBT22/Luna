@@ -14,6 +14,7 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
+#include "CommandBuffer.hpp"
 #include "Device.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"

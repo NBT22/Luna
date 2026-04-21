@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <luna/lunaCommandBuffer.h>
+#include <luna/lunaDevice.h>
 #include <luna/lunaTypes.h>
 #include <vulkan/vulkan_core.h>
 #include "CommandBuffer.hpp"
@@ -13,7 +14,6 @@
 #include "Fence.hpp"
 #include "helpers/Handle.hpp"
 #include "Luna.hpp"
-#include "luna/lunaDevice.h"
 
 VkResult lunaAllocateCommandBuffer(const LunaDevice device,
                                    const LunaCommandPool commandPool,
@@ -33,12 +33,17 @@ VkResult lunaAllocateCommandBuffer(const LunaDevice device,
     return VK_SUCCESS;
 }
 
-VkResult lunaBeginSingleUseCommandBuffer(const LunaCommandBuffer commandBuffer)
+VkResult lunaBeginSingleUseCommandBuffer(const LunaDevice device, const LunaCommandBuffer commandBuffer)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer());
+    if (!commandBufferObject.isRecording())
+    {
+        CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer(
+                static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device))));
+    }
     return VK_SUCCESS;
 }
 

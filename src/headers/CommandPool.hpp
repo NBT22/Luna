@@ -10,10 +10,10 @@
 #include <luna/lunaTypes.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
 
 namespace luna
 {
+class CommandBuffer;
 class CommandPool
 {
     public:
@@ -37,8 +37,8 @@ class CommandPool
     private:
         bool isDestroyed_{true};
         VkCommandPool commandPool_{};
-        std::vector<CommandBuffer *> commandBuffers_{};
-        std::list<CommandBuffer> commandBufferList_{};
+        std::vector<CommandBuffer *> commandBuffers_;
+        std::list<CommandBuffer> commandBufferList_;
 };
 } // namespace luna
 
@@ -60,15 +60,6 @@ inline CommandPool::operator const VkCommandPool &() const
 {
     assert(!isDestroyed_);
     return commandPool_;
-}
-
-inline VkResult CommandPool::allocateCommandBuffer(const VkDevice device, VkCommandBufferLevel commandBufferLevel)
-{
-    assert(!isDestroyed_);
-    TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
-                                                                                   commandPool_,
-                                                                                   commandBufferLevel)));
-    return VK_SUCCESS;
 }
 
 inline size_t CommandPool::commandBufferCount() const

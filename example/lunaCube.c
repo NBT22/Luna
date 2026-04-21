@@ -486,7 +486,7 @@ int main(void)
     CHECK_RESULT(lunaCreateCommandPool(device, &commandPoolCreationInfo, &commandPool));
     LunaCommandBuffer commandBuffer = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaAllocateCommandBuffer(device, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &commandBuffer));
-    CHECK_RESULT(lunaBeginSingleUseCommandBuffer(commandBuffer));
+    CHECK_RESULT(lunaBeginSingleUseCommandBuffer(device, commandBuffer));
 
     const VkExtent3D extent = {
         .width = WIDTH,
@@ -572,7 +572,7 @@ int main(void)
         .instanceCount = 1,
     };
 
-    const VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    const VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     const VkSwapchainKHR swapchain = lunaGetVkSwapchain();
     uint32_t imageIndex = lunaGetSwapchainImageIndex();
 

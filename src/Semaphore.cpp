@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <vulkan/vulkan_core.h>
+#include "CommandBuffer.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
 #include "Semaphore.hpp"

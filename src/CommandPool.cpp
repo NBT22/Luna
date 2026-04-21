@@ -43,6 +43,14 @@ void CommandPool::destroy(const VkDevice device)
     vkDestroyCommandPool(device, commandPool_, nullptr);
     isDestroyed_ = true;
 }
+VkResult CommandPool::allocateCommandBuffer(VkDevice device, VkCommandBufferLevel commandBufferLevel)
+{
+    assert(!isDestroyed_);
+    TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
+                                                                                   commandPool_,
+                                                                                   commandBufferLevel)));
+    return VK_SUCCESS;
+}
 
 inline VkResult CommandPool::reset(const VkDevice device,
                                    const VkCommandPoolResetFlags flags,

@@ -118,7 +118,7 @@ VkResult lunaDispatchBase(const LunaDevice device,
     const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
 
-    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject), true));
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject)));
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::ComputePipeline>(info->pipeline)
                                 ->bind(commandBufferObject,
                                        info->descriptorSetBindInfo == nullptr ? LunaDescriptorSetBindInfo{}

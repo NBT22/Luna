@@ -210,7 +210,7 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
         .levelCount = mipmapLevels,
         .layerCount = arrayLayers_,
     };
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device), true));
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device)));
 
     if (writeInfo.bytes == 0 || writeInfo.pixels == nullptr)
     {
@@ -512,8 +512,7 @@ VkResult lunaBlitImageToSwapchain(const LunaDevice device,
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(*luna::helpers::fromHandle<
-                                                                                    luna::Device>(device)),
-                                                              true));
+                                                                                    luna::Device>(device))));
 
     constexpr VkImageSubresourceRange subresourceRange = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -567,7 +566,7 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
 
     const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject), true));
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject)));
     const luna::Image &imageObject = *luna::helpers::fromHandle<luna::Image>(image);
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
 

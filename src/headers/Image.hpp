@@ -8,7 +8,6 @@
 #include <luna/lunaTypes.h>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
 #include "helpers/Handle.hpp"
 
 namespace luna::helpers
@@ -24,6 +23,8 @@ VkResult createImageView(VkDevice device,
 
 namespace luna
 {
+class CommandBuffer;
+
 // TODO: Support for 1D images
 class Image
 {
