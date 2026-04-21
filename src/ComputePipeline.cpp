@@ -103,6 +103,7 @@ VkResult lunaDispatch(const LunaDevice device, const LunaCommandBuffer commandBu
         .groupCountY = info->groupCountY,
         .groupCountZ = info->groupCountZ,
         .queue = info->queue,
+        .stageMask = info->stageMask,
     };
     return lunaDispatchBase(device, commandBuffer, &baseInfo);
 }
