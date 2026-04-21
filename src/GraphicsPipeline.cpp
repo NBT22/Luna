@@ -910,6 +910,7 @@ VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsi
                                                    LunaGraphicsPipeline *pipeline)
 {
     assert(creationInfo);
+    (void)creationInfo;
     (void)pipeline;
     // TRY_CATCH_RESULT(luna::device.graphicsPipelines.emplace_back(*creationInfo));
     // if (pipeline != nullptr)
