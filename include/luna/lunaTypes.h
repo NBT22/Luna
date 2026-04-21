@@ -458,7 +458,6 @@ typedef struct
         LunaDynamicStateBindInfoUnion bindInfo;
 } LunaDynamicStateBindInfo;
 
-// TODO (0.3.0): Is it possible to bind a given binding of a descriptor set, or does the whole thing need to be bound
 typedef struct
 {
         uint32_t firstSet;
@@ -500,13 +499,8 @@ typedef struct
         const LunaCommandBufferSubmitInfo *submitInfo;
 } LunaDispatchInfo;
 
-/// @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
-// TODO (0.3.0): Have a way for buffers to say if they will be used for compute or not
 typedef struct
 {
-        /// If both @c regionCount and @c size are not zero, then @c size must be greater than or equal to the sum of
-        ///  the region sizes. If @c size is greater than the sum of all region sizes, then the buffer will be
-        ///  allocated @c size bytes, with any bytes not assigned to a region being after the last region.
         VkDeviceSize size;
         VkBufferCreateFlags flags;
         VkBufferUsageFlags usage;
@@ -673,7 +667,8 @@ typedef struct
         VkAccessFlags2 sourceAccessMask;
         VkPipelineStageFlags2 destinationStageMask;
         VkAccessFlags2 destinationAccessMask;
-        bool synchronizeGraphicsToCompute; // TODO (0.3.0): Remove this and replace it with src and dst queue family index fields
+        uint32_t srcQueueFamilyIndex;
+        uint32_t dstQueueFamilyIndex;
         LunaBuffer buffer;
         VkDeviceSize offset;
         VkDeviceSize size;
@@ -687,6 +682,8 @@ typedef struct
         VkAccessFlags2 destinationAccessMask;
         VkImageLayout oldLayout;
         VkImageLayout newLayout;
+        uint32_t srcQueueFamilyIndex;
+        uint32_t dstQueueFamilyIndex;
         LunaImage image;
         VkImageSubresourceRange subresourceRange;
 } LunaImageMemoryBarrier;

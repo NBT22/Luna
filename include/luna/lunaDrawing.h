@@ -81,7 +81,6 @@ VkResult lunaDrawBufferIndexedIndirectCount(LunaDevice device,
                                             VkIndexType indexType,
                                             const LunaDrawIndexedIndirectCountInfo *drawInfo);
 
-// TODO: This should take a pipeline layout, but those don't exist yet
 void lunaBindDescriptorSets(LunaCommandBuffer commandBuffer,
                             LunaGraphicsPipeline pipeline,
                             const LunaDescriptorSetBindInfo *bindInfo);

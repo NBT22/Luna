@@ -125,8 +125,8 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                               nullptr,
                                               bufferMemoryBarrier.sourceAccessMask,
                                               bufferMemoryBarrier.destinationAccessMask,
-                                              VK_QUEUE_FAMILY_IGNORED,
-                                              VK_QUEUE_FAMILY_IGNORED,
+                                              bufferMemoryBarrier.srcQueueFamilyIndex,
+                                              bufferMemoryBarrier.dstQueueFamilyIndex,
                                               bufferRegionIndex.buffer(),
                                               bufferRegionIndex.offset() + bufferMemoryBarrier.offset,
                                               bufferMemoryBarrier.size == 0 ? bufferRegionIndex.size()
@@ -146,8 +146,8 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                              imageMemoryBarrier.destinationAccessMask,
                                              imageMemoryBarrier.oldLayout,
                                              imageMemoryBarrier.newLayout,
-                                             VK_QUEUE_FAMILY_IGNORED,
-                                             VK_QUEUE_FAMILY_IGNORED,
+                                             imageMemoryBarrier.srcQueueFamilyIndex,
+                                             imageMemoryBarrier.dstQueueFamilyIndex,
                                              luna::helpers::fromHandle<Image>(imageMemoryBarrier.image)->image(),
                                              imageMemoryBarrier.subresourceRange);
         }
@@ -202,8 +202,8 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                               bufferMemoryBarrier.sourceAccessMask,
                                               bufferMemoryBarrier.destinationStageMask,
                                               bufferMemoryBarrier.destinationAccessMask,
-                                              VK_QUEUE_FAMILY_IGNORED,
-                                              VK_QUEUE_FAMILY_IGNORED,
+                                              bufferMemoryBarrier.srcQueueFamilyIndex,
+                                              bufferMemoryBarrier.dstQueueFamilyIndex,
                                               bufferRegionIndex.buffer(),
                                               bufferRegionIndex.offset() + bufferMemoryBarrier.offset,
                                               bufferMemoryBarrier.size);
@@ -222,8 +222,8 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                              imageMemoryBarrier.destinationAccessMask,
                                              imageMemoryBarrier.oldLayout,
                                              imageMemoryBarrier.newLayout,
-                                             VK_QUEUE_FAMILY_IGNORED,
-                                             VK_QUEUE_FAMILY_IGNORED,
+                                             imageMemoryBarrier.srcQueueFamilyIndex,
+                                             imageMemoryBarrier.dstQueueFamilyIndex,
                                              luna::helpers::fromHandle<Image>(imageMemoryBarrier.image)->image(),
                                              imageMemoryBarrier.subresourceRange);
         }
