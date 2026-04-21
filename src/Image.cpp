@@ -237,11 +237,11 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
         extent.depth = 1;
     }
 
-    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device, device.stagingBuffer, writeInfo.bytes));
-    CHECK_RESULT_RETURN(device.stagingBuffer->copyToBuffer(device,
-                                                           commandBuffer,
-                                                           static_cast<const uint8_t *>(writeInfo.pixels),
-                                                           writeInfo.bytes));
+    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device, device.stagingBuffer(), writeInfo.bytes));
+    CHECK_RESULT_RETURN(device.stagingBuffer()->copyToBuffer(device,
+                                                             commandBuffer,
+                                                             static_cast<const uint8_t *>(writeInfo.pixels),
+                                                             writeInfo.bytes));
     helpers::pipelineBarrier(commandBuffer,
                              writeInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
                                                                                    : writeInfo.sourceStageMask,
@@ -258,13 +258,13 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
         .layerCount = arrayLayers_,
     };
     const VkBufferImageCopy bufferCopyInfo = {
-        .bufferOffset = device.stagingBuffer->offset(),
+        .bufferOffset = device.stagingBuffer()->offset(),
         .imageSubresource = writeInfo.subresourceLayers == nullptr ? subresourceLayers : *writeInfo.subresourceLayers,
         .imageOffset = writeInfo.offset == nullptr ? VkOffset3D{} : *writeInfo.offset,
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           device.stagingBuffer->buffer(),
+                           device.stagingBuffer()->buffer(),
                            image_,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,

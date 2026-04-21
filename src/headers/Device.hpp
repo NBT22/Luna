@@ -83,10 +83,7 @@ class Device
         [[nodiscard]] const LunaQueueFamilyProperties *queueFamilies() const noexcept;
         [[nodiscard]] VmaAllocator allocator() const noexcept;
         [[nodiscard]] std::list<Buffer> &buffers() noexcept;
-
-        // TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
-        //  that way it can shrink if it grows to an absurd size
-        BufferRegionIndex *stagingBuffer{};
+        [[nodiscard]] BufferRegionIndex *&stagingBuffer() noexcept;
 
     private:
         VkResult initQueueFamilies_(VkPhysicalDevice physicalDevice,
@@ -124,6 +121,9 @@ class Device
         std::list<BufferRegionIndex> bufferRegionIndices_{};
         std::list<VkSampler> samplers_{};
         std::list<Image> images_{};
+        // TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
+        //  that way it can shrink if it grows to an absurd size
+        BufferRegionIndex *stagingBuffer_{};
 };
 } // namespace luna
 
@@ -160,6 +160,10 @@ inline VmaAllocator Device::allocator() const noexcept
 inline std::list<Buffer> &Device::buffers() noexcept
 {
     return buffers_;
+}
+inline BufferRegionIndex *&Device::stagingBuffer() noexcept
+{
+    return stagingBuffer_;
 }
 
 inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice,

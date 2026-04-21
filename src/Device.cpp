@@ -215,7 +215,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     };
     LunaBuffer stagingBufferHandle = LUNA_NULL_HANDLE;
     CHECK_RESULT_THROW(BufferRegion::createBufferRegion(*this, bufferCreationInfo, &stagingBufferHandle));
-    stagingBuffer = helpers::fromHandle<BufferRegionIndex>(stagingBufferHandle);
+    stagingBuffer_ = helpers::fromHandle<BufferRegionIndex>(stagingBufferHandle);
 
     isDestroyed_ = false;
 }

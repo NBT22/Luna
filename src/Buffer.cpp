@@ -337,18 +337,18 @@ VkResult BufferRegionIndex::copyToBuffer(Device &device,
         (void)stageFlags;
     } else
     {
-        assert(this != device.stagingBuffer);
+        BufferRegionIndex *&stagingBuffer = device.stagingBuffer();
+        assert(this != stagingBuffer && stagingBuffer != nullptr);
         CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device)));
-        CHECK_RESULT_RETURN(resize(device, device.stagingBuffer, bytes));
-        assert(device.stagingBuffer->data() != nullptr);
-        // ReSharper disable once CppDFANullDereference
-        std::copy_n(data, bytes, device.stagingBuffer->data() + offset);
+        CHECK_RESULT_RETURN(resize(device, stagingBuffer, bytes));
+        assert(stagingBuffer->data() != nullptr);
+        std::copy_n(data, bytes, stagingBuffer->data() + offset);
         const VkBufferCopy copyRegion = {
-            .srcOffset = device.stagingBuffer->offset(),
+            .srcOffset = stagingBuffer->offset(),
             .dstOffset = BufferRegionIndex::offset() + offset,
             .size = bytes,
         };
-        vkCmdCopyBuffer(commandBuffer, device.stagingBuffer->buffer(), buffer(), 1, &copyRegion);
+        vkCmdCopyBuffer(commandBuffer, stagingBuffer->buffer(), buffer(), 1, &copyRegion);
     }
     return VK_SUCCESS;
 }
