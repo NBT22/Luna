@@ -37,7 +37,7 @@ class Image
 
         constexpr bool operator==(const Image &other) const;
 
-        void destroy(VkDevice device, const VmaAllocator &allocator) const;
+        void destroy(VkDevice device, const VmaAllocator &allocator);
 
         [[nodiscard]] VkResult write(Device &device,
                                      CommandBuffer &commandBuffer,
@@ -126,10 +126,12 @@ constexpr bool Image::operator==(const Image &other) const
            sampler_ == other.sampler_;
 }
 
-inline void Image::destroy(const VkDevice device, const VmaAllocator &allocator) const
+inline void Image::destroy(const VkDevice device, const VmaAllocator &allocator)
 {
     vkDestroyImageView(device, imageView_, nullptr);
     vmaDestroyImage(allocator, image_, allocation_);
+    imageView_ = VK_NULL_HANDLE;
+    image_ = VK_NULL_HANDLE;
 }
 
 inline void Image::updateDescriptorBinding(const VkDevice device,

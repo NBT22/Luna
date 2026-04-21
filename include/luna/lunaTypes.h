@@ -40,6 +40,7 @@ LUNA_DEFINE_HANDLE(LunaCommandPool);
 LUNA_DEFINE_HANDLE(LunaCommandBuffer);
 LUNA_DEFINE_HANDLE(LunaSlangSession);
 LUNA_DEFINE_HANDLE(LunaSemaphore);
+LUNA_DEFINE_HANDLE(LunaFence);
 
 typedef struct
 {
@@ -706,6 +707,18 @@ typedef struct
         VkCommandPoolCreateFlags flags;
         uint32_t queueFamilyIndex;
 } LunaCommandPoolCreationInfo;
+
+typedef struct
+{
+        VkSemaphoreType type;
+        uint64_t initialValue;
+} LunaSemaphoreCreationInfo;
+
+typedef struct
+{
+        VkFenceCreateFlags flags;
+        VkExternalFenceHandleTypeFlags exportHandleTypes;
+} LunaFenceCreationInfo;
 
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)

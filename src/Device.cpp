@@ -232,7 +232,7 @@ void Device::destroy()
         vkDestroySampler(logicalDevice_, sampler, nullptr);
     }
     samplers_.clear();
-    for (const Image &image: images_)
+    for (Image &image: images_)
     {
         image.destroy(logicalDevice_, allocator_);
     }
@@ -285,12 +285,11 @@ void Device::destroy()
         commandPool.destroy(logicalDevice_);
     }
     commandPools_.clear();
-    // TODO (0.3.0): Allow applications to create semaphores and fences
-    // for (Semaphore &semaphore: semaphores_)
-    // {
-    //     semaphore.destroy(logicalDevice_);
-    // }
-    // semaphores_.clear();
+    for (Semaphore &semaphore: semaphores_)
+    {
+        semaphore.destroy(logicalDevice_);
+    }
+    semaphores_.clear();
     vmaDestroyAllocator(allocator_);
     vkDestroyDevice(logicalDevice_, nullptr);
 
@@ -488,6 +487,24 @@ VkResult Device::createImage(CommandBuffer &commandBuffer,
     }
     return VK_SUCCESS;
 }
+VkResult Device::createSemaphore(const LunaSemaphoreCreationInfo &creationInfo, LunaSemaphore *semaphore)
+{
+    const VkSemaphoreTypeCreateInfo typeCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .semaphoreType = creationInfo.type,
+        .initialValue = creationInfo.initialValue,
+    };
+    const VkSemaphoreCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = &typeCreateInfo,
+    };
+    TRY_CATCH_RESULT(semaphores_.emplace_back(logicalDevice_, createInfo));
+    if (semaphore != nullptr)
+    {
+        *semaphore = helpers::toHandle(&semaphores_.back());
+    }
+    return VK_SUCCESS;
+}
 
 void Device::destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex)
 {
@@ -521,9 +538,19 @@ void Device::destroyImage(const LunaImage &image)
     {
         return;
     }
-    const Image &imageObject = *helpers::fromHandle<Image>(image);
+    Image &imageObject = *helpers::fromHandle<Image>(image);
+    imageObject.destroy(logicalDevice_, allocator_);
     images_.remove(imageObject);
-    vkDestroyImage(logicalDevice_, imageObject.image(), nullptr);
+}
+void Device::destroySemaphore(const LunaSemaphore &semaphore)
+{
+    if (semaphore == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    Semaphore &semaphoreObject = *helpers::fromHandle<Semaphore>(semaphore);
+    semaphoreObject.destroy(logicalDevice_);
+    semaphores_.remove(semaphoreObject);
 }
 
 uint32_t Device::findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const

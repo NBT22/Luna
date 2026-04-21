@@ -79,6 +79,7 @@ add_library(Luna STATIC
         src/CommandBuffer.cpp
         src/Semaphore.cpp
         src/Fence.cpp
+        include/luna/lunaSynchronization.h
 )
 add_dependencies(Luna GenerateShaderHeader)
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)

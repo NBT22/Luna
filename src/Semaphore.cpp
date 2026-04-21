@@ -3,10 +3,14 @@
 //
 
 #include <cassert>
+#include <luna/lunaSynchronization.h>
+#include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
-#include "Instance.hpp"
+#include "CommandBuffer.hpp" // NOLINT(*-include-cleaner)
+#include "Device.hpp"
+#include "helpers/Handle.hpp"
 #include "Luna.hpp"
+#include "luna/lunaTypes.h"
 #include "Semaphore.hpp"
 
 namespace luna
@@ -33,3 +37,20 @@ VkResult Semaphore::create(const VkDevice device)
     return VK_SUCCESS;
 }
 } // namespace luna
+
+VkResult lunaCreateSemaphore(const LunaDevice device,
+                             const LunaSemaphoreCreationInfo *creationInfo,
+                             LunaSemaphore *semaphore)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(creationInfo);
+
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createSemaphore(*creationInfo, semaphore));
+    return VK_SUCCESS;
+}
+
+void lunaDestroySemaphore(const LunaDevice device, const LunaSemaphore semaphore)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    luna::helpers::fromHandle<luna::Device>(device)->destroySemaphore(semaphore);
+}

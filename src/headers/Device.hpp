@@ -70,12 +70,14 @@ class Device
                              uint32_t depth,
                              uint32_t arrayLayers,
                              LunaImage *image);
+        VkResult createSemaphore(const LunaSemaphoreCreationInfo &creationInfo, LunaSemaphore *semaphore);
 
         /// Removes a buffer region index from the list. Calling this function with an invalid or null pointer will have no effect
         void destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex);
         void destroySampler(const LunaSampler &sampler);
         // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
         void destroyImage(const LunaImage &image);
+        void destroySemaphore(const LunaSemaphore &semaphore);
 
         [[nodiscard]] uint32_t findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const;
 
@@ -121,6 +123,7 @@ class Device
         std::list<BufferRegionIndex> bufferRegionIndices_{};
         std::list<VkSampler> samplers_{};
         std::list<Image> images_{};
+        std::list<Semaphore> semaphores_{};
         // TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
         //  that way it can shrink if it grows to an absurd size
         BufferRegionIndex *stagingBuffer_{};
