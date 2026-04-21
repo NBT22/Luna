@@ -52,8 +52,6 @@ add_library(Luna STATIC
 
         src/headers/helpers/Handle.hpp
         src/headers/helpers/Pipeline.hpp
-        src/headers/commandBuffer/CommandBuffer.hpp
-        src/headers/commandBuffer/CommandBufferArray.hpp
         src/headers/ComputePipeline.hpp
         src/headers/Buffer.hpp
         src/headers/CommandBuffer.hpp

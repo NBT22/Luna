@@ -5,10 +5,8 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
 #include <vulkan/vulkan_core.h>
-#include "commandBuffer/CommandBuffer.hpp"
-#include "commandBuffer/CommandBufferArray.hpp"
+#include "Fence.hpp"
 #include "helpers/Handle.hpp"
 #include "Semaphore.hpp"
 
@@ -17,226 +15,192 @@ namespace luna
 class CommandBuffer
 {
     public:
-        enum class Type : uint8_t
-        {
-            SINGLE,
-            ARRAY,
-        };
-
         CommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
-        CommandBuffer(VkDevice device,
-                      VkCommandPool commandPool,
-                      VkCommandBufferLevel commandBufferLevel,
-                      uint32_t arraySize);
 
         operator const VkCommandBuffer &() const;
 
         void destroy(VkDevice device);
 
-        VkResult resizeArray(VkDevice device,
-                             VkCommandBufferLevel commandBufferLevel,
-                             uint32_t arraySize,
-                             uint64_t timeout = UINT64_MAX);
         VkResult beginSingleUseCommandBuffer();
         VkResult end();
-        VkResult submit(VkQueue queue,
+        VkResult submit(VkDevice device,
+                        VkQueue queue,
                         const VkSubmitInfo &submitInfo,
                         VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-        VkResult endAndSubmit(VkQueue queue, VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-        VkResult endAndSubmit(VkQueue queue,
+        VkResult endAndSubmit(VkDevice device,
+                              VkQueue queue,
+                              VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+        VkResult endAndSubmit(VkDevice device,
+                              VkQueue queue,
                               const VkSubmitInfo &submitInfo,
                               VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
         bool getAndSetIsSignaled(bool value);
-        [[nodiscard]] VkResult waitForAllFences(VkDevice device, uint64_t timeout = UINT64_MAX) const;
-        [[nodiscard]] VkResult waitForFence(VkDevice device, uint64_t timeout = UINT64_MAX) const;
+        VkResult waitForFence(VkDevice device, uint64_t timeout = UINT64_MAX) const;
         VkResult resetFence(VkDevice device);
-        VkResult recreateSemaphores(VkDevice device);
         VkResult ensureIsRecording(VkDevice device, bool shouldResetFence = false);
 
         [[nodiscard]] bool isRecording() const;
-        [[nodiscard]] const Semaphore &semaphore() const;
-
-        [[nodiscard]] Type type() const;
-        [[nodiscard]] std::string typeAsString() const;
-        [[nodiscard]] const commandBuffer::CommandBuffer &commandBuffer() const;
-        [[nodiscard]] const commandBuffer::CommandBufferArray &commandBufferArray() const;
 
     private:
-        Type type_{};
+        bool isRecording_{};
         VkCommandPool commandPool_{};
-        commandBuffer::CommandBuffer commandBuffer_{};
-        commandBuffer::CommandBufferArray commandBufferArray_{};
+        VkCommandBuffer commandBuffer_{};
+        Fence fence_{};
+        Semaphore semaphore_{};
 };
 } // namespace luna
 
 #pragma region Implementation
 
 #include <cassert>
-#include <stdexcept>
-#include <type_traits>
+#include <volk.h>
 #include "Luna.hpp"
 
 namespace luna
 {
+inline CommandBuffer::CommandBuffer(const VkDevice device,
+                                    const VkCommandPool commandPool,
+                                    const VkCommandBufferLevel commandBufferLevel):
+    commandPool_(commandPool),
+    fence_(device,
+           VkFenceCreateInfo{
+               .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+           }),
+    semaphore_(device,
+               VkSemaphoreCreateInfo{
+                   .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+               })
+{
+    const VkCommandBufferAllocateInfo allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = commandPool,
+        .level = commandBufferLevel,
+        .commandBufferCount = 1,
+    };
+    CHECK_RESULT_THROW(vkAllocateCommandBuffers(device, &allocateInfo, &commandBuffer_));
+}
+
 inline CommandBuffer::operator const VkCommandBuffer &() const
 {
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_;
-        case Type::ARRAY:
-            return commandBufferArray_;
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in operator const VkCommandBuffer &");
-    }
+    return commandBuffer_;
+}
+
+inline void CommandBuffer::destroy(const VkDevice device)
+{
+    assert(!isRecording_);
+    fence_.destroy(device);
+    semaphore_.destroy(device);
+    vkFreeCommandBuffers(device, commandPool_, 1, &commandBuffer_);
+    commandBuffer_ = VK_NULL_HANDLE;
 }
 
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer()
 {
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.beginSingleUseCommandBuffer();
-        case Type::ARRAY:
-            return commandBufferArray_.beginSingleUseCommandBuffer();
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in beginSingleUseCommandBuffer!");
-    }
+    assert(!isRecording_);
+    CHECK_RESULT_RETURN(vkResetCommandBuffer(commandBuffer_, 0));
+
+    constexpr VkCommandBufferBeginInfo commandBufferBeginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    CHECK_RESULT_RETURN(vkBeginCommandBuffer(commandBuffer_, &commandBufferBeginInfo));
+    isRecording_ = true;
+    return VK_SUCCESS;
 }
 inline VkResult CommandBuffer::end()
 {
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.end();
-        case Type::ARRAY:
-            return commandBufferArray_.end();
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in end!");
-    }
+    CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
+    isRecording_ = false;
+    return VK_SUCCESS;
 }
-inline VkResult CommandBuffer::submit(const VkQueue queue,
+inline VkResult CommandBuffer::submit(const VkDevice device,
+                                      const VkQueue queue,
                                       const VkSubmitInfo &submitInfo,
                                       const VkPipelineStageFlags stageMask)
 {
-    switch (type_)
+    if (fence_.willBeSignaled())
     {
-        case Type::SINGLE:
-            return commandBuffer_.submit(queue, submitInfo, stageMask);
-        case Type::ARRAY:
-            return commandBufferArray_.submit(queue, submitInfo, stageMask);
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in submit!");
+        CHECK_RESULT_RETURN(waitForFence(device));
+        CHECK_RESULT_RETURN(resetFence(device));
     }
+    CHECK_RESULT_RETURN(vkQueueSubmit(queue, 1, &submitInfo, fence_));
+    fence_.setWillBeSignaled(true);
+    if (submitInfo.signalSemaphoreCount > 0)
+    {
+        for (uint32_t i = 0; i < submitInfo.signalSemaphoreCount; i++)
+        {
+            if (submitInfo.pSignalSemaphores[i] == semaphore_)
+            {
+                semaphore_.setIsSignaled(true);
+                semaphore_.setStageMask(stageMask);
+                break;
+            }
+        }
+    }
+    return VK_SUCCESS;
 }
-inline VkResult CommandBuffer::endAndSubmit(const VkQueue queue, VkPipelineStageFlags stageMask)
+inline VkResult CommandBuffer::endAndSubmit(const VkDevice device, const VkQueue queue, VkPipelineStageFlags stageMask)
 {
     const VkSubmitInfo submitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = semaphore().isSignaled() ? 1u : 0u,
-        .pWaitSemaphores = &semaphore(),
+        .waitSemaphoreCount = semaphore_.isSignaled() ? 1u : 0u,
+        .pWaitSemaphores = &semaphore_,
         .pWaitDstStageMask = &stageMask,
         .commandBufferCount = 1,
         .pCommandBuffers = &static_cast<const VkCommandBuffer &>(*this),
         .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &semaphore(),
+        .pSignalSemaphores = &semaphore_,
     };
-    return endAndSubmit(queue, submitInfo, stageMask);
+    return endAndSubmit(device, queue, submitInfo, stageMask);
 }
-inline VkResult CommandBuffer::endAndSubmit(const VkQueue queue,
+inline VkResult CommandBuffer::endAndSubmit(const VkDevice device,
+                                            const VkQueue queue,
                                             const VkSubmitInfo &submitInfo,
                                             const VkPipelineStageFlags stageMask)
 {
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.endAndSubmit(queue, submitInfo, stageMask);
-        case Type::ARRAY:
-            return commandBufferArray_.endAndSubmit(queue, submitInfo, stageMask);
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in endAndSubmit!");
-    }
+    CHECK_RESULT_RETURN(end());
+    CHECK_RESULT_RETURN(submit(device, queue, submitInfo, stageMask));
+    return VK_SUCCESS;
 }
 inline bool CommandBuffer::getAndSetIsSignaled(const bool value)
 {
-    switch (type_)
+    const bool oldValue = semaphore_.isSignaled();
+    semaphore_.setIsSignaled(value);
+    return oldValue;
+}
+inline VkResult CommandBuffer::waitForFence(const VkDevice device, const uint64_t timeout) const
+{
+    if (!fence_.willBeSignaled())
     {
-        case Type::SINGLE:
-            return commandBuffer_.getAndSetIsSignaled(value);
-        case Type::ARRAY:
-            return commandBufferArray_.getAndSetIsSignaled(value);
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in getAndSetIsSignaled!");
+        return VK_SUCCESS;
     }
+    // TODO: If this fails with the default timeout it will block the the render thread for 585 years,
+    //  which is unacceptable. While it is not the responsibility of this method to handle this problem,
+    //  all usages of this method currently use the default timeout.
+    return vkWaitForFences(device, 1, &fence_, VK_TRUE, timeout);
+}
+inline VkResult CommandBuffer::resetFence(const VkDevice device)
+{
+    fence_.setWillBeSignaled(false);
+    return vkResetFences(device, 1, &fence_);
+}
+inline VkResult CommandBuffer::ensureIsRecording(const VkDevice device, const bool shouldResetFence)
+{
+    if (!isRecording())
+    {
+        CHECK_RESULT_RETURN(waitForFence(device));
+        if (shouldResetFence)
+        {
+            CHECK_RESULT_RETURN(resetFence(device));
+        }
+        CHECK_RESULT_RETURN(beginSingleUseCommandBuffer());
+    }
+    return VK_SUCCESS;
 }
 
 inline bool CommandBuffer::isRecording() const
 {
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.isRecording();
-        case Type::ARRAY:
-            return commandBufferArray_.isRecording();
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in isRecording!");
-    }
-}
-inline const Semaphore &CommandBuffer::semaphore() const
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_.semaphore();
-        case Type::ARRAY:
-            return commandBufferArray_.semaphore();
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in semaphore!");
-    }
-}
-inline CommandBuffer::Type CommandBuffer::type() const
-{
-    return type_;
-}
-inline std::string CommandBuffer::typeAsString() const
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return "Type::SINGLE";
-        case Type::ARRAY:
-            return "Type::ARRAY";
-        default:
-            return std::to_string(static_cast<std::underlying_type_t<Type>>(type_));
-    }
-}
-inline const commandBuffer::CommandBuffer &CommandBuffer::commandBuffer() const
-{
-    switch (type_)
-    {
-        case Type::SINGLE:
-            return commandBuffer_;
-        default:
-            throw std::runtime_error("Invalid command buffer type " + typeAsString() + " when used in commandBuffer!");
-    }
-}
-inline const commandBuffer::CommandBufferArray &CommandBuffer::commandBufferArray() const
-{
-    switch (type_)
-    {
-        case Type::ARRAY:
-            return commandBufferArray_;
-        default:
-            throw std::runtime_error("Invalid command buffer type " +
-                                     typeAsString() +
-                                     " when used in commandBufferArray!");
-    }
+    return isRecording_;
 }
 } // namespace luna
 

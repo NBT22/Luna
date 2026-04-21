@@ -22,8 +22,8 @@ CommandPool::CommandPool(const VkDevice device, const LunaCommandPoolCreationInf
 {
     const VkCommandPoolCreateInfo poolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = creationInfo.flags,
-        // TODO: queueFamilyIndex
+        .flags = creationInfo.flags | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = creationInfo.queueFamilyIndex,
     };
     CHECK_RESULT_THROW(vkCreateCommandPool(device, &poolCreateInfo, nullptr, &commandPool_));
     isDestroyed_ = false;
@@ -51,13 +51,7 @@ inline VkResult CommandPool::reset(const VkDevice device,
     assert(!isDestroyed_);
     for (const CommandBuffer &commandBuffer: commandBufferList_)
     {
-        if (commandBuffer.type() == CommandBuffer::Type::ARRAY)
-        {
-            CHECK_RESULT_RETURN(commandBuffer.commandBufferArray().waitForAllFences(device, timeout));
-        } else
-        {
-            CHECK_RESULT_RETURN(commandBuffer.commandBuffer().waitForFence(device, timeout));
-        }
+        CHECK_RESULT_RETURN(commandBuffer.waitForFence(device, timeout));
     }
     CHECK_RESULT_RETURN(vkResetCommandPool(device, commandPool_, flags));
 
@@ -65,21 +59,13 @@ inline VkResult CommandPool::reset(const VkDevice device,
 }
 } // namespace luna
 
-LunaCommandBuffer lunaGetInternalGraphicsCommandBuffer(const LunaDevice device)
-{
-    assert(device != LUNA_NULL_HANDLE);
-    return luna::helpers::toHandle(
-            luna::helpers::fromHandle<luna::Device>(device)->commandPools().graphics->commandBuffer());
-}
-
 VkResult lunaCreateCommandPool(const LunaDevice device,
                                const LunaCommandPoolCreationInfo *creationInfo,
                                LunaCommandPool *commandPool)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->addApplicationCommandPool(*creationInfo,
-                                                                                                   commandPool));
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createCommandPool(*creationInfo, commandPool));
     return VK_SUCCESS;
 }
 

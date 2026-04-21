@@ -9,12 +9,9 @@
 #include <cstdint>
 #include <list>
 #include <luna/lunaTypes.h>
-#include <thread>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
-#include "Device.hpp"
 #include "helpers/Handle.hpp"
-#include "Luna.hpp"
 
 namespace luna
 {
@@ -70,6 +67,7 @@ class BufferRegionIndex
 
         [[nodiscard]] VkResult flushMemory(const VmaAllocator &allocator) const;
         [[nodiscard]] VkResult copyToBuffer(Device &device,
+                                            CommandBuffer &commandBuffer,
                                             const uint8_t *data,
                                             size_t bytes,
                                             size_t offset = 0,
@@ -132,100 +130,10 @@ class Buffer
 
 #pragma region Implementation
 
-#include <algorithm>
 #include <cassert>
 
 namespace luna
 {
-inline VkResult BufferRegionIndex::resize(Device &device,
-                                          BufferRegionIndex *&bufferRegionIndex,
-                                          const VkDeviceSize newSize)
-{
-    if (bufferRegionIndex->size() == newSize)
-    {
-        return VK_SUCCESS;
-    }
-
-    if (bufferRegionIndex->bufferRegion_ == nullptr)
-    {
-        LunaBuffer lunaBuffer = LUNA_NULL_HANDLE;
-        const LunaBufferCreationInfo newCreationInfo = {
-            .size = newSize,
-            .flags = bufferRegionIndex->buffer_->creationFlags_,
-            .usage = bufferRegionIndex->buffer_->usageFlags_,
-        };
-        CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
-
-        bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
-        bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
-    }
-
-    const bool growing = bufferRegionIndex->size() < newSize;
-    const size_t sizeChange = growing ? newSize - bufferRegionIndex->size() : bufferRegionIndex->size() - newSize;
-    Buffer *buffer = bufferRegionIndex->buffer_;
-    BufferRegion *bufferRegion = bufferRegionIndex->bufferRegion_;
-
-    if (growing)
-    {
-        const bool regionIsLast = bufferRegion == &buffer->regions_.back();
-        const bool regionCanBeResizedIntoFreeBytes = regionIsLast && newSize <= buffer->freeBytes_;
-        bool regionCanBeResizedIntoUnusedBytes = false;
-        if (!regionCanBeResizedIntoFreeBytes && !regionIsLast)
-        {
-            std::list<BufferRegion>::const_iterator bufferRegionIterator =
-                    std::ranges::find_if(buffer->regions_, [&bufferRegion](const BufferRegion &region) -> bool {
-                        return &region == bufferRegion;
-                    });
-            assert(bufferRegionIterator != buffer->regions_.cend()); // Internal state check
-            ++bufferRegionIterator;
-            assert(bufferRegionIterator != buffer->regions_.cend()); // Internal state check
-            regionCanBeResizedIntoUnusedBytes = newSize <= bufferRegionIterator->offset_ - bufferRegion->offset_;
-        }
-        if (regionCanBeResizedIntoFreeBytes || regionCanBeResizedIntoUnusedBytes)
-        {
-            bufferRegion->size_ += sizeChange;
-            buffer->usedBytes_ += sizeChange;
-            if (regionCanBeResizedIntoFreeBytes)
-            {
-                buffer->freeBytes_ -= sizeChange;
-            } else
-            {
-                buffer->unusedBytes_ -= sizeChange;
-            }
-        } else
-        {
-            LunaBuffer lunaBuffer = helpers::toHandle(bufferRegionIndex);
-            LunaBufferCreationInfo newCreationInfo;
-            bufferRegionIndex->creationInfo(newCreationInfo);
-            newCreationInfo.size = newSize;
-
-            CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
-
-            if (bufferRegion->data_ != nullptr)
-            {
-                uint8_t *newBufferRegionData = helpers::fromHandle<BufferRegionIndex>(lunaBuffer)->data();
-                assert(newBufferRegionData != nullptr); // Internal state check
-                std::copy_n(bufferRegion->data_, bufferRegion->size_, newBufferRegionData);
-            }
-            bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
-            bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
-        }
-    } else
-    {
-        bufferRegion->size_ -= sizeChange;
-        buffer->usedBytes_ -= sizeChange;
-        if (bufferRegion == &buffer->regions_.back())
-        {
-            buffer->freeBytes_ += sizeChange;
-        } else
-        {
-            buffer->unusedBytes_ += sizeChange;
-        }
-    }
-
-    return VK_SUCCESS;
-}
-
 inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion):
     buffer_(buffer),
     bufferRegion_(bufferRegion)

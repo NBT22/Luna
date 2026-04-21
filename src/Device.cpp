@@ -126,22 +126,17 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         throw std::runtime_error("Failed to find a suitable GPU for Vulkan!");
     }
 
-    constexpr float queuePriority = 1;
-    std::array<VkDeviceQueueCreateInfo, 2> queuesCreateInfo{
-        VkDeviceQueueCreateInfo{
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = familyIndices_.graphics,
-            .queueCount = 1,
-            .pQueuePriorities = &queuePriority,
-        },
-        VkDeviceQueueCreateInfo{
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = familyIndices_.compute,
-            .queueCount = 1,
-            .pQueuePriorities = &queuePriority,
-        },
-    };
-    initQueueFamilyIndices_();
+    std::vector<float> priorities;
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    CHECK_RESULT_THROW(initQueueFamilies_(physicalDevice_, creationInfo.surface, priorities, queueCreateInfos));
+    for (float &priority: priorities)
+    {
+        priority = 1.0f;
+    }
+    for (VkDeviceQueueCreateInfo &createInfo: queueCreateInfos)
+    {
+        createInfo.pQueuePriorities = priorities.data();
+    }
 
     const VkPhysicalDeviceSynchronization2Features synchronization2Features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
@@ -154,18 +149,14 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = pNext,
-        .queueCreateInfoCount = hasFamily_.compute ? 2u : 1u,
-        .pQueueCreateInfos = queuesCreateInfo.data(),
+        .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+        .pQueueCreateInfos = queueCreateInfos.data(),
         .enabledExtensionCount = creationInfo.extensionCount,
         .ppEnabledExtensionNames = creationInfo.extensionNames,
         .pEnabledFeatures = &creationInfo.requiredFeatures.features,
     };
     CHECK_RESULT_THROW(vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_));
     volkLoadDevice(logicalDevice_);
-
-    vkGetDeviceQueue(logicalDevice_, familyIndices_.graphics, 0, &familyQueues_.graphics);
-    vkGetDeviceQueue(logicalDevice_, familyIndices_.compute, 0, &familyQueues_.compute);
-    vkGetDeviceQueue(logicalDevice_, familyIndices_.presentation, 0, &familyQueues_.presentation);
 
     const VmaVulkanFunctions vmaVulkanFunctions = {
         .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
@@ -207,6 +198,23 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         .vulkanApiVersion = apiVersion,
     };
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
+
+    std::vector<uint32_t> queueFamilyIndices;
+    queueFamilyIndices.reserve(queueFamilies_.size());
+    for (uint32_t i = 0; i < queueFamilies_.size(); i++)
+    {
+        queueFamilyIndices.emplace_back(i);
+    }
+    const LunaBufferCreationInfo bufferCreationInfo = {
+        .size = 1 << 16,
+        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        .queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size()),
+        .queueFamilyIndices = queueFamilyIndices.data(),
+        .allocationCreateInfo = &ALLOCATION_CREATE_INFO,
+    };
+    LunaBuffer stagingBufferHandle = LUNA_NULL_HANDLE;
+    CHECK_RESULT_THROW(BufferRegion::createBufferRegion(*this, bufferCreationInfo, &stagingBufferHandle));
+    stagingBuffer = helpers::fromHandle<BufferRegionIndex>(stagingBufferHandle);
 
     isDestroyed_ = false;
 }
@@ -276,77 +284,21 @@ void Device::destroy()
         commandPool.destroy(logicalDevice_);
     }
     commandPools_.clear();
-    if (internalCommandPools_.graphics != nullptr)
-    {
-        internalCommandPools_.graphics->destroy(logicalDevice_);
-    }
-    if (internalCommandPools_.compute != nullptr)
-    {
-        internalCommandPools_.compute->destroy(logicalDevice_);
-    }
-    if (internalCommandPools_.presentation != nullptr)
-    {
-        internalCommandPools_.presentation->destroy(logicalDevice_);
-    }
-    for (Semaphore &semaphore: renderFinishedSemaphores_)
-    {
-        semaphore.destroy(logicalDevice_);
-    }
-    renderFinishedSemaphores_.clear();
+    // TODO (0.3.0): Allow applications to create semaphores and fences
+    // for (Semaphore &semaphore: semaphores_)
+    // {
+    //     semaphore.destroy(logicalDevice_);
+    // }
+    // semaphores_.clear();
     vmaDestroyAllocator(allocator_);
     vkDestroyDevice(logicalDevice_, nullptr);
 
-    queueFamilyIndices_.clear();
-    queueFamilyIndices_.shrink_to_fit();
+    queueFamilies_.clear();
+    queueFamilies_.shrink_to_fit();
     isDestroyed_ = true;
 }
 
-VkResult Device::createSemaphores(const uint32_t imageCount)
-{
-    constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-    const uint32_t oldSize = renderFinishedSemaphores_.size();
-    renderFinishedSemaphores_.resize(imageCount);
-    for (uint32_t i = oldSize; i < imageCount; i++)
-    {
-        Semaphore &semaphore = renderFinishedSemaphores_.at(i);
-        CHECK_RESULT_RETURN(vkCreateSemaphore(logicalDevice_, &semaphoreCreateInfo, nullptr, &semaphore));
-    }
-    return VK_SUCCESS;
-}
-
-VkResult Device::createInternalCommandPools()
-{
-    const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = familyIndices_.graphics,
-    };
-    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &graphicsCommandPoolCreateInfo));
-    internalCommandPools_.graphics = &commandPools_.back();
-
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(logicalDevice_,
-                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY));
-    CHECK_RESULT_RETURN(internalCommandPools_.graphics->allocateCommandBuffer(logicalDevice_,
-                                                                              VK_COMMAND_BUFFER_LEVEL_PRIMARY));
-
-    const VkCommandPoolCreateInfo computeCommandPoolCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = familyIndices_.compute,
-    };
-    TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, &computeCommandPoolCreateInfo));
-    internalCommandPools_.compute = &commandPools_.back();
-
-    CHECK_RESULT_RETURN(internalCommandPools_.compute->allocateCommandBuffer(logicalDevice_,
-                                                                             VK_COMMAND_BUFFER_LEVEL_PRIMARY));
-
-    return VK_SUCCESS;
-}
-
-VkResult Device::addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
-                                           LunaCommandPool *commandPool)
+VkResult Device::createCommandPool(const LunaCommandPoolCreationInfo &creationInfo, LunaCommandPool *commandPool)
 {
     TRY_CATCH_RESULT(commandPools_.emplace_back(logicalDevice_, creationInfo));
     if (commandPool != nullptr)
@@ -367,11 +319,7 @@ VkResult Device::createShaderModule(const LunaShaderModuleCreationInfo &creation
 }
 VkResult Device::createRenderPass(const LunaRenderPassCreationInfo &creationInfo, LunaRenderPass *renderPass)
 {
-    TRY_CATCH_RESULT(renderPasses_.emplace_back(logicalDevice_,
-                                                familyCount(),
-                                                queueFamilyIndices(),
-                                                allocator_,
-                                                creationInfo));
+    TRY_CATCH_RESULT(renderPasses_.emplace_back(logicalDevice_, allocator_, creationInfo));
     if (renderPass != nullptr)
     {
         *renderPass = helpers::toHandle(&renderPasses_.back());
@@ -380,11 +328,7 @@ VkResult Device::createRenderPass(const LunaRenderPassCreationInfo &creationInfo
 }
 VkResult Device::createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo, LunaRenderPass *renderPass)
 {
-    TRY_CATCH_RESULT(renderPasses_.emplace_back(logicalDevice_,
-                                                familyCount(),
-                                                queueFamilyIndices(),
-                                                allocator_,
-                                                creationInfo));
+    TRY_CATCH_RESULT(renderPasses_.emplace_back(logicalDevice_, allocator_, creationInfo));
     if (renderPass != nullptr)
     {
         *renderPass = helpers::toHandle(&renderPasses_.back());
@@ -527,6 +471,7 @@ VkResult Device::createImage(CommandBuffer &commandBuffer,
                              uint32_t arrayLayers,
                              LunaImage *image)
 {
+    assert(creationInfo.queueFamilyIndexCount != 0);
     TRY_CATCH_RESULT(images_.emplace_back(*this, commandBuffer, creationInfo, depth, arrayLayers));
     if (creationInfo.writeInfo.descriptorSet != LUNA_NULL_HANDLE)
     {
@@ -580,9 +525,52 @@ void Device::destroyImage(const LunaImage &image)
     vkDestroyImage(logicalDevice_, imageObject.image(), nullptr);
 }
 
-const Semaphore &Device::renderFinishedSemaphore(const uint32_t imageIndex) const
+uint32_t Device::findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const
 {
-    return renderFinishedSemaphores_.at(imageIndex);
+    for (uint32_t i = 0; i < queueFamilies_.size(); i++)
+    {
+        const LunaQueueFamilyProperties &properties = queueFamilies_.at(i);
+        if (requiredProperties.presentationSupport && !properties.presentationSupport)
+        {
+            continue;
+        }
+        if ((properties.queueFamilyProperties.queueFlags & requiredProperties.queueFamilyProperties.queueFlags) !=
+            requiredProperties.queueFamilyProperties.queueFlags)
+        {
+            continue;
+        }
+        if (properties.queueFamilyProperties.queueCount < requiredProperties.queueFamilyProperties.queueCount)
+        {
+            continue;
+        }
+        if (properties.queueFamilyProperties.timestampValidBits <
+            requiredProperties.queueFamilyProperties.timestampValidBits)
+        {
+            continue;
+        }
+        const VkExtent3D minImageTransferGranularity = {
+            .width = std::max(requiredProperties.queueFamilyProperties.minImageTransferGranularity.width, 1u),
+            .height = std::max(requiredProperties.queueFamilyProperties.minImageTransferGranularity.height, 1u),
+            .depth = std::max(requiredProperties.queueFamilyProperties.minImageTransferGranularity.depth, 1u),
+        };
+        if (minImageTransferGranularity.width <
+            properties.queueFamilyProperties.minImageTransferGranularity.width)
+        {
+            continue;
+        }
+        if (minImageTransferGranularity.height <
+            properties.queueFamilyProperties.minImageTransferGranularity.height)
+        {
+            continue;
+        }
+        if (minImageTransferGranularity.depth <
+            properties.queueFamilyProperties.minImageTransferGranularity.depth)
+        {
+            continue;
+        }
+        return i;
+    }
+    return static_cast<uint32_t>(-1);
 }
 } // namespace luna
 
@@ -607,15 +595,6 @@ VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo, LunaDevice
     TRY_CATCH_RESULT(luna::devices.emplace_back(creationInfo2));
     luna::Device &deviceObject = luna::devices.back();
     *device = luna::helpers::toHandle(deviceObject);
-    CHECK_RESULT_RETURN(deviceObject.createInternalCommandPools());
-    constexpr LunaBufferCreationInfo bufferCreationInfo = {
-        .size = 1 << 16,
-        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        .allocationCreateInfo = &ALLOCATION_CREATE_INFO,
-    };
-    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(deviceObject.stagingBuffer);
-    CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(deviceObject, bufferCreationInfo, &stagingBufferHandle));
-    deviceObject.stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;
 }
 
@@ -627,15 +606,6 @@ VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo, LunaDevi
     TRY_CATCH_RESULT(luna::devices.emplace_back(*creationInfo));
     luna::Device &deviceObject = luna::devices.back();
     *device = luna::helpers::toHandle(deviceObject);
-    CHECK_RESULT_RETURN(deviceObject.createInternalCommandPools());
-    constexpr LunaBufferCreationInfo bufferCreationInfo = {
-        .size = 1 << 16,
-        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        .allocationCreateInfo = &ALLOCATION_CREATE_INFO,
-    };
-    LunaBuffer stagingBufferHandle = luna::helpers::toHandle(deviceObject.stagingBuffer);
-    CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(deviceObject, bufferCreationInfo, &stagingBufferHandle));
-    deviceObject.stagingBuffer = luna::helpers::fromHandle<luna::BufferRegionIndex>(stagingBufferHandle);
     return VK_SUCCESS;
 }
 
@@ -667,37 +637,18 @@ void lunaGetPhysicalDeviceProperties2(const LunaDevice device, VkPhysicalDeviceP
     vkGetPhysicalDeviceProperties2(lunaGetPhysicalDevice(device), properties);
 }
 
-VkResult lunaSubmitInternalComputeQueue(const LunaDevice device, const LunaCommandBuffer commandBuffer)
+const LunaQueueFamilyProperties *lunaGetQueueFamilies(const LunaDevice device)
 {
     assert(device != LUNA_NULL_HANDLE);
-    assert(commandBuffer != LUNA_NULL_HANDLE);
-
-    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
-    const VkDevice vkDevice = static_cast<VkDevice>(deviceObject);
-    constexpr VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.waitForFence(vkDevice));
-    CHECK_RESULT_RETURN(commandBufferObject.resetFence(vkDevice));
-    const luna::Semaphore &semaphore = commandBufferObject.semaphore();
-    const VkSubmitInfo submitInfo = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = semaphore.isSignaled() ? 1u : 0u,
-        .pWaitSemaphores = &semaphore,
-        .pWaitDstStageMask = &stageMask,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &static_cast<const VkCommandBuffer &>(commandBufferObject),
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &semaphore,
-    };
-    CHECK_RESULT_RETURN(commandBufferObject.submit(deviceObject.familyQueues().compute, submitInfo, stageMask));
-    CHECK_RESULT_RETURN(commandBufferObject.waitForFence(vkDevice));
-    return VK_SUCCESS;
+    return luna::helpers::fromHandle<luna::Device>(device)->queueFamilies();
 }
 
-// void lunaGetQueue(const LunaQueueProperties *requiredProperties, VkQueue queue){
-//
-//     vkGetDeviceQueue()
-// }
+uint32_t lunaGetQueueFamilyIndex(const LunaDevice device, const LunaQueueFamilyProperties *requiredProperties)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(requiredProperties);
+    return luna::helpers::fromHandle<luna::Device>(device)->findQueueFamilyIndex(*requiredProperties);
+}
 
 VkResult lunaCreateShaderModule(const LunaDevice device,
                                 const LunaShaderModuleCreationInfo *creationInfo,

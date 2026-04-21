@@ -14,8 +14,6 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "Buffer.hpp"
-#include "CommandPool.hpp"
 #include "Device.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
@@ -211,9 +209,10 @@ static VkResult createSwapchain(Device &device, const LunaSwapchainCreationInfo 
         .imageExtent = swapchain.extent,
         .imageArrayLayers = 1,
         .imageUsage = swapchain.imageUsage,
-        .imageSharingMode = device.sharingMode(),
-        .queueFamilyIndexCount = device.familyCount(),
-        .pQueueFamilyIndices = device.queueFamilyIndices(),
+        .imageSharingMode = creationInfo.queueFamilyIndexCount == 1 ? VK_SHARING_MODE_EXCLUSIVE
+                                                                    : VK_SHARING_MODE_CONCURRENT,
+        .queueFamilyIndexCount = creationInfo.queueFamilyIndexCount,
+        .pQueueFamilyIndices = creationInfo.queueFamilyIndices,
         .preTransform = capabilities.currentTransform,
         .compositeAlpha = swapchain.compositeAlpha,
         .presentMode = swapchain.presentMode,
@@ -226,15 +225,21 @@ static VkResult createSwapchain(Device &device, const LunaSwapchainCreationInfo 
                                              &luna::swapchain.swapchain));
 
     CHECK_RESULT_RETURN(helpers::createSwapchainImages(static_cast<VkDevice>(device)));
-    assert(capabilities.minImageCount <= luna::swapchain.imageCount &&
-           luna::swapchain.imageCount <= capabilities.maxImageCount);
-    CHECK_RESULT_RETURN(device.createSemaphores(luna::swapchain.imageCount));
+    assert(capabilities.minImageCount <= swapchain.imageCount && swapchain.imageCount <= capabilities.maxImageCount);
 
-    CHECK_RESULT_RETURN(device.commandPools().graphics->commandBuffer().resizeArray(static_cast<VkDevice>(device),
-                                                                                    VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                                    luna::swapchain.imageCount));
+    swapchain.renderSemaphores.reserve(swapchain.imageCount);
+    for (uint32_t i = 0; i < swapchain.imageCount; i++)
+    {
+        constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
+        swapchain.renderSemaphores.emplace_back(static_cast<VkDevice>(device), semaphoreCreateInfo);
+    }
+    for (Semaphore &semaphore: swapchain.presentSemaphores)
+    {
+        CHECK_RESULT_RETURN(semaphore.create(static_cast<VkDevice>(device)));
+    }
 
-    swapchain.imageIndex = -1u;
     swapchain.safeToUse = true;
     swapchain.safeToUse.notify_all();
     return VK_SUCCESS;
@@ -323,6 +328,14 @@ VkResult lunaDestroyInstance()
         {
             vkDestroyImageView(static_cast<VkDevice>(device), luna::swapchain.imageViews.at(i), nullptr);
         }
+        for (luna::Semaphore &semaphore: luna::swapchain.renderSemaphores)
+        {
+            semaphore.destroy(static_cast<VkDevice>(device));
+        }
+        for (luna::Semaphore &semaphore: luna::swapchain.presentSemaphores)
+        {
+            semaphore.destroy(static_cast<VkDevice>(device));
+        }
         if (luna::swapchain.swapchain != VK_NULL_HANDLE)
         {
             vkDestroySwapchainKHR(static_cast<VkDevice>(device), luna::swapchain.swapchain, nullptr);
@@ -337,6 +350,8 @@ VkResult lunaDestroyInstance()
     luna::swapchain.images.shrink_to_fit();
     luna::swapchain.imageViews.clear();
     luna::swapchain.imageViews.shrink_to_fit();
+    luna::swapchain.renderSemaphores.clear();
+    luna::swapchain.renderSemaphores.shrink_to_fit();
 
     if (luna::instance != VK_NULL_HANDLE)
     {
@@ -370,8 +385,12 @@ bool lunaIsInstanceExtensionVersionAvailable(const char *extensionName, const ui
 VkResult lunaCreateSwapchain(const LunaDevice device, const LunaSwapchainCreationInfo *creationInfo)
 {
     assert(device != LUNA_NULL_HANDLE);
-    assert(creationInfo);
+    assert(creationInfo && creationInfo->queueFamilyIndexCount != 0);
     return luna::helpers::createSwapchain(*luna::helpers::fromHandle<luna::Device>(device), *creationInfo);
+}
+VkSwapchainKHR lunaGetVkSwapchain()
+{
+    return luna::swapchain.swapchain;
 }
 VkFormat lunaGetSwapchainFormat()
 {
@@ -380,6 +399,14 @@ VkFormat lunaGetSwapchainFormat()
 VkExtent2D lunaGetSwapchainExtent()
 {
     return luna::swapchain.extent;
+}
+uint32_t lunaGetSwapchainImageCount()
+{
+    return luna::swapchain.imageCount;
+}
+uint32_t lunaGetSwapchainImageIndex()
+{
+    return luna::swapchain.imageIndex;
 }
 VkResult lunaGetSurfaceCapabilities(const LunaDevice device,
                                     const VkSurfaceKHR surface,

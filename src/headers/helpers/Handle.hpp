@@ -6,6 +6,7 @@
 
 #include <concepts>
 #include <luna/lunaTypes.h>
+#include <type_traits>
 #include <vulkan/vulkan_core.h>
 
 namespace luna
@@ -25,6 +26,7 @@ class CommandBuffer;
 class SlangSession;
 
 LUNA_DEFINE_HANDLE(HandleType);
+static_assert(std::is_trivially_copyable_v<HandleType>);
 
 template<typename T> concept HandleData = std::same_as<T, Device> ||
                                           std::same_as<T, RenderPass> ||

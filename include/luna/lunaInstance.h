@@ -16,7 +16,7 @@ extern "C"
 
 VkResult lunaInitializeVolk(void);
 VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo);
-VkResult lunaDestroyInstance();
+VkResult lunaDestroyInstance(void);
 VkInstance lunaGetInstance(void);
 
 bool lunaIsInstanceExtensionAvailable(const char *extensionName);
@@ -25,8 +25,11 @@ bool lunaIsInstanceExtensionVersionAvailable(const char *extensionName, uint32_t
 VkResult lunaGetSurfaceCapabilities(LunaDevice device, VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 
 VkResult lunaCreateSwapchain(LunaDevice device, const LunaSwapchainCreationInfo *creationInfo);
+VkSwapchainKHR lunaGetVkSwapchain(void);
 VkFormat lunaGetSwapchainFormat(void);
 VkExtent2D lunaGetSwapchainExtent(void);
+uint32_t lunaGetSwapchainImageCount(void);
+uint32_t lunaGetSwapchainImageIndex(void);
 
 VkResult lunaSetDepthImageFormat(LunaDevice device, uint32_t formatCount, const VkFormat *formatPriorityList);
 VkFormat lunaGetDepthImageFormat(void);

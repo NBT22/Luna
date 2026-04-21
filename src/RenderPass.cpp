@@ -354,8 +354,6 @@ static VkResult createRenderPass2(const VkDevice device,
 namespace luna
 {
 RenderPass::RenderPass(const VkDevice device,
-                       const uint32_t queueFamilyIndexCount,
-                       const uint32_t *queueFamilyIndices,
                        const VmaAllocator &allocator,
                        const LunaRenderPassCreationInfo &creationInfo)
 {
@@ -363,8 +361,8 @@ RenderPass::RenderPass(const VkDevice device,
     init_(creationInfo);
     CHECK_RESULT_THROW(helpers::createRenderPass(device, creationInfo, samples_, renderPass_));
     CHECK_RESULT_THROW(createAttachmentImages(device,
-                                              queueFamilyIndexCount,
-                                              queueFamilyIndices,
+                                              creationInfo.queueFamilyIndexCount,
+                                              creationInfo.queueFamilyIndices,
                                               allocator,
                                               creationInfo.createDepthAttachment));
     CHECK_RESULT_THROW(createFramebuffers(device,
@@ -374,8 +372,6 @@ RenderPass::RenderPass(const VkDevice device,
     isDestroyed_ = false;
 }
 RenderPass::RenderPass(const VkDevice device,
-                       const uint32_t queueFamilyIndexCount,
-                       const uint32_t *queueFamilyIndices,
                        const VmaAllocator &allocator,
                        const LunaRenderPassCreationInfo2 &creationInfo)
 {
@@ -383,8 +379,8 @@ RenderPass::RenderPass(const VkDevice device,
     init_(creationInfo);
     CHECK_RESULT_THROW(helpers::createRenderPass2(device, creationInfo, samples_, renderPass_));
     CHECK_RESULT_THROW(createAttachmentImages(device,
-                                              queueFamilyIndexCount,
-                                              queueFamilyIndices,
+                                              creationInfo.queueFamilyIndexCount,
+                                              creationInfo.queueFamilyIndices,
                                               allocator,
                                               creationInfo.createDepthAttachment));
     CHECK_RESULT_THROW(createFramebuffers(device,
@@ -632,7 +628,6 @@ VkResult RenderPass::begin(const VkDevice device,
                            CommandBuffer &commandBuffer,
                            const LunaRenderPassBeginInfo &beginInfo) const
 {
-    assert(swapchain.imageIndex != -1u);
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
 
     uint32_t clearValueCount = 1;

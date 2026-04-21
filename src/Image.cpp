@@ -21,10 +21,10 @@
 namespace luna::helpers
 {
 static void pipelineBarrier(const VkCommandBuffer commandBuffer,
-                            const LunaFlags sourceStageMask,
-                            const LunaFlags sourceAccessMask,
-                            const LunaFlags destinationStageMask,
-                            const LunaFlags destinationAccessMask,
+                            const VkPipelineStageFlags2 sourceStageMask,
+                            const VkAccessFlags2 sourceAccessMask,
+                            const VkPipelineStageFlags2 destinationStageMask,
+                            const VkAccessFlags2 destinationAccessMask,
                             const VkImageLayout oldLayout,
                             const VkImageLayout newLayout,
                             const VkImage image,
@@ -164,9 +164,9 @@ Image::Image(Device &device,
         .samples = creationInfo.samples == 0 ? VK_SAMPLE_COUNT_1_BIT : creationInfo.samples,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = usage,
-        .sharingMode = device.sharingMode(),
-        .queueFamilyIndexCount = device.familyCount(),
-        .pQueueFamilyIndices = device.queueFamilyIndices(),
+        .sharingMode = creationInfo.queueFamilyIndexCount == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
+        .queueFamilyIndexCount = creationInfo.queueFamilyIndexCount,
+        .pQueueFamilyIndices = creationInfo.queueFamilyIndices,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
     constexpr VmaAllocationCreateInfo allocationCreateInfo = {
@@ -225,7 +225,12 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
                                  layout_,
                                  image_,
                                  subresourceRange);
-        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(device.familyQueues().graphics, writeInfo.destinationStageMask));
+        if (writeInfo.queue != VK_NULL_HANDLE)
+        {
+            CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(static_cast<VkDevice>(device),
+                                                           writeInfo.queue,
+                                                           writeInfo.destinationStageMask));
+        }
         return VK_SUCCESS;
     }
     VkExtent3D extent = writeInfo.extent == nullptr ? extent_ : *writeInfo.extent;
@@ -236,6 +241,7 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
 
     CHECK_RESULT_RETURN(BufferRegionIndex::resize(device, device.stagingBuffer, writeInfo.bytes));
     CHECK_RESULT_RETURN(device.stagingBuffer->copyToBuffer(device,
+                                                           commandBuffer,
                                                            static_cast<const uint8_t *>(writeInfo.pixels),
                                                            writeInfo.bytes));
     helpers::pipelineBarrier(commandBuffer,
@@ -282,7 +288,12 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
                                  subresourceRange);
     }
 
-    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(device.familyQueues().graphics, writeInfo.destinationStageMask));
+    if (writeInfo.queue != VK_NULL_HANDLE)
+    {
+        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(static_cast<VkDevice>(device),
+                                                       writeInfo.queue,
+                                                       writeInfo.destinationStageMask));
+    }
     return VK_SUCCESS;
 }
 
@@ -547,7 +558,8 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
                                const LunaImage image,
                                const LunaBuffer buffer,
                                const uint32_t regionCount,
-                               const VkBufferImageCopy *regions)
+                               const VkBufferImageCopy *regions,
+                               const VkQueue queue)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
@@ -559,26 +571,18 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
     const luna::Image &imageObject = *luna::helpers::fromHandle<luna::Image>(image);
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
 
-    std::vector<VkBufferImageCopy> regionsVector;
-    regionsVector.reserve(regionCount);
-    for (uint32_t i = 0; i < regionCount; i++)
-    {
-        const VkBufferImageCopy &region = regions[i];
-        regionsVector.emplace_back(region.bufferOffset + bufferRegionIndex.offset(),
-                                   region.bufferRowLength,
-                                   region.bufferImageHeight,
-                                   region.imageSubresource,
-                                   region.imageOffset,
-                                   region.imageExtent);
-    }
-
     vkCmdCopyImageToBuffer(commandBufferObject,
                            imageObject.image(),
                            imageObject.layout(),
                            bufferRegionIndex.buffer(),
                            regionCount,
                            regions);
-    CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(deviceObject.familyQueues().graphics));
+    if (queue != VK_NULL_HANDLE)
+    {
+        CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<
+                                                                                   luna::Device>(device)),
+                                                             queue));
+    }
     return VK_SUCCESS;
 }
 

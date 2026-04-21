@@ -25,9 +25,7 @@ class CommandPool
 
         void destroy(VkDevice device);
 
-        [[nodiscard]] VkResult allocateCommandBuffer(VkDevice device,
-                                                     VkCommandBufferLevel commandBufferLevel,
-                                                     uint32_t arraySize = 1);
+        [[nodiscard]] VkResult allocateCommandBuffer(VkDevice device, VkCommandBufferLevel commandBufferLevel);
         [[nodiscard]] VkResult reset(VkDevice device,
                                      VkCommandPoolResetFlags flags,
                                      uint64_t timeout = UINT64_MAX) const;
@@ -64,23 +62,12 @@ inline CommandPool::operator const VkCommandPool &() const
     return commandPool_;
 }
 
-inline VkResult CommandPool::allocateCommandBuffer(const VkDevice device,
-                                                   VkCommandBufferLevel commandBufferLevel,
-                                                   const uint32_t arraySize)
+inline VkResult CommandPool::allocateCommandBuffer(const VkDevice device, VkCommandBufferLevel commandBufferLevel)
 {
     assert(!isDestroyed_);
-    if (arraySize == 1)
-    {
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
-                                                                                       commandPool_,
-                                                                                       commandBufferLevel)));
-    } else
-    {
-        TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
-                                                                                       commandPool_,
-                                                                                       commandBufferLevel,
-                                                                                       arraySize)));
-    }
+    TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
+                                                                                   commandPool_,
+                                                                                   commandBufferLevel)));
     return VK_SUCCESS;
 }
 

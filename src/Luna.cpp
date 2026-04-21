@@ -30,9 +30,11 @@
 
 namespace luna::helpers
 {
-static VkResult recreateSwapchain(Device &device, const VkSurfaceCapabilitiesKHR &capabilities)
+static VkResult recreateSwapchain(const VkDevice device,
+                                  const VkSurfaceCapabilitiesKHR &capabilities,
+                                  const uint32_t queueFamilyIndexCount,
+                                  const uint32_t *queueFamilyIndices)
 {
-    const VkDevice vkDevice = static_cast<VkDevice>(device);
     const VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = swapchain.surface,
@@ -42,23 +44,23 @@ static VkResult recreateSwapchain(Device &device, const VkSurfaceCapabilitiesKHR
         .imageExtent = swapchain.extent,
         .imageArrayLayers = 1,
         .imageUsage = swapchain.imageUsage,
-        .imageSharingMode = device.sharingMode(),
-        .queueFamilyIndexCount = device.familyCount(),
-        .pQueueFamilyIndices = device.queueFamilyIndices(),
+        .imageSharingMode = queueFamilyIndexCount == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
+        .queueFamilyIndexCount = queueFamilyIndexCount,
+        .pQueueFamilyIndices = queueFamilyIndices,
         .preTransform = capabilities.currentTransform,
         .compositeAlpha = swapchain.compositeAlpha,
         .presentMode = swapchain.presentMode,
         .clipped = VK_TRUE,
     };
-    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(vkDevice, &createInfo, nullptr, &luna::swapchain.swapchain));
+    CHECK_RESULT_RETURN(vkCreateSwapchainKHR(device, &createInfo, nullptr, &luna::swapchain.swapchain));
 
-    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(vkDevice,
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(device,
                                                 luna::swapchain.swapchain,
                                                 &luna::swapchain.imageCount,
                                                 nullptr));
 
     swapchain.images.resize(swapchain.imageCount);
-    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(vkDevice,
+    CHECK_RESULT_RETURN(vkGetSwapchainImagesKHR(device,
                                                 luna::swapchain.swapchain,
                                                 &luna::swapchain.imageCount,
                                                 luna::swapchain.images.data()));
@@ -66,7 +68,7 @@ static VkResult recreateSwapchain(Device &device, const VkSurfaceCapabilitiesKHR
     swapchain.imageViews.resize(swapchain.imageCount);
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
     {
-        CHECK_RESULT_RETURN(createImageView(vkDevice,
+        CHECK_RESULT_RETURN(createImageView(device,
                                             luna::swapchain.images.at(i),
                                             luna::swapchain.format.format,
                                             VK_IMAGE_ASPECT_COLOR_BIT,
@@ -75,13 +77,21 @@ static VkResult recreateSwapchain(Device &device, const VkSurfaceCapabilitiesKHR
     }
     assert(capabilities.minImageCount <= luna::swapchain.imageCount &&
            luna::swapchain.imageCount <= capabilities.maxImageCount);
-    CHECK_RESULT_RETURN(device.createSemaphores(luna::swapchain.imageCount));
 
-    CHECK_RESULT_RETURN(device.commandPools().graphics->commandBuffer().resizeArray(vkDevice,
-                                                                                    VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                                                                    luna::swapchain.imageCount));
+    for (Semaphore &semaphore: swapchain.renderSemaphores)
+    {
+        semaphore.destroy(device);
+    }
+    swapchain.renderSemaphores.clear();
+    swapchain.renderSemaphores.reserve(swapchain.imageCount);
+    for (uint32_t i = 0; i < swapchain.imageCount; i++)
+    {
+        constexpr VkSemaphoreCreateInfo semaphoreCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
+        swapchain.renderSemaphores.emplace_back(static_cast<VkDevice>(device), semaphoreCreateInfo);
+    }
 
-    swapchain.imageIndex = -1u;
     return VK_SUCCESS;
 }
 
@@ -481,19 +491,13 @@ VkResult lunaDrawIndexedIndirectCount(const LunaDevice device,
     return VK_SUCCESS;
 }
 
-VkResult lunaResizeSwapchain(const LunaDevice device,
-                             const LunaCommandBuffer commandBuffer,
-                             const uint32_t renderPassResizeInfoCount,
-                             const LunaRenderPassResizeInfo *renderPassResizeInfos,
-                             const VkExtent2D *targetExtent,
-                             VkExtent2D *newSwapchainExtent)
+VkResult lunaResizeSwapchain(const LunaDevice device, const LunaSwapchainResizeInfo *resizeInfo)
 {
     assert(device != LUNA_NULL_HANDLE);
-    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(resizeInfo);
 
-    luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
     const VkDevice vkDevice = static_cast<VkDevice>(deviceObject);
-    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
 
     VkSurfaceCapabilitiesKHR capabilities;
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(static_cast<VkPhysicalDevice>(deviceObject),
@@ -502,55 +506,34 @@ VkResult lunaResizeSwapchain(const LunaDevice device,
     capabilities.maxImageCount = capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount;
     luna::swapchain.safeToUse.wait(false);
     luna::swapchain.safeToUse = false;
-    if (targetExtent != nullptr)
-    {
-        assert(capabilities.minImageExtent.width <= targetExtent->width &&
-               targetExtent->width <= capabilities.maxImageExtent.width);
-        assert(capabilities.minImageExtent.height <= targetExtent->height &&
-               targetExtent->height <= capabilities.maxImageExtent.height);
-        luna::swapchain.extent = *targetExtent;
-    } else
-    {
-        luna::swapchain.extent = capabilities.currentExtent;
-    }
+    luna::swapchain.extent = resizeInfo->newSize;
     assert(capabilities.minImageExtent.width <= luna::swapchain.extent.width &&
            luna::swapchain.extent.width <= capabilities.maxImageExtent.width);
     assert(capabilities.minImageExtent.height <= luna::swapchain.extent.height &&
            luna::swapchain.extent.height <= capabilities.maxImageExtent.height);
 
-    CHECK_RESULT_RETURN(commandBufferObject.waitForAllFences(vkDevice));
-    CHECK_RESULT_RETURN(commandBufferObject.recreateSemaphores(vkDevice));
     for (uint32_t i = 0; i < luna::swapchain.imageCount; i++)
     {
         vkDestroyImageView(vkDevice, luna::swapchain.imageViews.at(i), nullptr);
     }
     vkDestroySwapchainKHR(vkDevice, luna::swapchain.swapchain, nullptr);
 
-    CHECK_RESULT_RETURN(luna::helpers::recreateSwapchain(deviceObject, capabilities));
-    for (uint32_t i = 0; i < renderPassResizeInfoCount; i++)
+    CHECK_RESULT_RETURN(luna::helpers::recreateSwapchain(vkDevice,
+                                                         capabilities,
+                                                         resizeInfo->queueFamilyIndexCount,
+                                                         resizeInfo->queueFamilyIndices));
+    for (uint32_t i = 0; i < resizeInfo->renderPassCount; i++)
     {
-        const LunaRenderPassResizeInfo &renderPassResizeInfo = renderPassResizeInfos[i];
-        const uint32_t width = renderPassResizeInfo.width == LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH
-                                       ? luna::swapchain.extent.width
-                                       : renderPassResizeInfo.width;
-        const uint32_t height = renderPassResizeInfo.height == LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT
-                                        ? luna::swapchain.extent.height
-                                        : renderPassResizeInfo.height;
-        CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::RenderPass>(renderPassResizeInfo.renderPass)
+        CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::RenderPass>(resizeInfo->renderPasses[i])
                                     ->recreateFramebuffer(vkDevice,
-                                                          deviceObject.familyCount(),
-                                                          deviceObject.queueFamilyIndices(),
+                                                          resizeInfo->queueFamilyIndexCount,
+                                                          resizeInfo->queueFamilyIndices,
                                                           deviceObject.allocator(),
-                                                          width,
-                                                          height));
+                                                          luna::swapchain.extent.width,
+                                                          luna::swapchain.extent.height));
     }
     luna::swapchain.safeToUse = true;
     luna::swapchain.safeToUse.notify_all();
-
-    if (newSwapchainExtent != nullptr)
-    {
-        *newSwapchainExtent = luna::swapchain.extent;
-    }
 
     return VK_SUCCESS;
 }
@@ -567,12 +550,13 @@ VkResult lunaBeginFrame(const LunaDevice device,
     // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
     CHECK_RESULT_RETURN(commandBufferObject.waitForFence(vkDevice));
     CHECK_RESULT_RETURN(commandBufferObject.resetFence(vkDevice));
-    const VkResult acquireImageResult = vkAcquireNextImageKHR(vkDevice,
-                                                              luna::swapchain.swapchain,
-                                                              UINT64_MAX,
-                                                              commandBufferObject.semaphore(),
-                                                              VK_NULL_HANDLE,
-                                                              &luna::swapchain.imageIndex);
+    const VkResult acquireImageResult =
+            vkAcquireNextImageKHR(vkDevice,
+                                  luna::swapchain.swapchain,
+                                  UINT64_MAX,
+                                  luna::swapchain.presentSemaphores.at(luna::swapchain.frameIndex),
+                                  VK_NULL_HANDLE,
+                                  &luna::swapchain.imageIndex);
     switch (acquireImageResult)
     {
         case VK_SUCCESS:
@@ -595,51 +579,77 @@ VkResult lunaBeginFrame(const LunaDevice device,
     return VK_SUCCESS;
 }
 
-VkResult lunaEndFrame(const LunaDevice device)
+VkResult lunaEndFrame(const LunaDevice device,
+                      const LunaCommandBuffer commandBuffer,
+                      const VkPresentInfoKHR *presentInfo,
+                      const VkSubmitInfo *submitInfo,
+                      const VkQueue queue)
 {
     assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(presentInfo);
+    assert(submitInfo);
+    assert(queue != VK_NULL_HANDLE);
 
-    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
-    luna::CommandBuffer &commandBuffer = deviceObject.commandPools().graphics->commandBuffer();
-    assert(commandBuffer.isRecording());
+    const VkSemaphore presentSemaphore = luna::swapchain.presentSemaphores.at(luna::swapchain.frameIndex);
+    const VkSemaphore renderSemaphore = luna::swapchain.renderSemaphores.at(luna::swapchain.imageIndex);
 
-    const luna::Semaphore &secondaryGraphicsSemaphore =
-            deviceObject.commandPools().graphics->commandBuffer(1).semaphore();
-    const std::array<VkSemaphore, 2> waitSemaphores = {commandBuffer.semaphore(), secondaryGraphicsSemaphore};
-    const std::array<VkPipelineStageFlags, 2> waitStageMasks = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                                                secondaryGraphicsSemaphore.stageMask()};
-    const VkSubmitInfo queueSubmitInfo = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = deviceObject.commandPools().graphics->commandBuffer(1).getAndSetIsSignaled(false) ? 2u
-                                                                                                                : 1u,
-        .pWaitSemaphores = waitSemaphores.data(),
-        .pWaitDstStageMask = waitStageMasks.data(),
-        .commandBufferCount = 1,
-        .pCommandBuffers = &static_cast<const VkCommandBuffer &>(commandBuffer),
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = &deviceObject.renderFinishedSemaphore(luna::swapchain.imageIndex),
-    };
-    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(deviceObject.familyQueues().graphics, queueSubmitInfo));
-
-    const VkPresentInfoKHR presentInfo = {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &deviceObject.renderFinishedSemaphore(luna::swapchain.imageIndex),
-        .swapchainCount = 1,
-        .pSwapchains = &luna::swapchain.swapchain,
-        .pImageIndices = &luna::swapchain.imageIndex,
-    };
-    const VkResult presentationResult = vkQueuePresentKHR(deviceObject.familyQueues().presentation, &presentInfo);
-    switch (presentationResult)
+    std::vector<VkSemaphore> submissionWaitSemaphores{presentSemaphore};
+    if (submitInfo->waitSemaphoreCount > 0)
     {
-        case VK_SUCCESS:
-        case VK_SUBOPTIMAL_KHR:
-        case VK_ERROR_OUT_OF_DATE_KHR:
-            break;
-        default:
-            return presentationResult;
+        submissionWaitSemaphores.insert(submissionWaitSemaphores.end(),
+                                        submitInfo->pWaitSemaphores,
+                                        submitInfo->pWaitSemaphores + submitInfo->waitSemaphoreCount);
+    }
+    std::vector<VkSemaphore> signalSemaphores{renderSemaphore};
+    if (submitInfo->signalSemaphoreCount > 0)
+    {
+        signalSemaphores.insert(signalSemaphores.end(),
+                                submitInfo->pSignalSemaphores,
+                                submitInfo->pSignalSemaphores + submitInfo->signalSemaphoreCount);
     }
 
-    luna::swapchain.imageIndex = -1u;
-    return presentationResult;
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    const VkCommandBuffer vkCommandBuffer = commandBufferObject;
+    const VkSubmitInfo finalSubmitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = submitInfo->pNext,
+        .waitSemaphoreCount = static_cast<uint32_t>(submissionWaitSemaphores.size()),
+        .pWaitSemaphores = submissionWaitSemaphores.data(),
+        .pWaitDstStageMask = submitInfo->pWaitDstStageMask,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &vkCommandBuffer,
+        .signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
+        .pSignalSemaphores = signalSemaphores.data(),
+    };
+    constexpr VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<
+                                                                               luna::Device>(device)),
+                                                         queue,
+                                                         finalSubmitInfo,
+                                                         stageMask));
+
+    std::vector<VkSemaphore> presentationWaitSemaphores{renderSemaphore};
+    if (presentInfo->waitSemaphoreCount > 0)
+    {
+        presentationWaitSemaphores.insert(presentationWaitSemaphores.end(),
+                                          presentInfo->pWaitSemaphores,
+                                          presentInfo->pWaitSemaphores + presentInfo->waitSemaphoreCount);
+    }
+
+    ++luna::swapchain.frameIndex;
+    luna::swapchain.frameIndex %= luna::Swapchain::FRAMES_IN_FLIGHT;
+
+    const VkPresentInfoKHR finalPresentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .pNext = presentInfo->pNext,
+        .waitSemaphoreCount = static_cast<uint32_t>(presentationWaitSemaphores.size()),
+        .pWaitSemaphores = presentationWaitSemaphores.data(),
+        .swapchainCount = presentInfo->swapchainCount,
+        .pSwapchains = presentInfo->pSwapchains,
+        .pImageIndices = presentInfo->pImageIndices,
+        .pResults = presentInfo->pResults,
+    };
+    // TODO: Handling the result like this doesn't ever call the CHECK_RESULT_RETURN macro
+    return vkQueuePresentKHR(queue, &finalPresentInfo);
 }

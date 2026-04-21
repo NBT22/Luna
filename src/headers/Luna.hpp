@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <exception>
@@ -11,6 +12,7 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
+#include "Semaphore.hpp"
 
 static_assert(VK_ACCESS_NONE == VK_ACCESS_2_NONE);
 static_assert(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT == VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT);
@@ -36,6 +38,8 @@ namespace luna
 {
 struct Swapchain
 {
+        static constexpr uint32_t FRAMES_IN_FLIGHT = 1;
+
         VkSurfaceKHR surface{};
         VkSurfaceFormatKHR format{};
         VkExtent2D extent{};
@@ -50,6 +54,9 @@ struct Swapchain
         uint32_t imageIndex{};
         std::vector<VkImage> images{};
         std::vector<VkImageView> imageViews{};
+        std::vector<Semaphore> renderSemaphores{};
+        uint32_t frameIndex{};
+        std::array<Semaphore, FRAMES_IN_FLIGHT> presentSemaphores{};
 };
 } // namespace luna
 

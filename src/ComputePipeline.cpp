@@ -102,8 +102,7 @@ VkResult lunaDispatch(const LunaDevice device, const LunaCommandBuffer commandBu
         .groupCountX = info->groupCountX,
         .groupCountY = info->groupCountY,
         .groupCountZ = info->groupCountZ,
-        .endCommandBuffer = info->endCommandBuffer,
-        .submitQueue = info->submitQueue,
+        .queue = info->queue,
     };
     return lunaDispatchBase(device, commandBuffer, &baseInfo);
 }
@@ -130,15 +129,12 @@ VkResult lunaDispatchBase(const LunaDevice device,
                       info->groupCountX == 0 ? 1 : info->groupCountX,
                       info->groupCountY == 0 ? 1 : info->groupCountY,
                       info->groupCountZ == 0 ? 1 : info->groupCountZ);
-    if (info->submitQueue)
+    if (info->queue != VK_NULL_HANDLE)
     {
-        // TODO (0.3.0): If possible, optionally allow the source stage mask
-        //  (if not possible to be optional, just use top of pipe)
-        CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(deviceObject.familyQueues().compute,
-                                                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT));
-    } else if (info->endCommandBuffer)
-    {
-        CHECK_RESULT_RETURN(commandBufferObject.end());
+        CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<
+                                                                                   luna::Device>(device)),
+                                                             info->queue,
+                                                             info->stageMask));
     }
     return VK_SUCCESS;
 }

@@ -88,15 +88,14 @@ void lunaBindDescriptorSets(LunaCommandBuffer commandBuffer,
 
 VkResult lunaPushConstants(LunaDevice device, LunaCommandBuffer commandBuffer, LunaGraphicsPipeline pipeline);
 
-VkResult lunaResizeSwapchain(LunaDevice device,
-                             LunaCommandBuffer commandBuffer,
-                             uint32_t renderPassResizeInfoCount,
-                             const LunaRenderPassResizeInfo *renderPassResizeInfos,
-                             const VkExtent2D *targetExtent,
-                             VkExtent2D *newSwapchainExtent);
+VkResult lunaResizeSwapchain(LunaDevice device, const LunaSwapchainResizeInfo *resizeInfo);
 
 VkResult lunaBeginFrame(LunaDevice device, LunaCommandBuffer commandBuffer, bool allowSuboptimalSwapchain);
-VkResult lunaEndFrame(LunaDevice device);
+VkResult lunaEndFrame(LunaDevice device,
+                      LunaCommandBuffer commandBuffer,
+                      const VkPresentInfoKHR *presentInfo,
+                      const VkSubmitInfo *submitInfo,
+                      VkQueue queue);
 
 #ifdef __cplusplus
 }

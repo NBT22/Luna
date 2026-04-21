@@ -29,13 +29,9 @@ class RenderPass
 
         RenderPass() = default;
         explicit RenderPass(VkDevice device,
-                            uint32_t queueFamilyIndexCount,
-                            const uint32_t *queueFamilyIndices,
                             const VmaAllocator &allocator,
                             const LunaRenderPassCreationInfo &creationInfo);
         explicit RenderPass(VkDevice device,
-                            uint32_t queueFamilyIndexCount,
-                            const uint32_t *queueFamilyIndices,
                             const VmaAllocator &allocator,
                             const LunaRenderPassCreationInfo2 &creationInfo);
 

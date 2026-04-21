@@ -4,12 +4,14 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <list>
 #include <luna/lunaTypes.h>
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
+#include "Buffer.hpp"
 #include "CommandPool.hpp"
 #include "ComputePipeline.hpp"
 #include "DescriptorSetLayout.hpp"
@@ -17,14 +19,10 @@
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "RenderPass.hpp"
-#include "Semaphore.hpp"
 #include "ShaderModule.hpp"
 
 namespace luna
 {
-class Buffer;
-class BufferRegion;
-
 template<typename T> struct FamilyValues
 {
         T graphics{};
@@ -35,7 +33,7 @@ template<typename T> struct FamilyValues
 class Device
 {
     public:
-        Device() = default;
+        Device() = delete;
         explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
 
         explicit operator const VkPhysicalDevice &() const;
@@ -43,11 +41,7 @@ class Device
 
         void destroy();
 
-        VkResult createSemaphores(uint32_t imageCount);
-        VkResult createInternalCommandPools();
-        VkResult addApplicationCommandPool(const LunaCommandPoolCreationInfo &creationInfo,
-                                           LunaCommandPool *commandPool);
-
+        VkResult createCommandPool(const LunaCommandPoolCreationInfo &creationInfo, LunaCommandPool *commandPool);
         VkResult createShaderModule(const LunaShaderModuleCreationInfo &creationInfo, LunaShaderModule *shaderModule);
         VkResult createRenderPass(const LunaRenderPassCreationInfo &creationInfo, LunaRenderPass *renderPass);
         VkResult createRenderPass(const LunaRenderPassCreationInfo2 &creationInfo, LunaRenderPass *renderPass);
@@ -83,19 +77,11 @@ class Device
         // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
         void destroyImage(const LunaImage &image);
 
+        [[nodiscard]] uint32_t findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const;
+
         [[nodiscard]] bool isDestroyed() const noexcept;
-        [[nodiscard]] VkSharingMode sharingMode() const noexcept;
-        /// A getter for the @c familyCount_ value
-        /// @return The total count of unique families
-        [[nodiscard]] uint32_t familyCount() const noexcept;
-        [[nodiscard]] const uint32_t *queueFamilyIndices() const noexcept;
+        [[nodiscard]] const LunaQueueFamilyProperties *queueFamilies() const noexcept;
         [[nodiscard]] VmaAllocator allocator() const noexcept;
-        [[nodiscard]] const FamilyValues<VkQueue> &familyQueues() const noexcept;
-        [[nodiscard]] const FamilyValues<uint32_t> &familyIndices() const noexcept;
-        [[nodiscard]] FamilyValues<CommandPool *> &commandPools() noexcept;
-        [[nodiscard]] const FamilyValues<CommandPool *> &commandPools() const noexcept;
-        [[nodiscard]] const Semaphore &renderFinishedSemaphore(uint32_t imageIndex) const;
-        [[nodiscard]] VkPhysicalDeviceVulkan13Features vulkan13Features() const noexcept;
         [[nodiscard]] std::list<Buffer> &buffers() noexcept;
 
         // TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
@@ -103,8 +89,10 @@ class Device
         BufferRegionIndex *stagingBuffer{};
 
     private:
-        VkResult findQueueFamilyIndices_(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-        void initQueueFamilyIndices_();
+        VkResult initQueueFamilies_(VkPhysicalDevice physicalDevice,
+                                    VkSurfaceKHR surface,
+                                    std::vector<float> &priorities,
+                                    std::vector<VkDeviceQueueCreateInfo> &creationInfos);
         [[nodiscard]] bool checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
         [[nodiscard]] bool checkFeatureSupport_(const VkBool32 *requiredFeatures) const;
         [[nodiscard]] bool checkUsability_(VkPhysicalDevice device, VkSurfaceKHR surface);
@@ -122,25 +110,20 @@ class Device
         VkPhysicalDeviceProperties properties_{};
         VkPhysicalDeviceMemoryProperties memoryProperties_{};
         VmaAllocator allocator_{};
-        std::vector<uint32_t> queueFamilyIndices_{};
-        FamilyValues<bool> hasFamily_{};
-        FamilyValues<VkQueue> familyQueues_{};
-        FamilyValues<uint32_t> familyIndices_{};
-        std::list<CommandPool> commandPools_;
-        FamilyValues<CommandPool *> internalCommandPools_{};
-        std::vector<Semaphore> renderFinishedSemaphores_;
-        std::list<ShaderModule> shaderModules_;
-        std::list<RenderPass> renderPasses_;
-        std::list<DescriptorSetLayout> descriptorSetLayouts_;
-        std::list<VkDescriptorPool> descriptorPools_;
-        std::list<VkDescriptorSet> descriptorSets_;
-        std::list<DescriptorSetIndex> descriptorSetIndices_;
-        std::list<GraphicsPipeline> graphicsPipelines_;
-        std::list<ComputePipeline> computePipelines_;
-        std::list<Buffer> buffers_;
-        std::list<BufferRegionIndex> bufferRegionIndices_;
-        std::list<VkSampler> samplers_;
-        std::list<Image> images_;
+        std::vector<LunaQueueFamilyProperties> queueFamilies_{};
+        std::list<CommandPool> commandPools_{};
+        std::list<ShaderModule> shaderModules_{};
+        std::list<RenderPass> renderPasses_{};
+        std::list<DescriptorSetLayout> descriptorSetLayouts_{};
+        std::list<VkDescriptorPool> descriptorPools_{};
+        std::list<VkDescriptorSet> descriptorSets_{};
+        std::list<DescriptorSetIndex> descriptorSetIndices_{};
+        std::list<GraphicsPipeline> graphicsPipelines_{};
+        std::list<ComputePipeline> computePipelines_{};
+        std::list<Buffer> buffers_{};
+        std::list<BufferRegionIndex> bufferRegionIndices_{};
+        std::list<VkSampler> samplers_{};
+        std::list<Image> images_{};
 };
 } // namespace luna
 
@@ -166,62 +149,30 @@ inline bool Device::isDestroyed() const noexcept
 {
     return isDestroyed_;
 }
-inline VkSharingMode Device::sharingMode() const noexcept
+inline const LunaQueueFamilyProperties *Device::queueFamilies() const noexcept
 {
-    return hasFamily_.compute ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
-}
-inline uint32_t Device::familyCount() const noexcept
-{
-    return hasFamily_.compute ? 2u : 1u;
-}
-inline const uint32_t *Device::queueFamilyIndices() const noexcept
-{
-    return queueFamilyIndices_.data();
+    return queueFamilies_.data();
 }
 inline VmaAllocator Device::allocator() const noexcept
 {
     return allocator_;
-}
-inline const FamilyValues<VkQueue> &Device::familyQueues() const noexcept
-{
-    return familyQueues_;
-}
-inline const FamilyValues<uint32_t> &Device::familyIndices() const noexcept
-{
-    return familyIndices_;
-}
-inline FamilyValues<CommandPool *> &Device::commandPools() noexcept
-{
-    return internalCommandPools_;
-}
-inline const FamilyValues<CommandPool *> &Device::commandPools() const noexcept
-{
-    return internalCommandPools_;
-}
-inline VkPhysicalDeviceVulkan13Features Device::vulkan13Features() const noexcept
-{
-    return vulkan13Features_;
 }
 inline std::list<Buffer> &Device::buffers() noexcept
 {
     return buffers_;
 }
 
-// TODO: Better family finding logic to allow for
-//  1. The application to tell Luna which families it would prefer to have be shared or prefer to be alone
-//  2. Ensuring that the most optimal layout is found, regardless of what order the implementation provides the families
-inline VkResult Device::findQueueFamilyIndices_(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface)
+inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice,
+                                           const VkSurfaceKHR surface,
+                                           std::vector<float> &priorities,
+                                           std::vector<VkDeviceQueueCreateInfo> &creationInfos)
 {
     assert(physicalDevice != VK_NULL_HANDLE);
-    hasFamily_.graphics = false;
-    hasFamily_.compute = false;
-    hasFamily_.presentation = false;
-
-    bool computeFound = false;
     uint32_t familyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, nullptr);
     std::vector<VkQueueFamilyProperties> families(familyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &familyCount, families.data());
+    queueFamilies_.reserve(familyCount);
     for (uint32_t index = 0; index < familyCount; index++)
     {
         VkBool32 supportsPresentation = VK_FALSE;
@@ -232,50 +183,16 @@ inline VkResult Device::findQueueFamilyIndices_(const VkPhysicalDevice physicalD
                                                                      surface,
                                                                      &supportsPresentation));
         }
-        if (!hasFamily_.graphics && (families.at(index).queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-        {
-            hasFamily_.graphics = true;
-            familyIndices_.graphics = index;
-
-            assert(surface == VK_NULL_HANDLE ||
-                   supportsPresentation); // This *should* be fine to assume, but technically is not in the spec
-            hasFamily_.presentation = true;
-            familyIndices_.presentation = index;
-
-            if (!computeFound && (families.at(index).queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
-            {
-                familyIndices_.compute = index;
-                computeFound = true;
-            }
-        } else if (!hasFamily_.compute && (families.at(index).queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
-        {
-            computeFound = true;
-            hasFamily_.compute = true;
-            familyIndices_.compute = index;
-        }
-
-        if (hasFamily_.graphics && hasFamily_.compute && hasFamily_.presentation)
-        {
-            return VK_SUCCESS;
-        }
+        queueFamilies_.emplace_back(families.at(index), supportsPresentation == VK_TRUE);
+        priorities.resize(std::max(static_cast<uint32_t>(priorities.size()), families.at(index).queueCount));
+        creationInfos.emplace_back(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                                   nullptr,
+                                   0,
+                                   index,
+                                   families.at(index).queueCount,
+                                   nullptr);
     }
-
-    if (!hasFamily_.compute && computeFound && hasFamily_.graphics && hasFamily_.presentation)
-    {
-        return VK_SUCCESS;
-    }
-
-    // TODO: Allow for not having graphics/compute queues
-    return VK_ERROR_UNKNOWN;
-}
-inline void Device::initQueueFamilyIndices_()
-{
-    assert(queueFamilyIndices_.empty());
-    queueFamilyIndices_.emplace_back(familyIndices_.graphics);
-    if (hasFamily_.compute)
-    {
-        queueFamilyIndices_.emplace_back(familyIndices_.compute);
-    }
+    return VK_SUCCESS;
 }
 inline bool Device::checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
@@ -422,8 +339,6 @@ inline bool Device::checkUsability_(const VkPhysicalDevice device, const VkSurfa
             return false;
         }
     }
-
-    CHECK_RESULT_THROW(findQueueFamilyIndices_(device, surface));
 
     vkGetPhysicalDeviceProperties(device, &properties_);
     vkGetPhysicalDeviceMemoryProperties(device, &memoryProperties_);

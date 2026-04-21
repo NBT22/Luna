@@ -12,10 +12,8 @@ extern "C"
 
 #include <luna/lunaTypes.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <vulkan/vulkan_core.h>
-
-// TODO (0.3.0): Remove
-LunaCommandBuffer lunaGetInternalGraphicsCommandBuffer(LunaDevice device);
 
 /**
  * @brief Create a new command pool.
@@ -50,12 +48,25 @@ VkResult lunaResetCommandPoolWithTimeout(LunaDevice device,
                                          size_t timeout);
 
 VkResult lunaAllocateCommandBuffer(LunaDevice device,
-                                   const LunaCommandBufferAllocationInfo *allocationInfo,
+                                   LunaCommandPool commandPool,
+                                   VkCommandBufferLevel level,
                                    LunaCommandBuffer *commandBuffer);
 
 VkResult lunaBeginSingleUseCommandBuffer(LunaCommandBuffer commandBuffer);
 
 VkResult lunaEndCommandBuffer(LunaCommandBuffer commandBuffer);
+
+VkResult lunaSubmitCommandBuffer(LunaDevice device,
+                                 LunaCommandBuffer commandBuffer,
+                                 VkQueue queue,
+                                 const VkSubmitInfo *submitInfo,
+                                 VkPipelineStageFlags stageMask);
+
+VkResult lunaEndAndSubmitCommandBuffer(LunaDevice device,
+                                       LunaCommandBuffer commandBuffer,
+                                       VkQueue queue,
+                                       const VkSubmitInfo *submitInfo,
+                                       VkPipelineStageFlags stageMask);
 
 VkResult lunaResetCommandBuffer(LunaCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
 

@@ -40,11 +40,6 @@ LUNA_DEFINE_HANDLE(LunaCommandPool);
 LUNA_DEFINE_HANDLE(LunaCommandBuffer);
 LUNA_DEFINE_HANDLE(LunaSlangSession);
 
-static const uint32_t LUNA_RENDER_PASS_WIDTH_SWAPCHAIN_WIDTH = -1u;
-static const uint32_t LUNA_RENDER_PASS_HEIGHT_SWAPCHAIN_HEIGHT = -1u;
-
-typedef VkFlags64 LunaFlags;
-
 typedef struct
 {
         VkInstanceCreateFlags flags;
@@ -68,7 +63,6 @@ typedef struct
 {
         VkQueueFamilyProperties queueFamilyProperties;
         bool presentationSupport;
-        uint32_t queueCount;
 } LunaQueueFamilyProperties;
 
 // TODO (0.3.0): Remove duplicate structures and prefer the `[...]2` structures
@@ -113,7 +107,19 @@ typedef struct
         uint32_t presentModeCount;
         const VkPresentModeKHR *presentModePriorityList;
         bool clipped;
+
+        uint32_t queueFamilyIndexCount;
+        const uint32_t *queueFamilyIndices;
 } LunaSwapchainCreationInfo;
+
+typedef struct
+{
+        VkExtent2D newSize;
+        uint32_t renderPassCount;
+        LunaRenderPass *renderPasses;
+        uint32_t queueFamilyIndexCount;
+        const uint32_t *queueFamilyIndices;
+} LunaSwapchainResizeInfo;
 
 typedef enum
 {
@@ -156,6 +162,9 @@ typedef struct
         VkExtent3D maxExtent;
         uint32_t framebufferAttachmentCount;
         const VkImageView *framebufferAttachments;
+
+        uint32_t queueFamilyIndexCount;
+        const uint32_t *queueFamilyIndices;
 } LunaRenderPassCreationInfo;
 
 typedef struct
@@ -196,6 +205,9 @@ typedef struct
         VkExtent3D maxExtent;
         uint32_t framebufferAttachmentCount;
         const VkImageView *framebufferAttachments;
+
+        uint32_t queueFamilyIndexCount;
+        const uint32_t *queueFamilyIndices;
 } LunaRenderPassCreationInfo2;
 
 typedef struct
@@ -460,8 +472,11 @@ typedef struct
         uint32_t groupCountX;
         uint32_t groupCountY;
         uint32_t groupCountZ;
-        bool endCommandBuffer;
-        bool submitQueue;
+
+        /// The queue to submit work on.
+        /// If this is VK_NULL_HANDLE, then the command buffer will not be ended and the queue will not be submitted.
+        VkQueue queue;
+        VkPipelineStageFlags stageMask;
 } LunaDispatchBaseInfo;
 
 typedef struct
@@ -471,8 +486,11 @@ typedef struct
         uint32_t groupCountX;
         uint32_t groupCountY;
         uint32_t groupCountZ;
-        bool endCommandBuffer;
-        bool submitQueue;
+
+        /// The queue to submit work on.
+        /// If this is VK_NULL_HANDLE, then the command buffer will not be ended and the queue will not be submitted.
+        VkQueue queue;
+        VkPipelineStageFlags stageMask;
 } LunaDispatchInfo;
 
 /// @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
@@ -485,11 +503,9 @@ typedef struct
         VkDeviceSize size;
         VkBufferCreateFlags flags;
         VkBufferUsageFlags usage;
+        uint32_t queueFamilyIndexCount;
+        const uint32_t *queueFamilyIndices;
         VkDeviceSize alignment;
-
-        uint32_t regionCount;
-        const VkDeviceSize *regionSizes;
-        const char **regionNames;
 
         const VmaAllocationCreateInfo *allocationCreateInfo;
 } LunaBufferCreationInfo;
@@ -539,9 +555,12 @@ typedef struct
         bool generateMipmaps;
         VkFilter mipmapFilter;
 
-        LunaFlags sourceStageMask; ///< VkPipelineStageFlags or VkPipelineStageFlags2
-        LunaFlags destinationStageMask; ///< VkPipelineStageFlags or VkPipelineStageFlags2
-        LunaFlags destinationAccessMask; ///< VkAccessFlags or VkAccessFlags2
+        VkPipelineStageFlags2 sourceStageMask;
+        VkPipelineStageFlags2 destinationStageMask;
+        VkAccessFlags2 destinationAccessMask;
+        /// The queue to submit work on.
+        /// If this is VK_NULL_HANDLE, then the command buffer will not be ended and the queue will not be submitted.
+        VkQueue queue;
 
         LunaDescriptorSet descriptorSet;
         const char *descriptorLayoutBindingName;
@@ -557,6 +576,8 @@ typedef struct
         // TODO (0.3.0): Clang-Tidy: Enum value of type 'VkSampleCountFlagBits' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
         VkSampleCountFlagBits samples;
         VkImageUsageFlags usage;
+        uint32_t queueFamilyIndexCount;
+        const uint32_t *queueFamilyIndices;
         VkImageLayout layout;
         VkImageAspectFlags aspectMask;
         LunaImageWriteInfo writeInfo;
@@ -573,13 +594,6 @@ typedef struct
         VkClearValue depthAttachmentClearValue;
         VkClearValue colorAttachmentClearValue;
 } LunaRenderPassBeginInfo;
-
-typedef struct
-{
-        LunaRenderPass renderPass;
-        uint32_t width;
-        uint32_t height;
-} LunaRenderPassResizeInfo;
 
 typedef struct
 {
@@ -642,18 +656,18 @@ typedef struct
 
 typedef struct
 {
-        LunaFlags sourceStageMask;
-        LunaFlags sourceAccessMask;
-        LunaFlags destinationStageMask;
-        LunaFlags destinationAccessMask;
+        VkPipelineStageFlags2 sourceStageMask;
+        VkAccessFlags2 sourceAccessMask;
+        VkPipelineStageFlags2 destinationStageMask;
+        VkAccessFlags2 destinationAccessMask;
 } LunaMemoryBarrier;
 
 typedef struct
 {
-        LunaFlags sourceStageMask;
-        LunaFlags sourceAccessMask;
-        LunaFlags destinationStageMask;
-        LunaFlags destinationAccessMask;
+        VkPipelineStageFlags2 sourceStageMask;
+        VkAccessFlags2 sourceAccessMask;
+        VkPipelineStageFlags2 destinationStageMask;
+        VkAccessFlags2 destinationAccessMask;
         bool synchronizeGraphicsToCompute; // TODO (0.3.0): Remove this and replace it with src and dst queue family index fields
         LunaBuffer buffer;
         VkDeviceSize offset;
@@ -662,10 +676,10 @@ typedef struct
 
 typedef struct
 {
-        LunaFlags sourceStageMask;
-        LunaFlags sourceAccessMask;
-        LunaFlags destinationStageMask;
-        LunaFlags destinationAccessMask;
+        VkPipelineStageFlags2 sourceStageMask;
+        VkAccessFlags2 sourceAccessMask;
+        VkPipelineStageFlags2 destinationStageMask;
+        VkAccessFlags2 destinationAccessMask;
         VkImageLayout oldLayout;
         VkImageLayout newLayout;
         LunaImage image;
@@ -686,24 +700,8 @@ typedef struct
 typedef struct
 {
         VkCommandPoolCreateFlags flags;
-        VkQueueFlags requiredQueueFlags;
-        bool requireQueuePresentationSupport;
+        uint32_t queueFamilyIndex;
 } LunaCommandPoolCreationInfo;
-
-typedef struct
-{
-        const LunaCommandPool *commandPool;
-        VkCommandBufferLevel level;
-        /// Luna will create an array of command buffers and automatically select the one recorded least recently
-        uint32_t arrayCount;
-} LunaCommandBufferAllocationInfo;
-
-typedef struct
-{
-        VkQueueFamilyProperties queueFamilyProperties;
-        bool presentationSupport;
-        uint32_t queueIndex;
-} LunaQueueProperties;
 
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)

@@ -16,10 +16,9 @@
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
 #include "CommandBuffer.hpp"
-#include "CommandPool.hpp"
+#include "Device.hpp"
 #include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
-#include "Instance.hpp"
 #include "Luna.hpp"
 
 static constexpr long double BLOCK_SIZE = 32 * 1024 * 1024;
@@ -63,9 +62,10 @@ VkResult BufferRegion::findSpaceForBufferRegion(Device &device,
             .flags = creationInfo.flags,
             .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::max(std::ceil(creationInfo.size / BLOCK_SIZE), 1.0L)),
             .usage = creationInfo.usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            .sharingMode = device.sharingMode(),
-            .queueFamilyIndexCount = device.familyCount(),
-            .pQueueFamilyIndices = device.queueFamilyIndices(),
+            .sharingMode = creationInfo.queueFamilyIndexCount == 1 ? VK_SHARING_MODE_EXCLUSIVE
+                                                                   : VK_SHARING_MODE_CONCURRENT,
+            .queueFamilyIndexCount = creationInfo.queueFamilyIndexCount,
+            .pQueueFamilyIndices = creationInfo.queueFamilyIndices,
         };
         CHECK_RESULT_RETURN(device.createBuffer(bufferCreateInfo,
                                                 allocationCreateInfo,
@@ -151,9 +151,9 @@ VkResult BufferRegion::findSpaceForBufferRegion(Device &device,
         .flags = creationInfo.flags,
         .size = static_cast<VkDeviceSize>(BLOCK_SIZE * std::max(std::ceil(creationInfo.size / BLOCK_SIZE), 1.0L)),
         .usage = creationInfo.usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        .sharingMode = device.sharingMode(),
-        .queueFamilyIndexCount = device.familyCount(),
-        .pQueueFamilyIndices = device.queueFamilyIndices(),
+        .sharingMode = creationInfo.queueFamilyIndexCount == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
+        .queueFamilyIndexCount = creationInfo.queueFamilyIndexCount,
+        .pQueueFamilyIndices = creationInfo.queueFamilyIndices,
     };
     CHECK_RESULT_RETURN(device.createBuffer(bufferCreateInfo, allocationCreateInfo, outBuffer));
     outOffset = 0;
@@ -190,6 +190,93 @@ VkResult BufferRegion::createBufferRegion(Device &device,
         buffer->unusedBytes_ -= creationInfo.size;
     }
     buffer->usedBytes_ += creationInfo.size;
+
+    return VK_SUCCESS;
+}
+
+VkResult BufferRegionIndex::resize(Device &device, BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize)
+{
+    if (bufferRegionIndex->size() == newSize)
+    {
+        return VK_SUCCESS;
+    }
+
+    if (bufferRegionIndex->bufferRegion_ == nullptr)
+    {
+        LunaBuffer lunaBuffer = LUNA_NULL_HANDLE;
+        const LunaBufferCreationInfo newCreationInfo = {
+            .size = newSize,
+            .flags = bufferRegionIndex->buffer_->creationFlags_,
+            .usage = bufferRegionIndex->buffer_->usageFlags_,
+        };
+        CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
+
+        bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
+        bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
+    }
+
+    const bool growing = bufferRegionIndex->size() < newSize;
+    const size_t sizeChange = growing ? newSize - bufferRegionIndex->size() : bufferRegionIndex->size() - newSize;
+    Buffer *buffer = bufferRegionIndex->buffer_;
+    BufferRegion *bufferRegion = bufferRegionIndex->bufferRegion_;
+
+    if (growing)
+    {
+        const bool regionIsLast = bufferRegion == &buffer->regions_.back();
+        const bool regionCanBeResizedIntoFreeBytes = regionIsLast && newSize <= buffer->freeBytes_;
+        bool regionCanBeResizedIntoUnusedBytes = false;
+        if (!regionCanBeResizedIntoFreeBytes && !regionIsLast)
+        {
+            std::list<BufferRegion>::const_iterator bufferRegionIterator =
+                    std::ranges::find_if(buffer->regions_, [&bufferRegion](const BufferRegion &region) -> bool {
+                        return &region == bufferRegion;
+                    });
+            assert(bufferRegionIterator != buffer->regions_.cend()); // Internal state check
+            ++bufferRegionIterator;
+            assert(bufferRegionIterator != buffer->regions_.cend()); // Internal state check
+            regionCanBeResizedIntoUnusedBytes = newSize <= bufferRegionIterator->offset_ - bufferRegion->offset_;
+        }
+        if (regionCanBeResizedIntoFreeBytes || regionCanBeResizedIntoUnusedBytes)
+        {
+            bufferRegion->size_ += sizeChange;
+            buffer->usedBytes_ += sizeChange;
+            if (regionCanBeResizedIntoFreeBytes)
+            {
+                buffer->freeBytes_ -= sizeChange;
+            } else
+            {
+                buffer->unusedBytes_ -= sizeChange;
+            }
+        } else
+        {
+            LunaBuffer lunaBuffer = helpers::toHandle(bufferRegionIndex);
+            LunaBufferCreationInfo newCreationInfo;
+            bufferRegionIndex->creationInfo(newCreationInfo);
+            newCreationInfo.size = newSize;
+
+            CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
+
+            if (bufferRegion->data_ != nullptr)
+            {
+                uint8_t *newBufferRegionData = helpers::fromHandle<BufferRegionIndex>(lunaBuffer)->data();
+                assert(newBufferRegionData != nullptr); // Internal state check
+                std::copy_n(bufferRegion->data_, bufferRegion->size_, newBufferRegionData);
+            }
+            bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
+            bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
+        }
+    } else
+    {
+        bufferRegion->size_ -= sizeChange;
+        buffer->usedBytes_ -= sizeChange;
+        if (bufferRegion == &buffer->regions_.back())
+        {
+            buffer->freeBytes_ += sizeChange;
+        } else
+        {
+            buffer->unusedBytes_ += sizeChange;
+        }
+    }
 
     return VK_SUCCESS;
 }
@@ -232,6 +319,7 @@ VkResult BufferRegionIndex::flushMemory(const VmaAllocator &allocator) const
 }
 
 VkResult BufferRegionIndex::copyToBuffer(Device &device,
+                                         CommandBuffer &commandBuffer,
                                          const uint8_t *data,
                                          const size_t bytes,
                                          const size_t offset,
@@ -245,11 +333,10 @@ VkResult BufferRegionIndex::copyToBuffer(Device &device,
         std::copy_n(data, bytes, mappedData + offset);
         CHECK_RESULT_RETURN(flushMemory(device.allocator()));
         // TODO (0.3.0): Memory dependency for the provided stageFlags
+        (void)stageFlags;
     } else
     {
         assert(this != device.stagingBuffer);
-        // TODO: Should this use a dedicated transfer command buffer
-        CommandBuffer &commandBuffer = device.commandPools().graphics->commandBuffer(1);
         CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device), true));
         CHECK_RESULT_RETURN(resize(device, device.stagingBuffer, bytes));
         assert(device.stagingBuffer->data() != nullptr);
@@ -261,7 +348,6 @@ VkResult BufferRegionIndex::copyToBuffer(Device &device,
             .size = bytes,
         };
         vkCmdCopyBuffer(commandBuffer, device.stagingBuffer->buffer(), buffer(), 1, &copyRegion);
-        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(device.familyQueues().graphics, stageFlags));
     }
     return VK_SUCCESS;
 }
@@ -340,7 +426,7 @@ void Buffer::destroy(const VkDevice device, const VmaAllocator &allocator)
 VkResult lunaCreateBuffer(const LunaDevice device, const LunaBufferCreationInfo *creationInfo, LunaBuffer *buffer)
 {
     assert(device != LUNA_NULL_HANDLE);
-    assert(creationInfo);
+    assert(creationInfo && creationInfo->queueFamilyIndexCount != 0);
     CHECK_RESULT_RETURN(luna::BufferRegion::createBufferRegion(*luna::helpers::fromHandle<luna::Device>(device),
                                                                *creationInfo,
                                                                buffer));
@@ -377,24 +463,28 @@ VkResult lunaResizeBuffer(const LunaDevice device, LunaBuffer *buffer, const VkD
     return VK_SUCCESS;
 }
 
-VkResult lunaFillBuffer(const LunaDevice device, const LunaBuffer buffer, const uint32_t data)
+VkResult lunaFillBuffer(const LunaDevice device,
+                        const LunaCommandBuffer commandBuffer,
+                        const LunaBuffer buffer,
+                        const uint32_t data,
+                        const VkQueue submissionQueue,
+                        const VkPipelineStageFlags stageFlags)
 {
     assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(buffer != LUNA_NULL_HANDLE);
 
-    luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
-    luna::CommandBuffer &commandBuffer = deviceObject.commandPools().compute->commandBuffer(0);
-    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(deviceObject), true));
+    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject), true));
 
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
-    vkCmdFillBuffer(commandBuffer,
+    vkCmdFillBuffer(commandBufferObject,
                     bufferRegionIndex.buffer(),
                     bufferRegionIndex.offset(),
                     bufferRegionIndex.size(),
                     data);
-    // TODO (0.3.0): This is not ideal
-    CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(deviceObject.familyQueues().compute,
-                                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT));
+    CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(deviceObject), submissionQueue, stageFlags));
     return VK_SUCCESS;
 }
 
@@ -411,9 +501,13 @@ VkResult lunaCreateBufferView(const LunaDevice device,
                                bufferView);
 }
 
-VkResult lunaWriteDataToBuffer(const LunaDevice device, const LunaBuffer buffer, const LunaBufferWriteInfo *writeInfo)
+VkResult lunaWriteDataToBuffer(const LunaDevice device,
+                               const LunaCommandBuffer commandBuffer,
+                               const LunaBuffer buffer,
+                               const LunaBufferWriteInfo *writeInfo)
 {
     assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(writeInfo != nullptr);
     if (writeInfo->bytes != 0)
     {
@@ -422,6 +516,8 @@ VkResult lunaWriteDataToBuffer(const LunaDevice device, const LunaBuffer buffer,
 
         const luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
         CHECK_RESULT_RETURN(bufferRegionIndex->copyToBuffer(*luna::helpers::fromHandle<luna::Device>(device),
+                                                            *luna::helpers::fromHandle<
+                                                                    luna::CommandBuffer>(commandBuffer),
                                                             static_cast<const uint8_t *>(writeInfo->data),
                                                             writeInfo->bytes,
                                                             writeInfo->offset,
