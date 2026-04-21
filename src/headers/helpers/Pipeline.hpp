@@ -11,7 +11,6 @@
 #include <vulkan/vulkan_core.h>
 #include "DescriptorSetLayout.hpp"
 #include "helpers/Handle.hpp"
-#include "Instance.hpp"
 
 namespace luna::helpers
 {

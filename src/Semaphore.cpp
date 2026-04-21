@@ -4,14 +4,11 @@
 
 #include <cassert>
 #include <luna/lunaSynchronization.h>
+#include <luna/lunaTypes.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp" // NOLINT(*-include-cleaner)
-#include "Device.hpp"
 #include "helpers/Handle.hpp"
 #include "Luna.hpp"
-#include "luna/lunaTypes.h"
-#include "Semaphore.hpp"
 
 namespace luna
 {

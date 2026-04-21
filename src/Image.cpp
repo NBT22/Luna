@@ -11,8 +11,6 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "Buffer.hpp"
-#include "CommandBuffer.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
 #include "Instance.hpp"

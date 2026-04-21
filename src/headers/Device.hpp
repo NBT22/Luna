@@ -11,18 +11,23 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
-#include "Buffer.hpp"
-#include "CommandPool.hpp"
-#include "ComputePipeline.hpp"
-#include "DescriptorSetLayout.hpp"
-#include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
-#include "Image.hpp"
-#include "RenderPass.hpp"
-#include "ShaderModule.hpp"
 
 namespace luna
 {
+class CommandPool;
+class ShaderModule;
+class RenderPass;
+class DescriptorSetLayout;
+struct DescriptorSetIndex;
+class GraphicsPipeline;
+class ComputePipeline;
+class Buffer;
+class BufferRegion;
+class BufferRegionIndex;
+class Image;
+class Semaphore;
+
 template<typename T> struct FamilyValues
 {
         T graphics{};
@@ -110,20 +115,20 @@ class Device
         VkPhysicalDeviceMemoryProperties memoryProperties_{};
         VmaAllocator allocator_{};
         std::vector<LunaQueueFamilyProperties> queueFamilies_{};
-        std::list<CommandPool> commandPools_{};
-        std::list<ShaderModule> shaderModules_{};
-        std::list<RenderPass> renderPasses_{};
-        std::list<DescriptorSetLayout> descriptorSetLayouts_{};
+        std::list<CommandPool> commandPools_;
+        std::list<ShaderModule> shaderModules_;
+        std::list<RenderPass> renderPasses_;
+        std::list<DescriptorSetLayout> descriptorSetLayouts_;
         std::list<VkDescriptorPool> descriptorPools_{};
         std::list<VkDescriptorSet> descriptorSets_{};
-        std::list<DescriptorSetIndex> descriptorSetIndices_{};
-        std::list<GraphicsPipeline> graphicsPipelines_{};
-        std::list<ComputePipeline> computePipelines_{};
-        std::list<Buffer> buffers_{};
-        std::list<BufferRegionIndex> bufferRegionIndices_{};
+        std::list<DescriptorSetIndex> descriptorSetIndices_;
+        std::list<GraphicsPipeline> graphicsPipelines_;
+        std::list<ComputePipeline> computePipelines_;
+        std::list<Buffer> buffers_;
+        std::list<BufferRegionIndex> bufferRegionIndices_;
         std::list<VkSampler> samplers_{};
-        std::list<Image> images_{};
-        std::list<Semaphore> semaphores_{};
+        std::list<Image> images_;
+        std::list<Semaphore> semaphores_;
         // TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
         //  that way it can shrink if it grows to an absurd size
         BufferRegionIndex *stagingBuffer_{};

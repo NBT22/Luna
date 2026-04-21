@@ -9,8 +9,6 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
-#include "DescriptorSetLayout.hpp"
 #include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"

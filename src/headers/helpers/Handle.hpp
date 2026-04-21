@@ -7,7 +7,6 @@
 #include <concepts>
 #include <luna/lunaTypes.h>
 #include <type_traits>
-#include <vulkan/vulkan_core.h>
 
 namespace luna
 {

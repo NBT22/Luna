@@ -9,12 +9,9 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
-#include "ComputePipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
 #include "Luna.hpp"
-#include "ShaderModule.hpp"
 
 namespace luna
 {

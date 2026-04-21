@@ -6,11 +6,9 @@
 #include <luna/lunaCommandBuffer.h>
 #include <luna/lunaDevice.h>
 #include <luna/lunaTypes.h>
+#include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
 #include "CommandPool.hpp"
-#include "Device.hpp"
-#include "Fence.hpp"
 #include "helpers/Handle.hpp"
 #include "Luna.hpp"
 

@@ -10,13 +10,9 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
-#include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "helpers/Pipeline.hpp"
 #include "Luna.hpp"
-#include "RenderPass.hpp"
-#include "ShaderModule.hpp"
 
 #ifdef LUNA_SLANG_SHADERS
 #include <cmath>

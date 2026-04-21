@@ -9,16 +9,12 @@
 #include <cstdint>
 #include <list>
 #include <luna/lunaBuffer.h>
-#include <luna/lunaCommandBuffer.h>
 #include <luna/lunaDrawing.h>
 #include <luna/lunaTypes.h>
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
 #include "Buffer.hpp"
-#include "CommandBuffer.hpp"
-#include "Device.hpp"
-#include "GraphicsPipeline.hpp"
 #include "helpers/Handle.hpp"
 #include "Luna.hpp"
 

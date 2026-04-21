@@ -14,11 +14,8 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "CommandBuffer.hpp"
-#include "Device.hpp"
 #include "helpers/Handle.hpp"
 #include "Image.hpp"
-#include "Instance.hpp"
 #include "Luna.hpp"
 
 #ifdef LUNA_SLANG_SHADERS
@@ -161,7 +158,7 @@ static VkResult createSwapchainImages(const VkDevice device)
     return VK_SUCCESS;
 }
 
-static VkResult createSwapchain(Device &device, const LunaSwapchainCreationInfo &creationInfo)
+static VkResult createSwapchain(const Device &device, const LunaSwapchainCreationInfo &creationInfo)
 {
     assert(!luna::swapchain.safeToUse);
 

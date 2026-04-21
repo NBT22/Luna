@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include <luna/lunaTypes.h>
+#include <string>
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_core.h>

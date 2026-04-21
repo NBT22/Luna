@@ -39,17 +39,32 @@ endif ()
 
 add_library(Luna STATIC
         src/Buffer.cpp
+        src/CommandBuffer.cpp
         src/CommandPool.cpp
         src/ComputePipeline.cpp
         src/DescriptorSetLayout.cpp
         src/Device.cpp
+        src/Fence.cpp
         src/GraphicsPipeline.cpp
         src/Image.cpp
         src/Instance.cpp
         src/Luna.cpp
         src/RenderPass.cpp
         src/ShaderModule.cpp
+        src/Semaphore.cpp
 
+        include/luna/luna.h
+        include/luna/lunaBuffer.h
+        include/luna/lunaCommandBuffer.h
+        include/luna/lunaDevice.h
+        include/luna/lunaDrawing.h
+        include/luna/lunaImage.h
+        include/luna/lunaInstance.h
+        include/luna/lunaSynchronization.h
+        include/luna/lunaTypes.h
+)
+add_dependencies(Luna GenerateShaderHeader)
+target_precompile_headers(Luna PRIVATE
         src/headers/helpers/Handle.hpp
         src/headers/helpers/Pipeline.hpp
         src/headers/ComputePipeline.hpp
@@ -67,21 +82,7 @@ add_library(Luna STATIC
         src/headers/Semaphore.hpp
         src/headers/ShaderModule.hpp
         src/headers/SlangSession.hpp
-
-        include/luna/luna.h
-        include/luna/lunaBuffer.h
-        include/luna/lunaDevice.h
-        include/luna/lunaDrawing.h
-        include/luna/lunaImage.h
-        include/luna/lunaInstance.h
-        include/luna/lunaTypes.h
-        include/luna/lunaCommandBuffer.h
-        src/CommandBuffer.cpp
-        src/Semaphore.cpp
-        src/Fence.cpp
-        include/luna/lunaSynchronization.h
 )
-add_dependencies(Luna GenerateShaderHeader)
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
 target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)
 target_link_libraries(Luna PRIVATE _LunaInternal_PrivateDependencies _LunaInternal_compileOptions)
