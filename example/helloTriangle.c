@@ -16,7 +16,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <volk.h>
 #include <vulkan/vulkan_core.h>
+#include "luna/lunaCommandBuffer.h"
 
 #define MACRO_WRAPPER(expr) \
     do \
@@ -137,7 +139,7 @@ static bool shouldQuit(void)
     return false;
 }
 
-static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *renderPass)
+static VkResult createRenderPass(const LunaDevice device, const VkExtent3D extent, LunaRenderPass *renderPass)
 {
     VkSubpassDependency dependency = {
         .srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -159,10 +161,12 @@ static VkResult createRenderPass(const VkExtent3D extent, LunaRenderPass *render
         .dependencies = &dependency,
         .extent = extent,
     };
-    return lunaCreateRenderPass(TODO, &renderPassCreationInfo, renderPass);
+    return lunaCreateRenderPass(device, &renderPassCreationInfo, renderPass);
 }
 
-static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphicsPipeline *pipeline)
+static VkResult createGraphicsPipeline(const LunaDevice device,
+                                       const LunaRenderPassSubpass subpass,
+                                       LunaGraphicsPipeline *pipeline)
 {
     const VkExtent2D swapchainExtent = lunaGetSwapchainExtent();
 
@@ -173,7 +177,9 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .creationInfoUnion.spirv.size = sizeof(VERTEX_SHADER_SPIRV),
         .creationInfoUnion.spirv.spirv = VERTEX_SHADER_SPIRV,
     };
-    VkResult vertexShaderCreationResult = lunaCreateShaderModule(TODO, &vertexShaderCreationInfo, &vertexShaderModule);
+    VkResult vertexShaderCreationResult = lunaCreateShaderModule(device,
+                                                                 &vertexShaderCreationInfo,
+                                                                 &vertexShaderModule);
     if (vertexShaderCreationResult != VK_SUCCESS)
     {
         return vertexShaderCreationResult;
@@ -183,7 +189,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .creationInfoUnion.spirv.size = sizeof(FRAGMENT_SHADER_SPIRV),
         .creationInfoUnion.spirv.spirv = FRAGMENT_SHADER_SPIRV,
     };
-    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(TODO,
+    VkResult fragmentShaderCreationResult = lunaCreateShaderModule(device,
                                                                    &fragmentShaderCreationInfo,
                                                                    &fragmentShaderModule);
     if (fragmentShaderCreationResult != VK_SUCCESS)
@@ -280,7 +286,7 @@ static VkResult createGraphicsPipeline(LunaRenderPassSubpass subpass, LunaGraphi
         .colorBlendState = &colorBlending,
         .subpass = subpass,
     };
-    return lunaCreateGraphicsPipeline(TODO, &pipelineCreationInfo, pipeline);
+    return lunaCreateGraphicsPipeline(device, &pipelineCreationInfo, pipeline);
 }
 
 int main(void)
@@ -320,6 +326,7 @@ int main(void)
     {
         return 4;
     }
+    LunaDevice device = LUNA_NULL_HANDLE;
     const LunaPhysicalDevicePreferenceDefinition physicalDevicePreferenceDefinition = {
         .preferredDeviceType = VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
     };
@@ -329,7 +336,25 @@ int main(void)
         .surface = surface,
         .physicalDevicePreferenceDefinition = &physicalDevicePreferenceDefinition,
     };
-    CHECK_RESULT(lunaCreateDevice(&deviceCreationInfo));
+    CHECK_RESULT(lunaCreateDevice(&deviceCreationInfo, &device));
+
+    const LunaQueueFamilyProperties requiredProperties = {
+        .queueFamilyProperties.queueFlags = VK_QUEUE_GRAPHICS_BIT,
+        .presentationSupport = true,
+    };
+    const uint32_t queueFamilyIndex = lunaGetQueueFamilyIndex(device, &requiredProperties);
+
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(lunaGetVkDevice(device), queueFamilyIndex, 0, &queue);
+
+    LunaCommandPool commandPool = LUNA_NULL_HANDLE;
+    const LunaCommandPoolCreationInfo commandPoolCreationInfo = {
+        .queueFamilyIndex = queueFamilyIndex,
+    };
+    CHECK_RESULT(lunaCreateCommandPool(device, &commandPoolCreationInfo, &commandPool));
+    LunaCommandBuffer commandBuffer = LUNA_NULL_HANDLE;
+    CHECK_RESULT(lunaAllocateCommandBuffer(device, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, &commandBuffer));
+    CHECK_RESULT(lunaBeginSingleUseCommandBuffer(device, commandBuffer));
 
     const VkExtent3D extent = {
         .width = WIDTH,
@@ -344,27 +369,31 @@ int main(void)
         .formatPriorityList = (VkSurfaceFormatKHR[]){{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}},
         .presentModeCount = 1,
         .presentModePriorityList = (VkPresentModeKHR[]){VK_PRESENT_MODE_FIFO_KHR},
+        .queueFamilyIndexCount = 1,
+        .queueFamilyIndices = &queueFamilyIndex,
     };
-    CHECK_RESULT(lunaCreateSwapchain(&swapchainCreationInfo));
+    CHECK_RESULT(lunaCreateSwapchain(device, &swapchainCreationInfo));
 
     LunaRenderPass renderPass = LUNA_NULL_HANDLE;
-    CHECK_RESULT(createRenderPass(extent, &renderPass));
+    CHECK_RESULT(createRenderPass(device, extent, &renderPass));
 
     LunaGraphicsPipeline graphicsPipeline = LUNA_NULL_HANDLE;
-    CHECK_RESULT(createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline));
+    CHECK_RESULT(createGraphicsPipeline(device, lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline));
 
     const LunaBufferCreationInfo bufferCreationInfo = {
         .size = sizeof(vertices),
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        .queueFamilyIndexCount = 1,
+        .queueFamilyIndices = &queueFamilyIndex,
     };
     LunaBuffer vertexBuffer = LUNA_NULL_HANDLE;
-    CHECK_RESULT(lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer));
+    CHECK_RESULT(lunaCreateBuffer(device, &bufferCreationInfo, &vertexBuffer));
     const LunaBufferWriteInfo vertexBufferWriteInfo = {
         .bytes = sizeof(vertices),
         .data = vertices,
         .stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
     };
-    CHECK_RESULT(lunaWriteDataToBuffer(vertexBuffer, &vertexBufferWriteInfo));
+    CHECK_RESULT(lunaWriteDataToBuffer(device, commandBuffer, vertexBuffer, &vertexBufferWriteInfo));
 
     const LunaRenderPassBeginInfo beginInfo = {
         .renderArea.extent.width = extent.width,
@@ -377,13 +406,30 @@ int main(void)
         .instanceCount = 1,
     };
 
+    const VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    const VkSwapchainKHR swapchain = lunaGetVkSwapchain();
+    uint32_t imageIndex = lunaGetSwapchainImageIndex();
+
+    const VkSubmitInfo submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    };
+    const VkPresentInfoKHR presentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .swapchainCount = 1,
+        .pSwapchains = &swapchain,
+        .pImageIndices = &imageIndex,
+    };
+
+    CHECK_RESULT(lunaEndAndSubmitCommandBuffer(device, commandBuffer, queue, &submitInfo, stageMask));
+
     while (!shouldQuit())
     {
-        CHECK_RESULT(lunaBeginFrame(false));
-        CHECK_RESULT(lunaBeginRenderPass(renderPass, &beginInfo));
-        CHECK_RESULT(lunaDrawBuffer(vertexBuffer, &drawInfo));
-        lunaEndRenderPass(TODO);
-        CHECK_RESULT(lunaEndFrame());
+        CHECK_RESULT(lunaBeginFrame(device, commandBuffer, false));
+        CHECK_RESULT(lunaBeginRenderPass(device, commandBuffer, renderPass, &beginInfo));
+        CHECK_RESULT(lunaDrawBuffer(device, commandBuffer, vertexBuffer, &drawInfo));
+        lunaEndRenderPass(commandBuffer);
+        imageIndex = lunaGetSwapchainImageIndex();
+        CHECK_RESULT(lunaEndFrame(device, commandBuffer, &presentInfo, &submitInfo, queue));
     }
     CHECK_RESULT(lunaDestroyInstance());
     return 0;

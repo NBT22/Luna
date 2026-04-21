@@ -574,7 +574,7 @@ VkResult lunaBeginFrame(const LunaDevice device,
             return acquireImageResult;
     }
 
-    CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer(vkDevice));
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(vkDevice));
 
     return VK_SUCCESS;
 }
@@ -591,15 +591,20 @@ VkResult lunaEndFrame(const LunaDevice device,
     assert(submitInfo);
     assert(queue != VK_NULL_HANDLE);
 
+    static constexpr VkPipelineStageFlags STAGE_MASK = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     const VkSemaphore presentSemaphore = luna::swapchain.presentSemaphores.at(luna::swapchain.frameIndex);
     const VkSemaphore renderSemaphore = luna::swapchain.renderSemaphores.at(luna::swapchain.imageIndex);
 
     std::vector<VkSemaphore> submissionWaitSemaphores{presentSemaphore};
+    std::vector<uint32_t> stageMasks{STAGE_MASK};
     if (submitInfo->waitSemaphoreCount > 0)
     {
         submissionWaitSemaphores.insert(submissionWaitSemaphores.end(),
                                         submitInfo->pWaitSemaphores,
                                         submitInfo->pWaitSemaphores + submitInfo->waitSemaphoreCount);
+        stageMasks.insert(stageMasks.end(),
+                          submitInfo->pWaitDstStageMask,
+                          submitInfo->pWaitDstStageMask + submitInfo->waitSemaphoreCount);
     }
     std::vector<VkSemaphore> signalSemaphores{renderSemaphore};
     if (submitInfo->signalSemaphoreCount > 0)
@@ -616,18 +621,17 @@ VkResult lunaEndFrame(const LunaDevice device,
         .pNext = submitInfo->pNext,
         .waitSemaphoreCount = static_cast<uint32_t>(submissionWaitSemaphores.size()),
         .pWaitSemaphores = submissionWaitSemaphores.data(),
-        .pWaitDstStageMask = submitInfo->pWaitDstStageMask,
+        .pWaitDstStageMask = stageMasks.data(),
         .commandBufferCount = 1,
         .pCommandBuffers = &vkCommandBuffer,
         .signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size()),
         .pSignalSemaphores = signalSemaphores.data(),
     };
-    constexpr VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<
                                                                                luna::Device>(device)),
                                                          queue,
                                                          finalSubmitInfo,
-                                                         stageMask));
+                                                         STAGE_MASK));
 
     std::vector<VkSemaphore> presentationWaitSemaphores{renderSemaphore};
     if (presentInfo->waitSemaphoreCount > 0)

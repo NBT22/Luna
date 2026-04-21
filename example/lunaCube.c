@@ -578,7 +578,6 @@ int main(void)
 
     const VkSubmitInfo submitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pWaitDstStageMask = &stageMask,
     };
     const VkPresentInfoKHR presentInfo = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,

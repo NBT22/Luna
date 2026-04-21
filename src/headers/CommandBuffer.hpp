@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 #include "Fence.hpp"
 #include "helpers/Handle.hpp"
