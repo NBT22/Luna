@@ -86,7 +86,7 @@ VkResult lunaResetCommandPool(const LunaDevice device,
 VkResult lunaResetCommandPoolWithTimeout(const LunaDevice device,
                                          const LunaCommandPool commandPool,
                                          const VkCommandPoolResetFlags flags,
-                                         const size_t timeout)
+                                         const uint64_t timeout)
 {
     CHECK_RESULT_RETURN(
             luna::helpers::fromHandle<luna::CommandPool>(commandPool)->reset(lunaGetVkDevice(device), flags, timeout));

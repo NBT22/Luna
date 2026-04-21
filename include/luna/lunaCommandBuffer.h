@@ -45,7 +45,7 @@ VkResult lunaResetCommandPool(LunaDevice device, LunaCommandPool commandPool, Vk
 VkResult lunaResetCommandPoolWithTimeout(LunaDevice device,
                                          LunaCommandPool commandPool,
                                          VkCommandPoolResetFlags flags,
-                                         size_t timeout);
+                                         uint64_t timeout);
 
 VkResult lunaAllocateCommandBuffer(LunaDevice device,
                                    LunaCommandPool commandPool,

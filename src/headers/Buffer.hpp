@@ -38,19 +38,24 @@ class BufferRegion
         static VkResult findSpaceForBufferRegion(Device &device,
                                                  const LunaBufferCreationInfo &creationInfo,
                                                  Buffer *&outBuffer,
-                                                 size_t &outOffset,
+                                                 VkDeviceSize &outOffset,
                                                  std::list<BufferRegion>::iterator &outIterator);
 
     public: // BufferRegion public members
-        BufferRegion(Device &device, size_t size, uint8_t *data, size_t offset, Buffer *buffer, LunaBuffer *outBuffer);
+        BufferRegion(Device &device,
+                     VkDeviceSize size,
+                     uint8_t *data,
+                     VkDeviceSize offset,
+                     Buffer *buffer,
+                     LunaBuffer *outBuffer);
 
-        [[nodiscard]] size_t size() const;
-        [[nodiscard]] size_t offset() const;
+        [[nodiscard]] VkDeviceSize size() const;
+        [[nodiscard]] VkDeviceSize offset() const;
 
     private: // BufferRegion private members
-        size_t size_{};
+        VkDeviceSize size_{};
         uint8_t *data_{};
-        size_t offset_{};
+        VkDeviceSize offset_{};
 };
 class BufferRegionIndex
 {
@@ -69,15 +74,15 @@ class BufferRegionIndex
         [[nodiscard]] VkResult copyToBuffer(Device &device,
                                             CommandBuffer &commandBuffer,
                                             const uint8_t *data,
-                                            size_t bytes,
-                                            size_t offset = 0,
+                                            VkDeviceSize bytes,
+                                            VkDeviceSize offset = 0,
                                             VkPipelineStageFlags stageFlags = 0) const;
         [[nodiscard]] VkResult createBufferView(VkDevice device,
                                                 const LunaBufferViewCreationInfo &creationInfo,
                                                 LunaBufferView *lunaView);
 
-        [[nodiscard]] size_t offset() const;
-        [[nodiscard]] size_t size() const;
+        [[nodiscard]] VkDeviceSize offset() const;
+        [[nodiscard]] VkDeviceSize size() const;
         [[nodiscard]] uint8_t *data() const;
         [[nodiscard]] VkBufferCreateFlags creationFlags() const;
         [[nodiscard]] VkBufferUsageFlags usageFlags() const;
@@ -120,9 +125,9 @@ class Buffer
         VkBufferCreateFlags creationFlags_{};
         VkBufferUsageFlags usageFlags_{};
         VmaAllocationCreateInfo allocationCreateInfo_{};
-        size_t usedBytes_{};
-        size_t unusedBytes_{}; ///< The bytes within the buffer that make up the dead space between buffer regions
-        size_t freeBytes_{}; ///< The bytes at the end of the VkBuffer that are not used by any region
+        VkDeviceSize usedBytes_{};
+        VkDeviceSize unusedBytes_{}; ///< The bytes within the buffer that make up the dead space between buffer regions
+        VkDeviceSize freeBytes_{}; ///< The bytes at the end of the VkBuffer that are not used by any region
         void *data_{};
         std::list<BufferRegion> regions_{};
 };
@@ -139,12 +144,12 @@ inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *buffer
     bufferRegion_(bufferRegion)
 {}
 
-inline size_t BufferRegionIndex::offset() const
+inline VkDeviceSize BufferRegionIndex::offset() const
 {
     assert(bufferRegion_);
     return bufferRegion_->offset_;
 }
-inline size_t BufferRegionIndex::size() const
+inline VkDeviceSize BufferRegionIndex::size() const
 {
     if (bufferRegion_ == nullptr)
     {
@@ -185,11 +190,11 @@ inline const VkBuffer &BufferRegionIndex::buffer() const
 }
 
 
-inline size_t BufferRegion::size() const
+inline VkDeviceSize BufferRegion::size() const
 {
     return size_;
 }
-inline size_t BufferRegion::offset() const
+inline VkDeviceSize BufferRegion::offset() const
 {
     return offset_;
 }

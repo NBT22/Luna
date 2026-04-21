@@ -547,7 +547,7 @@ typedef struct
 
 typedef struct
 {
-        size_t bytes;
+        VkDeviceSize bytes;
         const void *pixels;
         VkImageSubresourceLayers *subresourceLayers;
         const VkOffset3D *offset;

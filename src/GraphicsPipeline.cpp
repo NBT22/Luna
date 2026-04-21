@@ -514,7 +514,7 @@ GraphicsPipeline::GraphicsPipeline(const VkDevice device, const LunaGraphicsPipe
         .renderPass = *subpassIndex->renderPass,
         .subpass = subpassIndex->index,
     };
-    CHECK_RESULT_THROW(vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline_));
+    CHECK_RESULT_THROW(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline_));
 
     isDestroyed_ = false;
 }

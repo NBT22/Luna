@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <list>
 #include <luna/lunaBuffer.h>
 #include <luna/lunaDrawing.h>
@@ -23,9 +24,9 @@ static constexpr long double BLOCK_SIZE = 32 * 1024 * 1024;
 namespace luna
 {
 BufferRegion::BufferRegion(Device &device,
-                           const size_t size,
+                           const VkDeviceSize size,
                            uint8_t *data,
-                           const size_t offset,
+                           const VkDeviceSize offset,
                            Buffer *buffer,
                            LunaBuffer *outBuffer):
     size_(size),
@@ -39,7 +40,7 @@ BufferRegion::BufferRegion(Device &device,
 VkResult BufferRegion::findSpaceForBufferRegion(Device &device,
                                                 const LunaBufferCreationInfo &creationInfo,
                                                 Buffer *&outBuffer,
-                                                size_t &outOffset,
+                                                VkDeviceSize &outOffset,
                                                 std::list<BufferRegion>::iterator &outIterator)
 {
     constexpr VmaAllocationCreateInfo defaultAllocationCreateInfo = {
@@ -162,7 +163,7 @@ VkResult BufferRegion::createBufferRegion(Device &device,
                                           LunaBuffer *outBuffer)
 {
     Buffer *buffer{};
-    size_t offset{};
+    VkDeviceSize offset{};
     std::list<BufferRegion>::iterator iterator{};
     CHECK_RESULT_RETURN(findSpaceForBufferRegion(device, creationInfo, buffer, offset, iterator));
 
@@ -172,6 +173,7 @@ VkResult BufferRegion::createBufferRegion(Device &device,
         return VK_SUCCESS;
     }
 
+    assert(offset <= std::numeric_limits<ptrdiff_t>::max());
     buffer->regions_.emplace(iterator,
                              device,
                              creationInfo.size,
@@ -191,7 +193,7 @@ VkResult BufferRegion::createBufferRegion(Device &device,
     return VK_SUCCESS;
 }
 
-VkResult BufferRegionIndex::resize(Device &device, BufferRegionIndex *&bufferRegionIndex, VkDeviceSize newSize)
+VkResult BufferRegionIndex::resize(Device &device, BufferRegionIndex *&bufferRegionIndex, const VkDeviceSize newSize)
 {
     if (bufferRegionIndex->size() == newSize)
     {
@@ -213,7 +215,7 @@ VkResult BufferRegionIndex::resize(Device &device, BufferRegionIndex *&bufferReg
     }
 
     const bool growing = bufferRegionIndex->size() < newSize;
-    const size_t sizeChange = growing ? newSize - bufferRegionIndex->size() : bufferRegionIndex->size() - newSize;
+    const VkDeviceSize sizeChange = growing ? newSize - bufferRegionIndex->size() : bufferRegionIndex->size() - newSize;
     Buffer *buffer = bufferRegionIndex->buffer_;
     BufferRegion *bufferRegion = bufferRegionIndex->bufferRegion_;
 
@@ -318,11 +320,12 @@ VkResult BufferRegionIndex::flushMemory(const VmaAllocator &allocator) const
 VkResult BufferRegionIndex::copyToBuffer(Device &device,
                                          CommandBuffer &commandBuffer,
                                          const uint8_t *data,
-                                         const size_t bytes,
-                                         const size_t offset,
+                                         const VkDeviceSize bytes,
+                                         const VkDeviceSize offset,
                                          const VkPipelineStageFlags stageFlags) const
 {
     assert(bytes <= size() - offset);
+    assert(offset <= std::numeric_limits<ptrdiff_t>::max());
 
     uint8_t *mappedData = BufferRegionIndex::data();
     if (mappedData != nullptr)
@@ -537,7 +540,6 @@ VkDeviceSize lunaGetBufferSize(const LunaBuffer buffer)
     {
         return 0;
     }
-    // TODO: luna::BufferRegionIndex::size() returns a size_t but we are assuming it's the same size as VkDeviceSize
     return luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer)->size();
 }
 
