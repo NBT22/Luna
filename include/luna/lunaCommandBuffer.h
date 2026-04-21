@@ -58,15 +58,11 @@ VkResult lunaEndCommandBuffer(LunaCommandBuffer commandBuffer);
 
 VkResult lunaSubmitCommandBuffer(LunaDevice device,
                                  LunaCommandBuffer commandBuffer,
-                                 VkQueue queue,
-                                 const VkSubmitInfo *submitInfo,
-                                 VkPipelineStageFlags stageMask);
+                                 const LunaCommandBufferSubmitInfo *submitInfo);
 
 VkResult lunaEndAndSubmitCommandBuffer(LunaDevice device,
                                        LunaCommandBuffer commandBuffer,
-                                       VkQueue queue,
-                                       const VkSubmitInfo *submitInfo,
-                                       VkPipelineStageFlags stageMask);
+                                       const LunaCommandBufferSubmitInfo *submitInfo);
 
 VkResult lunaResetCommandBuffer(LunaCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
 

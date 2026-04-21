@@ -468,8 +468,7 @@ VkResult lunaFillBuffer(const LunaDevice device,
                         const LunaCommandBuffer commandBuffer,
                         const LunaBuffer buffer,
                         const uint32_t data,
-                        const VkQueue submissionQueue,
-                        const VkPipelineStageFlags stageFlags)
+                        const LunaCommandBufferSubmitInfo *submitInfo)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
@@ -485,9 +484,10 @@ VkResult lunaFillBuffer(const LunaDevice device,
                     bufferRegionIndex.offset(),
                     bufferRegionIndex.size(),
                     data);
-    CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(deviceObject),
-                                                         submissionQueue,
-                                                         stageFlags));
+    if (submitInfo != nullptr)
+    {
+        CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(deviceObject), *submitInfo));
+    }
     return VK_SUCCESS;
 }
 

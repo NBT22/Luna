@@ -94,8 +94,7 @@ VkResult lunaBeginFrame(LunaDevice device, LunaCommandBuffer commandBuffer, bool
 VkResult lunaEndFrame(LunaDevice device,
                       LunaCommandBuffer commandBuffer,
                       const VkPresentInfoKHR *presentInfo,
-                      const VkSubmitInfo *submitInfo,
-                      VkQueue queue);
+                      const LunaCommandBufferSubmitInfo *submitInfo);
 
 #ifdef __cplusplus
 }

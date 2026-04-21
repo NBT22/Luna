@@ -102,8 +102,7 @@ VkResult lunaDispatch(const LunaDevice device, const LunaCommandBuffer commandBu
         .groupCountX = info->groupCountX,
         .groupCountY = info->groupCountY,
         .groupCountZ = info->groupCountZ,
-        .queue = info->queue,
-        .stageMask = info->stageMask,
+        .submitInfo = info->submitInfo,
     };
     return lunaDispatchBase(device, commandBuffer, &baseInfo);
 }
@@ -130,12 +129,11 @@ VkResult lunaDispatchBase(const LunaDevice device,
                       info->groupCountX == 0 ? 1 : info->groupCountX,
                       info->groupCountY == 0 ? 1 : info->groupCountY,
                       info->groupCountZ == 0 ? 1 : info->groupCountZ);
-    if (info->queue != VK_NULL_HANDLE)
+    if (info->submitInfo != nullptr)
     {
         CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<
                                                                                    luna::Device>(device)),
-                                                             info->queue,
-                                                             info->stageMask));
+                                                             *info->submitInfo));
     }
     return VK_SUCCESS;
 }

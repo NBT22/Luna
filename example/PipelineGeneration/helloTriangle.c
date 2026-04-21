@@ -51,7 +51,7 @@ float4 main(float3 inColor) : SV_Target {\n\
 }\n\
 ";
 
-static const Vertex vertices[3] = {
+static const Vertex VERTICES[3] = {
     {.x = 0.0f, .y = -0.5f, .r = 1},
     {.x = 0.5f, .y = 0.5f, .g = 1},
     {.x = -0.5f, .y = 0.5f, .b = 1},
@@ -196,14 +196,14 @@ int main(void)
     CHECK_RESULT(createGraphicsPipeline(lunaGetRenderPassSubpassByName(renderPass, NULL), &graphicsPipeline));
 
     const LunaBufferCreationInfo bufferCreationInfo = {
-        .size = sizeof(vertices),
+        .size = sizeof(VERTICES),
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
     };
     LunaBuffer vertexBuffer = LUNA_NULL_HANDLE;
     CHECK_RESULT(lunaCreateBuffer(&bufferCreationInfo, &vertexBuffer));
     LunaBufferWriteInfo vertexBufferWriteInfo = {
-        .bytes = sizeof(vertices),
-        .data = vertices,
+        .bytes = sizeof(VERTICES),
+        .data = VERTICES,
         .stageFlags = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
     };
     lunaWriteDataToBuffer(vertexBuffer, &vertexBufferWriteInfo);
@@ -220,7 +220,7 @@ int main(void)
         CHECK_RESULT(lunaDrawBuffer(vertexBuffer,
                                     graphicsPipeline,
                                     (LunaGraphicsPipelineBindInfo[]){0},
-                                    sizeof(vertices) / sizeof(*vertices),
+                                    sizeof(VERTICES) / sizeof(*VERTICES),
                                     1,
                                     0,
                                     0));

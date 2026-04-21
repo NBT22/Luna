@@ -225,11 +225,9 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
                                  layout_,
                                  image_,
                                  subresourceRange);
-        if (writeInfo.queue != VK_NULL_HANDLE)
+        if (writeInfo.submitInfo != nullptr)
         {
-            CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(static_cast<VkDevice>(device),
-                                                           writeInfo.queue,
-                                                           writeInfo.destinationStageMask));
+            CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(static_cast<VkDevice>(device), *writeInfo.submitInfo));
         }
         return VK_SUCCESS;
     }
@@ -288,11 +286,9 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
                                  subresourceRange);
     }
 
-    if (writeInfo.queue != VK_NULL_HANDLE)
+    if (writeInfo.submitInfo != nullptr)
     {
-        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(static_cast<VkDevice>(device),
-                                                       writeInfo.queue,
-                                                       writeInfo.destinationStageMask));
+        CHECK_RESULT_RETURN(commandBuffer.endAndSubmit(static_cast<VkDevice>(device), *writeInfo.submitInfo));
     }
     return VK_SUCCESS;
 }
@@ -558,7 +554,7 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
                                const LunaBuffer buffer,
                                const uint32_t regionCount,
                                const VkBufferImageCopy *regions,
-                               const VkQueue queue)
+                               const LunaCommandBufferSubmitInfo *submitInfo)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
@@ -576,11 +572,11 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
                            bufferRegionIndex.buffer(),
                            regionCount,
                            regions);
-    if (queue != VK_NULL_HANDLE)
+    if (submitInfo != nullptr)
     {
         CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<
                                                                                    luna::Device>(device)),
-                                                             queue));
+                                                             *submitInfo));
     }
     return VK_SUCCESS;
 }

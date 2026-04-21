@@ -55,7 +55,7 @@ VkResult lunaCopyImageToBuffer(LunaDevice device,
                                LunaBuffer buffer,
                                uint32_t regionCount,
                                const VkBufferImageCopy *regions,
-                               VkQueue queue);
+                               const LunaCommandBufferSubmitInfo *submitInfo);
 
 void lunaDestroyImage(LunaDevice device, LunaImage image);
 

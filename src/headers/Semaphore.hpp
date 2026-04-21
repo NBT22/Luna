@@ -15,8 +15,6 @@ class Semaphore
         explicit Semaphore(VkDevice device, const VkSemaphoreCreateInfo &semaphoreCreateInfo);
 
         operator const VkSemaphore &() const;
-        const VkSemaphore *operator&() const;
-        VkSemaphore *operator&();
 
         void destroy(VkDevice device);
 
@@ -43,14 +41,6 @@ namespace luna
 inline Semaphore::operator const VkSemaphore &() const
 {
     return semaphore_;
-}
-inline const VkSemaphore *Semaphore::operator&() const
-{
-    return &semaphore_;
-}
-inline VkSemaphore *Semaphore::operator&()
-{
-    return &semaphore_;
 }
 
 inline void Semaphore::setIsSignaled(const bool value)

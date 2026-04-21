@@ -39,6 +39,7 @@ LUNA_DEFINE_HANDLE(LunaImage);
 LUNA_DEFINE_HANDLE(LunaCommandPool);
 LUNA_DEFINE_HANDLE(LunaCommandBuffer);
 LUNA_DEFINE_HANDLE(LunaSlangSession);
+LUNA_DEFINE_HANDLE(LunaSemaphore);
 
 typedef struct
 {
@@ -209,6 +210,17 @@ typedef struct
         uint32_t queueFamilyIndexCount;
         const uint32_t *queueFamilyIndices;
 } LunaRenderPassCreationInfo2;
+
+typedef struct
+{
+        VkQueue queue;
+        VkPipelineStageFlags stageMask;
+        uint32_t waitSemaphoreCount;
+        const LunaSemaphore *waitSemaphores;
+        const VkPipelineStageFlags2 *waitDstStageMasks;
+        uint32_t signalSemaphoreCount;
+        const LunaSemaphore *signalSemaphores;
+} LunaCommandBufferSubmitInfo;
 
 typedef struct
 {
@@ -473,10 +485,7 @@ typedef struct
         uint32_t groupCountY;
         uint32_t groupCountZ;
 
-        /// The queue to submit work on.
-        /// If this is VK_NULL_HANDLE, then the command buffer will not be ended and the queue will not be submitted.
-        VkQueue queue;
-        VkPipelineStageFlags stageMask;
+        const LunaCommandBufferSubmitInfo *submitInfo;
 } LunaDispatchBaseInfo;
 
 typedef struct
@@ -487,10 +496,7 @@ typedef struct
         uint32_t groupCountY;
         uint32_t groupCountZ;
 
-        /// The queue to submit work on.
-        /// If this is VK_NULL_HANDLE, then the command buffer will not be ended and the queue will not be submitted.
-        VkQueue queue;
-        VkPipelineStageFlags stageMask;
+        const LunaCommandBufferSubmitInfo *submitInfo;
 } LunaDispatchInfo;
 
 /// @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkCreateBuffer.html
@@ -558,9 +564,7 @@ typedef struct
         VkPipelineStageFlags2 sourceStageMask;
         VkPipelineStageFlags2 destinationStageMask;
         VkAccessFlags2 destinationAccessMask;
-        /// The queue to submit work on.
-        /// If this is VK_NULL_HANDLE, then the command buffer will not be ended and the queue will not be submitted.
-        VkQueue queue;
+        const LunaCommandBufferSubmitInfo *submitInfo;
 
         LunaDescriptorSet descriptorSet;
         const char *descriptorLayoutBindingName;

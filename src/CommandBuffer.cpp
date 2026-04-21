@@ -3,7 +3,6 @@
 //
 
 #include <cassert>
-#include <cstdint>
 #include <luna/lunaCommandBuffer.h>
 #include <luna/lunaDevice.h>
 #include <luna/lunaTypes.h>
@@ -57,26 +56,20 @@ VkResult lunaEndCommandBuffer(const LunaCommandBuffer commandBuffer)
 
 VkResult lunaSubmitCommandBuffer(const LunaDevice device,
                                  const LunaCommandBuffer commandBuffer,
-                                 const VkQueue queue,
-                                 const VkSubmitInfo *submitInfo,
-                                 const VkPipelineStageFlags stageMask)
+                                 const LunaCommandBufferSubmitInfo *submitInfo)
 {
     assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(submitInfo);
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     CHECK_RESULT_RETURN(commandBufferObject.submit(static_cast<
                                                            VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
-                                                   queue,
-                                                   *submitInfo,
-                                                   stageMask));
+                                                   *submitInfo));
     return VK_SUCCESS;
 }
 
 VkResult lunaEndAndSubmitCommandBuffer(const LunaDevice device,
                                        const LunaCommandBuffer commandBuffer,
-                                       const VkQueue queue,
-                                       const VkSubmitInfo *submitInfo,
-                                       const VkPipelineStageFlags stageMask)
+                                       const LunaCommandBufferSubmitInfo *submitInfo)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
@@ -84,9 +77,7 @@ VkResult lunaEndAndSubmitCommandBuffer(const LunaDevice device,
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<
                                                                                luna::Device>(device)),
-                                                         queue,
-                                                         *submitInfo,
-                                                         stageMask));
+                                                         *submitInfo));
     return VK_SUCCESS;
 }
 

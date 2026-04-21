@@ -50,8 +50,7 @@ VkResult lunaFillBuffer(LunaDevice device,
                         LunaCommandBuffer commandBuffer,
                         LunaBuffer buffer,
                         uint32_t data,
-                        VkQueue submissionQueue,
-                        VkPipelineStageFlags stageFlags);
+                        const LunaCommandBufferSubmitInfo *submitInfo);
 
 VkResult lunaCreateBufferView(LunaDevice device,
                               const LunaBufferViewCreationInfo *creationInfo,

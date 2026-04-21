@@ -24,6 +24,7 @@ class Image;
 class CommandPool;
 class CommandBuffer;
 class SlangSession;
+class Semaphore;
 
 LUNA_DEFINE_HANDLE(HandleType);
 static_assert(std::is_trivially_copyable_v<HandleType>);
@@ -44,7 +45,8 @@ template<typename T> concept HandleData = std::same_as<T, Device> ||
                                           std::same_as<T, CommandPool> ||
                                           std::same_as<T, CommandBuffer> ||
                                           std::same_as<T, VkCommandBuffer> ||
-                                          std::same_as<T, SlangSession>;
+                                          std::same_as<T, SlangSession> ||
+                                          std::same_as<T, Semaphore>;
 } // namespace luna
 namespace luna::helpers
 {
