@@ -6,6 +6,7 @@
 #include <bit>
 #include <cassert>
 #include <cstdint>
+#include <luna/lunaDevice.h>
 #include <luna/lunaImage.h>
 #include <luna/lunaTypes.h>
 #include <vector>
@@ -486,7 +487,7 @@ VkResult lunaUpdateImage(const LunaDevice device,
                                            *writeInfo));
     if (writeInfo->descriptorSet != LUNA_NULL_HANDLE)
     {
-        imageObject->updateDescriptorBinding(static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+        imageObject->updateDescriptorBinding(lunaGetVkDevice(device),
                                              writeInfo->descriptorSet,
                                              writeInfo->descriptorLayoutBindingName,
                                              writeInfo->descriptorArrayElement);

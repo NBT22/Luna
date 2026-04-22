@@ -5,6 +5,7 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <luna/lunaDevice.h>
 #include <luna/lunaDrawing.h>
 #include <luna/lunaTypes.h>
 #include <vector>
@@ -694,7 +695,7 @@ VkResult lunaBeginRenderPass(const LunaDevice device,
     assert(renderPass);
     assert(beginInfo);
     return luna::helpers::fromHandle<luna::RenderPass>(renderPass)
-            ->begin(static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+            ->begin(lunaGetVkDevice(device),
                     *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                     *beginInfo);
 }

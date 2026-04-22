@@ -4,6 +4,7 @@
 
 #include <luna/luna.h>
 #include <luna/lunaBuffer.h>
+#include <luna/lunaCommandBuffer.h>
 #include <luna/lunaDevice.h>
 #include <luna/lunaDrawing.h>
 #include <luna/lunaInstance.h>
@@ -18,7 +19,6 @@
 #include <stdint.h>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "luna/lunaCommandBuffer.h"
 
 #define MACRO_WRAPPER(expr) \
     do \

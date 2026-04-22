@@ -10,6 +10,7 @@
 #include <limits>
 #include <list>
 #include <luna/lunaBuffer.h>
+#include <luna/lunaDevice.h>
 #include <luna/lunaDrawing.h>
 #include <luna/lunaTypes.h>
 #include <vector>
@@ -498,9 +499,7 @@ VkResult lunaCreateBufferView(const LunaDevice device,
     assert(creationInfo && creationInfo->buffer != LUNA_NULL_HANDLE);
 
     return luna::helpers::fromHandle<luna::BufferRegionIndex>(creationInfo->buffer)
-            ->createBufferView(static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
-                               *creationInfo,
-                               bufferView);
+            ->createBufferView(lunaGetVkDevice(device), *creationInfo, bufferView);
 }
 
 VkResult lunaWriteDataToBuffer(const LunaDevice device,
@@ -586,9 +585,7 @@ VkDeviceAddress lunaGetBufferDeviceAddress(const LunaDevice device, const LunaBu
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
         .buffer = bufferRegionIndex.buffer(),
     };
-    return vkGetBufferDeviceAddress(static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
-                                    &bufferDeviceAddressInfo) +
-           bufferRegionIndex.offset();
+    return vkGetBufferDeviceAddress(lunaGetVkDevice(device), &bufferDeviceAddressInfo) + bufferRegionIndex.offset();
 }
 
 VkBuffer lunaGetVkBuffer(const LunaBuffer buffer)

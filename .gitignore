@@ -2,4 +2,5 @@
 /build/
 /cmake-build-*/
 /out/
-/src/shaders/Shaders.hpp
+/.cache/
+/.artifacts/

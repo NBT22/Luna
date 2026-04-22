@@ -6,11 +6,12 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <luna/lunaTypes.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+#include "CommandPool.hpp"
 #include "Fence.hpp"
 #include "helpers/Handle.hpp"
-#include "luna/lunaTypes.h"
 #include "Semaphore.hpp"
 
 namespace luna
@@ -18,7 +19,7 @@ namespace luna
 class CommandBuffer
 {
     public:
-        CommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel commandBufferLevel);
+        CommandBuffer(VkDevice device, CommandPool &commandPool, VkCommandBufferLevel commandBufferLevel);
 
         operator const VkCommandBuffer &() const;
 
@@ -33,10 +34,11 @@ class CommandBuffer
         VkResult ensureIsRecording(VkDevice device);
 
         [[nodiscard]] bool isRecording() const;
+        [[nodiscard]] CommandPool &commandPool() const;
 
     private:
         bool isRecording_{};
-        VkCommandPool commandPool_{};
+        CommandPool &commandPool_;
         VkCommandBuffer commandBuffer_{};
         Fence fence_{};
         Semaphore semaphore_{};
@@ -52,7 +54,7 @@ class CommandBuffer
 namespace luna
 {
 inline CommandBuffer::CommandBuffer(const VkDevice device,
-                                    const VkCommandPool commandPool,
+                                    CommandPool &commandPool,
                                     const VkCommandBufferLevel commandBufferLevel):
     commandPool_(commandPool),
     fence_(device,
@@ -202,6 +204,10 @@ inline VkResult CommandBuffer::ensureIsRecording(const VkDevice device)
 inline bool CommandBuffer::isRecording() const
 {
     return isRecording_;
+}
+inline CommandPool &CommandBuffer::commandPool() const
+{
+    return commandPool_;
 }
 } // namespace luna
 

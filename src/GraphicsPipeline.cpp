@@ -460,14 +460,13 @@ VkResult GraphicsPipeline::bind(const LunaDevice device,
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->bind(
-            static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+            lunaGetVkDevice(device),
             *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
             bindInfo == nullptr ? LunaGraphicsPipelineBindInfo{} : *bindInfo));
     assert(luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer)->isRecording()); // Internal state check
     return VK_SUCCESS;
 }
 
-// TODO (0.3.0): Base pipeline
 GraphicsPipeline::GraphicsPipeline(const VkDevice device, const LunaGraphicsPipelineCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
@@ -951,6 +950,6 @@ VkResult lunaPushConstants(const LunaDevice device,
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
     return luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->pushConstants(
-            static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
+            lunaGetVkDevice(device),
             *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer));
 }

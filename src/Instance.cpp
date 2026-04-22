@@ -2,6 +2,7 @@
 // Created by NBT22 on 2/13/25.
 //
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -96,17 +97,11 @@ static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
                                         const VkPresentModeKHR *targetPresentModes,
                                         VkPresentModeKHR &destination)
 {
-    if (targetPresentModeCount == 0)
-    {
-        // TODO: Check if fifo is somehow missing
-        destination = VK_PRESENT_MODE_FIFO_KHR;
-        return VK_SUCCESS;
-    }
     uint32_t presentModeCount = 0;
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr));
     if (presentModeCount == 0)
     {
-        return VK_ERROR_FORMAT_NOT_SUPPORTED;
+        return VK_ERROR_UNKNOWN;
     }
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     CHECK_RESULT_RETURN(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice,
@@ -127,11 +122,15 @@ static VkResult getSwapchainPresentMode(const VkPhysicalDevice physicalDevice,
         }
         if (destination != VK_PRESENT_MODE_MAX_ENUM_KHR)
         {
-            break;
+            return VK_SUCCESS;
         }
     }
-    // This is an assert instead of an error because VK_PRESENT_MODE_FIFO_KHR is required to be supported.
-    assert(destination != VK_PRESENT_MODE_MAX_ENUM_KHR);
+    if (std::ranges::find(presentModes, VK_PRESENT_MODE_FIFO_KHR) == presentModes.end())
+    {
+        // FIFO is not supported
+        return VK_ERROR_UNKNOWN;
+    }
+    destination = VK_PRESENT_MODE_FIFO_KHR;
     return VK_SUCCESS;
 }
 

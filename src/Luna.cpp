@@ -538,9 +538,8 @@ VkResult lunaBeginFrame(const LunaDevice device,
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
-    const VkDevice vkDevice = static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device));
+    const VkDevice vkDevice = lunaGetVkDevice(device);
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    // TODO: If this fails it blocks the render thread, which is unacceptable, so there should be handling
     CHECK_RESULT_RETURN(commandBufferObject.waitForFence(vkDevice));
     CHECK_RESULT_RETURN(commandBufferObject.resetFence(vkDevice));
     const VkResult acquireImageResult =
@@ -617,8 +616,7 @@ VkResult lunaEndFrame(const LunaDevice device,
         .signalSemaphores = signalSemaphores.data(),
     };
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer)
-                                ->endAndSubmit(static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device)),
-                                               finalSubmitInfo));
+                                ->endAndSubmit(lunaGetVkDevice(device), finalSubmitInfo));
 
     std::vector<VkSemaphore> presentationWaitSemaphores{
         luna::swapchain.renderSemaphores.at(luna::swapchain.imageIndex)};

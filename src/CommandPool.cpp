@@ -2,6 +2,7 @@
 // Created by NBT22 on 5/19/25.
 //
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -40,12 +41,17 @@ void CommandPool::destroy(const VkDevice device)
     vkDestroyCommandPool(device, commandPool_, nullptr);
     isDestroyed_ = true;
 }
+void CommandPool::destroyCommandBuffer(const VkDevice device, CommandBuffer &commandBuffer)
+{
+    commandBuffer.destroy(device);
+    std::ranges::remove(commandBuffers_, &commandBuffer);
+    commandBufferList_.remove(commandBuffer);
+    // commandBuffer is now invalid! DO NOT USE IT!
+}
 VkResult CommandPool::allocateCommandBuffer(VkDevice device, VkCommandBufferLevel commandBufferLevel)
 {
     assert(!isDestroyed_);
-    TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device,
-                                                                                   commandPool_,
-                                                                                   commandBufferLevel)));
+    TRY_CATCH_RESULT(commandBuffers_.emplace_back(&commandBufferList_.emplace_back(device, *this, commandBufferLevel)));
     return VK_SUCCESS;
 }
 

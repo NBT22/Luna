@@ -24,6 +24,7 @@ class CommandPool
         operator const VkCommandPool &() const;
 
         void destroy(VkDevice device);
+        void destroyCommandBuffer(VkDevice device, CommandBuffer &commandBuffer);
 
         [[nodiscard]] VkResult allocateCommandBuffer(VkDevice device, VkCommandBufferLevel commandBufferLevel);
         [[nodiscard]] VkResult reset(VkDevice device,

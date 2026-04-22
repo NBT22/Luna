@@ -38,8 +38,7 @@ VkResult lunaBeginSingleUseCommandBuffer(const LunaDevice device, const LunaComm
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     if (!commandBufferObject.isRecording())
     {
-        CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer(
-                static_cast<VkDevice>(*luna::helpers::fromHandle<luna::Device>(device))));
+        CHECK_RESULT_RETURN(commandBufferObject.beginSingleUseCommandBuffer(lunaGetVkDevice(device)));
     }
     return VK_SUCCESS;
 }
@@ -99,6 +98,6 @@ void lunaDestroyCommandBuffer(const LunaDevice device, const LunaCommandBuffer c
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    commandBufferObject.destroy(lunaGetVkDevice(device));
-    // TODO (0.3.0): Wherever the handle is a pointer to should get freed
+    luna::CommandPool &commandPool = commandBufferObject.commandPool();
+    commandPool.destroyCommandBuffer(lunaGetVkDevice(device), commandBufferObject);
 }
