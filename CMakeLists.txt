@@ -28,15 +28,6 @@ else ()
     set(RELEASE_FLAGS ${COMMON_FLAGS} ${RELEASE_FLAGS} -O3 -DNDEBUG)
 endif ()
 
-findDependencies()
-
-# TODO (0.3.0): The scripts to generate the header should probably live elsewhere
-if (WIN32)
-    add_custom_target(GenerateShaderHeader ALL BYPRODUCTS COMMAND powershell -ExecutionPolicy RemoteSigned -NoProfile -NonInteractive ${LUNA_SOURCE_DIR}/src/shaders/GenerateHeader.ps1 WORKING_DIRECTORY ${LUNA_SOURCE_DIR}/src/shaders)
-else ()
-    add_custom_target(GenerateShaderHeader ALL BYPRODUCTS COMMAND sh ${LUNA_SOURCE_DIR}/src/shaders/GenerateHeader.sh WORKING_DIRECTORY ${LUNA_SOURCE_DIR}/src/shaders)
-endif ()
-
 add_library(Luna STATIC
         src/Buffer.cpp
         src/CommandBuffer.cpp
@@ -53,47 +44,64 @@ add_library(Luna STATIC
         src/ShaderModule.cpp
         src/Semaphore.cpp
 
-        include/luna/luna.h
-        include/luna/lunaBuffer.h
-        include/luna/lunaCommandBuffer.h
-        include/luna/lunaDevice.h
-        include/luna/lunaDrawing.h
-        include/luna/lunaImage.h
-        include/luna/lunaInstance.h
-        include/luna/lunaSynchronization.h
-        include/luna/lunaTypes.h
+        include/internal/helpers/Handle.hpp
+        include/internal/helpers/Pipeline.hpp
+        include/internal/ComputePipeline.hpp
+        include/internal/Buffer.hpp
+        include/internal/CommandBuffer.hpp
+        include/internal/CommandPool.hpp
+        include/internal/DescriptorSetLayout.hpp
+        include/internal/Device.hpp
+        include/internal/Fence.hpp
+        include/internal/GraphicsPipeline.hpp
+        include/internal/Image.hpp
+        include/internal/Instance.hpp
+        include/internal/Luna.hpp
+        include/internal/RenderPass.hpp
+        include/internal/Semaphore.hpp
+        include/internal/ShaderModule.hpp
+        include/internal/SlangSession.hpp
+
+        include/bindings/C/luna/luna.h
+        include/bindings/C/luna/lunaBuffer.h
+        include/bindings/C/luna/lunaCommandBuffer.h
+        include/bindings/C/luna/lunaDevice.h
+        include/bindings/C/luna/lunaDrawing.h
+        include/bindings/C/luna/lunaImage.h
+        include/bindings/C/luna/lunaInstance.h
+        include/bindings/C/luna/lunaSynchronization.h
+        include/bindings/C/luna/lunaTypes.h
 )
-add_dependencies(Luna GenerateShaderHeader)
 target_precompile_headers(Luna PRIVATE
-        src/headers/helpers/Handle.hpp
-        src/headers/helpers/Pipeline.hpp
-        src/headers/ComputePipeline.hpp
-        src/headers/Buffer.hpp
-        src/headers/CommandBuffer.hpp
-        src/headers/CommandPool.hpp
-        src/headers/DescriptorSetLayout.hpp
-        src/headers/Device.hpp
-        src/headers/Fence.hpp
-        src/headers/GraphicsPipeline.hpp
-        src/headers/Image.hpp
-        src/headers/Instance.hpp
-        src/headers/Luna.hpp
-        src/headers/RenderPass.hpp
-        src/headers/Semaphore.hpp
-        src/headers/ShaderModule.hpp
-        src/headers/SlangSession.hpp
+        include/internal/helpers/Handle.hpp
+        include/internal/helpers/Pipeline.hpp
+        include/internal/ComputePipeline.hpp
+        include/internal/Buffer.hpp
+        include/internal/CommandBuffer.hpp
+        include/internal/CommandPool.hpp
+        include/internal/DescriptorSetLayout.hpp
+        include/internal/Device.hpp
+        include/internal/Fence.hpp
+        include/internal/GraphicsPipeline.hpp
+        include/internal/Image.hpp
+        include/internal/Instance.hpp
+        include/internal/Luna.hpp
+        include/internal/RenderPass.hpp
+        include/internal/Semaphore.hpp
+        include/internal/ShaderModule.hpp
+        include/internal/SlangSession.hpp
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
-target_link_libraries(Luna PUBLIC _LunaInternal_PublicDependencies)
-target_link_libraries(Luna PRIVATE _LunaInternal_PrivateDependencies _LunaInternal_compileOptions)
-target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include)
-target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/src/headers ${LUNA_SOURCE_DIR}/src/shaders)
+target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include/bindings/C)
+target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/include/internal ${LUNA_SOURCE_DIR}/generated/include)
 
-if (${LUNA_ENABLE_LTO})
+findDependencies()
+
+if (LUNA_ENABLE_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT IS_IPO_SUPPORTED)
     if (IS_IPO_SUPPORTED)
-        set_target_properties(Luna PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+        set_target_properties(Luna PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
     else ()
         message(WARNING "LTO option enabled, but LTO/IPO is not supported!")
     endif ()

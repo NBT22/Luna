@@ -4,7 +4,9 @@ include(${LUNA_SOURCE_DIR}/cmake/utils.cmake)
 
 function(findDependencies)
     # TODO (0.3.0): Look into reducing the size of the slang binary
-    if (${LUNA_SLANG_SHADERS})
+    if (LUNA_SLANG_SHADERS)
+        runGenerator(SlangHeader)
+
         disableOptions(SLANG_ENABLE_CUDA SLANG_ENABLE_OPTIX SLANG_ENABLE_NVAPI SLANG_ENABLE_XLIB SLANG_ENABLE_AFTERMATH SLANG_ENABLE_DX_ON_VK SLANG_ENABLE_SLANG_RHI SLANG_ENABLE_DXIL SLANG_ENABLE_FULL_IR_VALIDATION SLANG_ENABLE_IR_BREAK_ALLOC SLANG_ENABLE_ASAN SLANG_ENABLE_COVERAGE SLANG_ENABLE_GFX SLANG_ENABLE_SLANGD SLANG_ENABLE_SLANGC SLANG_ENABLE_SLANGI SLANG_ENABLE_SLANG_GLSLANG SLANG_ENABLE_TESTS SLANG_ENABLE_EXAMPLES SLANG_ENABLE_REPLAYER)
         enableOptions(SLANG_USE_SYSTEM_VULKAN_HEADERS SLANG_USE_SYSTEM_GLSLANG SLANG_ENABLE_RELEASE_LTO)
         set(SLANG_LIB_TYPE STATIC CACHE STRING "")
@@ -20,6 +22,9 @@ function(findDependencies)
                 SYSTEM
         )
         FetchContent_MakeAvailable(slang)
+
+        target_link_libraries(Luna PRIVATE slang)
+        target_compile_definitions(Luna PRIVATE LUNA_SLANG_SHADERS)
     endif ()
 
     makePackageAvailable(https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git v3.*.* VulkanMemoryAllocator CONFIG)
@@ -40,25 +45,17 @@ function(findDependencies)
         makePackageAvailable(https://github.com/zeux/volk.git vulkan-sdk-1.4.*.* volk)
     endif ()
 
-    add_library(_LunaInternal_PublicDependencies INTERFACE)
-    target_link_libraries(_LunaInternal_PublicDependencies INTERFACE volk::volk_headers GPUOpen::VulkanMemoryAllocator)
-
-    add_library(_LunaInternal_PrivateDependencies INTERFACE)
-    if (${LUNA_SLANG_SHADERS})
-        target_link_libraries(_LunaInternal_PrivateDependencies INTERFACE slang)
-    endif ()
+    target_link_libraries(Luna PUBLIC volk::volk_headers GPUOpen::VulkanMemoryAllocator)
 
     if (LUNA_DEFINE_VK_NO_PROTOTYPES)
-        target_compile_options(_LunaInternal_PublicDependencies INTERFACE $<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>)
-    else ()
-        target_compile_options(_LunaInternal_PrivateDependencies INTERFACE $<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>)
+        target_compile_options(Luna PUBLIC $<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>)
     endif ()
 endfunction()
 
 function(findSDL3)
     disableOptions(SDL_AUDIO_DEFAULT SDL_GPU_DEFAULT SDL_RENDER_DEFAULT SDL_CAMERA_DEFAULT SDL_JOYSTICK_DEFAULT
-                   SDL_HAPTIC_DEFAULT SDL_HIDAPI_DEFAULT SDL_POWER_DEFAULT SDL_SENSOR_DEFAULT SDL_DIALOG_DEFAULT
-                   SDL_PIPEWIRE SDL_OFFSCREEN SDL_LIBUDEV SDL_TEST_LIBRARY SDL_EXAMPLES)
+            SDL_HAPTIC_DEFAULT SDL_HIDAPI_DEFAULT SDL_POWER_DEFAULT SDL_SENSOR_DEFAULT SDL_DIALOG_DEFAULT
+            SDL_PIPEWIRE SDL_OFFSCREEN SDL_LIBUDEV SDL_TEST_LIBRARY SDL_EXAMPLES)
     makePackageAvailable(https://github.com/libsdl-org/SDL.git release-3.*.* SDL3 CONFIG)
 endfunction()
 

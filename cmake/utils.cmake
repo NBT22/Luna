@@ -43,3 +43,8 @@ macro(makePackageAvailable gitRepo versionSplat packageName)
     )
     FetchContent_MakeAvailable(${packageName})
 endmacro()
+
+function(runGenerator generator)
+    find_package(Python COMPONENTS Interpreter REQUIRED)
+    execute_process(WORKING_DIRECTORY ${LUNA_SOURCE_DIR}/generators COMMAND ${Python_EXECUTABLE} ${generator}.py)
+endfunction()
