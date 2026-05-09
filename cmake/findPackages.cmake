@@ -31,9 +31,12 @@ function(findDependencies)
 
     find_package(Vulkan COMPONENTS volk QUIET)
     if (Vulkan_INCLUDE_DIRS STREQUAL "Vulkan_INCLUDE_DIR-NOTFOUND") # Unable to find Vulkan headers
-        makePackageAvailable(https://github.com/KhronosGroup/Vulkan-Headers.git vulkan-sdk-1.4.*.* Headers)
+        if (NOT DEFINED VULKAN_HEADERS_SOURCE_DIR)
+            makePackageAvailable(https://github.com/KhronosGroup/Vulkan-Headers.git vulkan-sdk-1.4.*.* Headers)
+            find_package(Vulkan COMPONENTS volk QUIET) # This is kept to check if volk is installed on the system
+        endif ()
         set(Vulkan_INCLUDE_DIR ${VULKAN_HEADERS_SOURCE_DIR}/include)
-        find_package(Vulkan COMPONENTS volk QUIET) # This is kept to check if volk is installed on the system
+        target_include_directories(Luna PUBLIC ${Vulkan_INCLUDE_DIR})
     endif ()
     if (Vulkan_FOUND) # Able to find Volk
         add_library(_LunaInternal_volk INTERFACE)
