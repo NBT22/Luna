@@ -23,7 +23,7 @@ macro(getLatestPackageVersion gitRepo versionSplat)
     if (WIN32)
         execute_process(COMMAND powershell -command "((& '${GIT_EXECUTABLE}' -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort=version:refname --tags ${gitRepo} '${versionSplat}' | Select-Object -Last 1) -Split '/')[2]" OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE _LUNA_PACKAGE_LATEST_RELEASE_VERSION)
     else ()
-        execute_process(COMMAND ${GIT_EXECUTABLE} -c "versionsort.suffix=-" ls-remote --exit-code --refs --sort=version:refname --tags ${gitRepo} "${versionSplat}" COMMAND tail --lines=1 COMMAND cut --delimiter=/ --fields=3 COMMAND tr -d "\n" OUTPUT_VARIABLE _LUNA_PACKAGE_LATEST_RELEASE_VERSION)
+        execute_process(COMMAND ${GIT_EXECUTABLE} -c "versionsort.suffix=-" ls-remote --exit-code --refs --sort=version:refname --tags ${gitRepo} "${versionSplat}" COMMAND tail -n 1 COMMAND cut -d / -f 3 COMMAND tr -d "\n" OUTPUT_VARIABLE _LUNA_PACKAGE_LATEST_RELEASE_VERSION)
     endif ()
 endmacro()
 
