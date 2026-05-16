@@ -236,7 +236,7 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
         extent.depth = 1;
     }
 
-    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device, device.stagingBuffer(), writeInfo.bytes));
+    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device, commandBuffer, device.stagingBuffer(), writeInfo.bytes));
     CHECK_RESULT_RETURN(device.stagingBuffer()->copyToBuffer(device,
                                                              commandBuffer,
                                                              static_cast<const uint8_t *>(writeInfo.pixels),
@@ -492,58 +492,6 @@ VkResult lunaUpdateImage(const LunaDevice device,
                                              writeInfo->descriptorLayoutBindingName,
                                              writeInfo->descriptorArrayElement);
     }
-    return VK_SUCCESS;
-}
-
-VkResult lunaBlitImageToSwapchain(const LunaDevice device,
-                                  const LunaCommandBuffer commandBuffer,
-                                  const LunaImage image,
-                                  const VkImageBlit2 *blitRegion)
-{
-    assert(device != LUNA_NULL_HANDLE);
-    assert(commandBuffer != LUNA_NULL_HANDLE);
-    assert(image);
-    assert(blitRegion);
-
-    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(*luna::helpers::fromHandle<
-                                                                                    luna::Device>(device))));
-
-    constexpr VkImageSubresourceRange subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .levelCount = 1,
-        .layerCount = 1,
-    };
-
-    const VkImage swapchainImage = luna::swapchain.images.at(luna::swapchain.imageIndex);
-
-    luna::helpers::pipelineBarrier(commandBufferObject,
-                                   VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                   VK_ACCESS_2_NONE,
-                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                                   VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                                   VK_IMAGE_LAYOUT_UNDEFINED,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                   swapchainImage,
-                                   subresourceRange);
-    luna::helpers::blitImage(commandBufferObject,
-                             luna::helpers::fromHandle<luna::Image>(image)->image(),
-                             VK_IMAGE_LAYOUT_GENERAL,
-                             swapchainImage,
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                             1,
-                             blitRegion,
-                             VK_FILTER_NEAREST);
-    luna::helpers::pipelineBarrier(commandBufferObject,
-                                   VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                                   VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                                   VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                   VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                   VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                   swapchainImage,
-                                   subresourceRange);
-
     return VK_SUCCESS;
 }
 

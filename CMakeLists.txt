@@ -62,15 +62,15 @@ add_library(Luna STATIC
         include/internal/ShaderModule.hpp
         include/internal/SlangSession.hpp
 
-        include/bindings/C/luna/luna.h
-        include/bindings/C/luna/lunaBuffer.h
-        include/bindings/C/luna/lunaCommandBuffer.h
-        include/bindings/C/luna/lunaDevice.h
-        include/bindings/C/luna/lunaDrawing.h
-        include/bindings/C/luna/lunaImage.h
-        include/bindings/C/luna/lunaInstance.h
-        include/bindings/C/luna/lunaSynchronization.h
-        include/bindings/C/luna/lunaTypes.h
+        include/bindings/c/luna/luna.h
+        include/bindings/c/luna/lunaBuffer.h
+        include/bindings/c/luna/lunaCommandBuffer.h
+        include/bindings/c/luna/lunaDevice.h
+        include/bindings/c/luna/lunaDrawing.h
+        include/bindings/c/luna/lunaImage.h
+        include/bindings/c/luna/lunaInstance.h
+        include/bindings/c/luna/lunaSynchronization.h
+        include/bindings/c/luna/lunaTypes.h
 )
 target_precompile_headers(Luna PRIVATE
         include/internal/helpers/Handle.hpp
@@ -92,7 +92,7 @@ target_precompile_headers(Luna PRIVATE
         include/internal/SlangSession.hpp
 )
 target_compile_options(Luna PRIVATE $<IF:$<CONFIG:Debug>,${DEBUG_FLAGS},${RELEASE_FLAGS}>)
-target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include/bindings/C)
+target_include_directories(Luna PUBLIC ${LUNA_SOURCE_DIR}/include/bindings/c)
 target_include_directories(Luna PRIVATE ${LUNA_SOURCE_DIR}/include/internal ${LUNA_SOURCE_DIR}/generated/include)
 
 findDependencies()

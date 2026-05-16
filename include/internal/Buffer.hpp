@@ -61,6 +61,7 @@ class BufferRegionIndex
 {
     public:
         [[nodiscard]] static VkResult resize(Device &device,
+                                             CommandBuffer &commandBuffer,
                                              BufferRegionIndex *&bufferRegionIndex,
                                              VkDeviceSize newSize);
 

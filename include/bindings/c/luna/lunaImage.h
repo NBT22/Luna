@@ -43,12 +43,6 @@ VkResult lunaUpdateImage(LunaDevice device,
                          LunaImage image,
                          const LunaImageWriteInfo *writeInfo);
 
-// TODO (0.3.0): Finalize this function (maybe allow for taking multiple images and regions)
-VkResult lunaBlitImageToSwapchain(LunaDevice device,
-                                  LunaCommandBuffer commandBuffer,
-                                  LunaImage image,
-                                  const VkImageBlit2 *blitRegion);
-
 VkResult lunaCopyImageToBuffer(LunaDevice device,
                                LunaCommandBuffer commandBuffer,
                                LunaImage image,

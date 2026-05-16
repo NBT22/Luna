@@ -194,7 +194,10 @@ VkResult BufferRegion::createBufferRegion(Device &device,
     return VK_SUCCESS;
 }
 
-VkResult BufferRegionIndex::resize(Device &device, BufferRegionIndex *&bufferRegionIndex, const VkDeviceSize newSize)
+VkResult BufferRegionIndex::resize(Device &device,
+                                   CommandBuffer &commandBuffer,
+                                   BufferRegionIndex *&bufferRegionIndex,
+                                   const VkDeviceSize newSize)
 {
     if (bufferRegionIndex->size() == newSize)
     {
@@ -249,13 +252,23 @@ VkResult BufferRegionIndex::resize(Device &device, BufferRegionIndex *&bufferReg
             }
         } else
         {
-            LunaBuffer lunaBuffer = helpers::toHandle(bufferRegionIndex);
+            LunaBuffer lunaBuffer = LUNA_NULL_HANDLE;
             LunaBufferCreationInfo newCreationInfo;
             bufferRegionIndex->creationInfo(newCreationInfo);
             newCreationInfo.size = newSize;
 
             CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
+            assert(lunaBuffer != LUNA_NULL_HANDLE);
+            // BufferRegionIndex &newBufferRegionIndex = *helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
 
+            // const VkBufferCopy copyRegion = {
+            //     .srcOffset = bufferRegionIndex->offset(),
+            //     .dstOffset = newBufferRegionIndex.offset(),
+            //     .size = bufferRegionIndex->size(),
+            // };
+            // vkCmdCopyBuffer(commandBuffer, bufferRegionIndex->buffer(), newBufferRegionIndex.buffer(), 1, &copyRegion);
+
+            // TODO (0.3.0): Once buffers are properly ref counted switch this to the commented out vkCmdCopyBuffer
             if (bufferRegion->data_ != nullptr)
             {
                 uint8_t *newBufferRegionData = helpers::fromHandle<BufferRegionIndex>(lunaBuffer)->data();
@@ -340,7 +353,7 @@ VkResult BufferRegionIndex::copyToBuffer(Device &device,
         BufferRegionIndex *&stagingBuffer = device.stagingBuffer();
         assert(this != stagingBuffer && stagingBuffer != nullptr);
         CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device)));
-        CHECK_RESULT_RETURN(resize(device, stagingBuffer, bytes));
+        CHECK_RESULT_RETURN(resize(device, commandBuffer, stagingBuffer, bytes));
         assert(stagingBuffer->data() != nullptr);
         std::copy_n(data, bytes, stagingBuffer->data() + offset);
         const VkBufferCopy copyRegion = {
@@ -442,22 +455,29 @@ void lunaDestroyBuffer(const LunaDevice device, const LunaBuffer buffer)
     bufferRegionIndex->destroy(static_cast<VkDevice>(deviceObject), deviceObject.allocator());
 }
 
-VkResult lunaGrowBuffer(const LunaDevice device, LunaBuffer *buffer, const VkDeviceSize size)
+VkResult lunaGrowBuffer(const LunaDevice device,
+                        const LunaCommandBuffer commandBuffer,
+                        LunaBuffer *buffer,
+                        const VkDeviceSize size)
 {
     assert(buffer && *buffer != LUNA_NULL_HANDLE);
     if (luna::helpers::fromHandle<luna::BufferRegionIndex>(*buffer)->size() < size)
     {
-        CHECK_RESULT_RETURN(lunaResizeBuffer(device, buffer, size));
+        CHECK_RESULT_RETURN(lunaResizeBuffer(device, commandBuffer, buffer, size));
     }
     return VK_SUCCESS;
 }
 
-VkResult lunaResizeBuffer(const LunaDevice device, LunaBuffer *buffer, const VkDeviceSize newSize)
+VkResult lunaResizeBuffer(const LunaDevice device,
+                          const LunaCommandBuffer commandBuffer,
+                          LunaBuffer *buffer,
+                          const VkDeviceSize newSize)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(buffer && *buffer != LUNA_NULL_HANDLE);
     luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(*buffer);
     CHECK_RESULT_RETURN(luna::BufferRegionIndex::resize(*luna::helpers::fromHandle<luna::Device>(device),
+                                                        *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
                                                         bufferRegionIndex,
                                                         newSize));
     *buffer = luna::helpers::toHandle(bufferRegionIndex);

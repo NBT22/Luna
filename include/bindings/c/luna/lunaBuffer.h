@@ -37,14 +37,14 @@ void lunaDestroyBuffer(LunaDevice device, LunaBuffer buffer);
  * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
  * @param[in] size The new size to make the buffer.
  */
-VkResult lunaGrowBuffer(LunaDevice device, LunaBuffer *buffer, VkDeviceSize size);
+VkResult lunaGrowBuffer(LunaDevice device, LunaCommandBuffer commandBuffer, LunaBuffer *buffer, VkDeviceSize size);
 
 /**
  * @brief Resize a buffer, keeping the contents intact.
  * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
  * @param[in] newSize The new size to make the buffer.
  */
-VkResult lunaResizeBuffer(LunaDevice device, LunaBuffer *buffer, VkDeviceSize newSize);
+VkResult lunaResizeBuffer(LunaDevice device, LunaCommandBuffer commandBuffer, LunaBuffer *buffer, VkDeviceSize newSize);
 
 VkResult lunaFillBuffer(LunaDevice device,
                         LunaCommandBuffer commandBuffer,
@@ -62,8 +62,8 @@ VkResult lunaWriteDataToBuffer(LunaDevice device,
                                LunaCommandBuffer commandBuffer,
                                LunaBuffer buffer,
                                const LunaBufferWriteInfo *writeInfo);
-void *lunaGetBufferDataPointer(LunaBuffer buffer);
 
+void *lunaGetBufferDataPointer(LunaBuffer buffer);
 VkDeviceSize lunaGetBufferSize(LunaBuffer buffer);
 VkBufferCreateFlags lunaGetBufferCreationFlags(LunaBuffer buffer);
 VkBufferUsageFlags lunaGetBufferUsageFlags(LunaBuffer buffer);
