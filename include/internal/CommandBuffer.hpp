@@ -123,7 +123,8 @@ inline VkResult CommandBuffer::submit(const VkDevice device, const LunaCommandBu
         waitSemaphores.emplace_back(*semaphore);
         stageMasks.emplace_back(static_cast<VkPipelineStageFlags>(submitInfo.waitDstStageMasks[i]));
     }
-    if (submitInfo.waitSemaphoreCount == 0 || std::ranges::find(waitSemaphores, semaphore_) == waitSemaphores.end())
+    if (semaphore_.isSignaled() &&
+        (submitInfo.waitSemaphoreCount == 0 || std::ranges::find(waitSemaphores, semaphore_) == waitSemaphores.end()))
     {
         waitSemaphores.push_back(semaphore_);
         stageMasks.emplace_back(submitInfo.stageMask);
@@ -143,7 +144,7 @@ inline VkResult CommandBuffer::submit(const VkDevice device, const LunaCommandBu
 
     const VkSubmitInfo vkSubmitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = !semaphore_.isSignaled() ? 0 : static_cast<uint32_t>(waitSemaphores.size()),
+        .waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
         .pWaitSemaphores = waitSemaphores.data(),
         .pWaitDstStageMask = stageMasks.data(),
         .commandBufferCount = 1,

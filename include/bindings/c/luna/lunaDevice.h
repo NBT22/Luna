@@ -25,8 +25,9 @@ VkResult lunaDeviceWaitIdle(LunaDevice device);
 void lunaGetPhysicalDeviceProperties(LunaDevice device, VkPhysicalDeviceProperties *properties);
 void lunaGetPhysicalDeviceProperties2(LunaDevice device, VkPhysicalDeviceProperties2 *properties);
 
-const LunaQueueFamilyProperties *lunaGetQueueFamilies(LunaDevice device);
-uint32_t lunaGetQueueFamilyIndex(LunaDevice device, const LunaQueueFamilyProperties *requiredProperties);
+const LunaQueueFamilyProperties *lunaGetDeviceQueueFamilies(LunaDevice device);
+uint32_t lunaGetDeviceQueueFamilyIndex(LunaDevice device, const LunaQueueFamilyProperties *requiredProperties);
+VkQueue lunaGetDeviceQueue(LunaDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex);
 
 #ifdef __cplusplus
 }

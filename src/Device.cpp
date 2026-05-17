@@ -654,17 +654,25 @@ void lunaGetPhysicalDeviceProperties2(const LunaDevice device, VkPhysicalDeviceP
     vkGetPhysicalDeviceProperties2(lunaGetPhysicalDevice(device), properties);
 }
 
-const LunaQueueFamilyProperties *lunaGetQueueFamilies(const LunaDevice device)
+const LunaQueueFamilyProperties *lunaGetDeviceQueueFamilies(const LunaDevice device)
 {
     assert(device != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::Device>(device)->queueFamilies();
 }
 
-uint32_t lunaGetQueueFamilyIndex(const LunaDevice device, const LunaQueueFamilyProperties *requiredProperties)
+uint32_t lunaGetDeviceQueueFamilyIndex(const LunaDevice device, const LunaQueueFamilyProperties *requiredProperties)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(requiredProperties);
     return luna::helpers::fromHandle<luna::Device>(device)->findQueueFamilyIndex(*requiredProperties);
+}
+
+VkQueue lunaGetDeviceQueue(const LunaDevice device, const uint32_t queueFamilyIndex, const uint32_t queueIndex)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    VkQueue queue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(lunaGetVkDevice(device), queueFamilyIndex, queueIndex, &queue);
+    return queue;
 }
 
 VkResult lunaCreateShaderModule(const LunaDevice device,

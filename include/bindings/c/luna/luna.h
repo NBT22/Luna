@@ -63,9 +63,9 @@ VkResult lunaAllocateDescriptorSets(LunaDevice device,
  * @param[in] descriptorWrites An array of @c LunaWriteDescriptorSet structures containing information about what to write.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkUpdateDescriptorSets.html
  */
-VkResult lunaWriteDescriptorSets(LunaDevice device,
-                                 uint32_t descriptorWriteCount,
-                                 const LunaWriteDescriptorSet *descriptorWrites);
+void lunaWriteDescriptorSets(LunaDevice device,
+                             uint32_t descriptorWriteCount,
+                             const LunaWriteDescriptorSet *descriptorWrites);
 
 /**
  * @brief Create a new shader module.

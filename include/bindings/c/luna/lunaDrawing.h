@@ -29,11 +29,15 @@ VkResult lunaBeginRenderPass(LunaDevice device,
 void lunaNextSubpass(LunaCommandBuffer commandBuffer);
 void lunaEndRenderPass(LunaCommandBuffer commandBuffer);
 
-void lunaBindVertexBuffers(LunaCommandBuffer commandBuffer,
-                           const LunaBuffer *buffers,
-                           uint32_t firstBinding,
-                           uint32_t bindingCount);
-void lunaBindIndexBuffer(LunaCommandBuffer commandBuffer, LunaBuffer buffer, VkIndexType indexType);
+VkResult lunaBindVertexBuffers(LunaDevice device,
+                               LunaCommandBuffer commandBuffer,
+                               const LunaBuffer *buffers,
+                               uint32_t firstBinding,
+                               uint32_t bindingCount);
+VkResult lunaBindIndexBuffer(LunaDevice device,
+                             LunaCommandBuffer commandBuffer,
+                             LunaBuffer buffer,
+                             VkIndexType indexType);
 
 VkResult lunaDraw(LunaDevice device, LunaCommandBuffer commandBuffer, const LunaDrawInfo *drawInfo);
 VkResult lunaDrawIndirect(LunaDevice device, LunaCommandBuffer commandBuffer, const LunaDrawIndirectInfo *drawInfo);
@@ -81,9 +85,10 @@ VkResult lunaDrawBufferIndexedIndirectCount(LunaDevice device,
                                             VkIndexType indexType,
                                             const LunaDrawIndexedIndirectCountInfo *drawInfo);
 
-void lunaBindDescriptorSets(LunaCommandBuffer commandBuffer,
-                            LunaGraphicsPipeline pipeline,
-                            const LunaDescriptorSetBindInfo *bindInfo);
+VkResult lunaBindDescriptorSets(LunaDevice device,
+                                LunaCommandBuffer commandBuffer,
+                                LunaGraphicsPipeline pipeline,
+                                const LunaDescriptorSetBindInfo *bindInfo);
 
 VkResult lunaPushConstants(LunaDevice device, LunaCommandBuffer commandBuffer, LunaGraphicsPipeline pipeline);
 

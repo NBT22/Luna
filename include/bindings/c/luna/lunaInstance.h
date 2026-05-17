@@ -24,6 +24,7 @@ bool lunaIsInstanceExtensionVersionAvailable(const char *extensionName, uint32_t
 
 VkResult lunaGetSurfaceCapabilities(LunaDevice device, VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR *capabilities);
 
+// TODO (0.3.0): The swapchain should not be a one-off there should be a handle associated with it
 VkResult lunaCreateSwapchain(LunaDevice device, const LunaSwapchainCreationInfo *creationInfo);
 VkSwapchainKHR lunaGetVkSwapchain(void);
 VkFormat lunaGetSwapchainFormat(void);

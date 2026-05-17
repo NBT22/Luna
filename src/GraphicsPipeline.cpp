@@ -919,11 +919,16 @@ VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsi
     return VK_ERROR_UNKNOWN;
 }
 
-void lunaBindDescriptorSets(const LunaCommandBuffer commandBuffer,
-                            const LunaGraphicsPipeline pipeline,
-                            const LunaDescriptorSetBindInfo *bindInfo)
+VkResult lunaBindDescriptorSets(const LunaDevice device,
+                                const LunaCommandBuffer commandBuffer,
+                                const LunaGraphicsPipeline pipeline,
+                                const LunaDescriptorSetBindInfo *bindInfo)
 {
+    assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(lunaGetVkDevice(device)));
 
     std::vector<VkDescriptorSet> descriptorSets;
     descriptorSets.reserve(bindInfo->descriptorSetCount);
@@ -932,7 +937,7 @@ void lunaBindDescriptorSets(const LunaCommandBuffer commandBuffer,
         descriptorSets.emplace_back(
                 *luna::helpers::fromHandle<luna::DescriptorSetIndex>(bindInfo->descriptorSets[i])->set);
     }
-    vkCmdBindDescriptorSets(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+    vkCmdBindDescriptorSets(commandBufferObject,
                             VK_PIPELINE_BIND_POINT_GRAPHICS,
                             luna::helpers::fromHandle<luna::GraphicsPipeline>(pipeline)->layout(),
                             bindInfo->firstSet,
@@ -940,6 +945,7 @@ void lunaBindDescriptorSets(const LunaCommandBuffer commandBuffer,
                             descriptorSets.data(),
                             bindInfo->dynamicOffsetCount,
                             bindInfo->dynamicOffsets);
+    return VK_SUCCESS;
 }
 
 VkResult lunaPushConstants(const LunaDevice device,

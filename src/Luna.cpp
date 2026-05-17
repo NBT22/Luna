@@ -259,9 +259,9 @@ VkResult lunaAllocateDescriptorSets(const LunaDevice device,
     return VK_SUCCESS;
 }
 
-VkResult lunaWriteDescriptorSets(const LunaDevice device,
-                                 const uint32_t descriptorWriteCount,
-                                 const LunaWriteDescriptorSet *descriptorWrites)
+void lunaWriteDescriptorSets(const LunaDevice device,
+                             const uint32_t descriptorWriteCount,
+                             const LunaWriteDescriptorSet *descriptorWrites)
 {
     using namespace luna;
     std::list<VkDescriptorImageInfo> descriptorImageInfos;
@@ -332,7 +332,6 @@ VkResult lunaWriteDescriptorSets(const LunaDevice device,
                            writes.data(),
                            0,
                            nullptr);
-    return VK_SUCCESS;
 }
 
 VkResult lunaPipelineBarrier(const LunaDevice device,
