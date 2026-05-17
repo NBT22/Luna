@@ -306,11 +306,7 @@ VkResult lunaCreateInstance(const LunaInstanceCreationInfo *creationInfo)
         .enabledExtensionCount = creationInfo->extensionCount,
         .ppEnabledExtensionNames = creationInfo->extensionNames,
     };
-    if (const VkResult result = vkCreateInstance(&createInfo, nullptr, &luna::instance); result != VK_SUCCESS)
-    {
-        return result;
-    }
-    (void)0;
+    CHECK_RESULT_RETURN(vkCreateInstance(&createInfo, nullptr, &luna::instance));
     volkLoadInstanceOnly(luna::instance);
     return VK_SUCCESS;
 }

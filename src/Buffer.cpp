@@ -207,11 +207,9 @@ VkResult BufferRegionIndex::resize(Device &device,
     if (bufferRegionIndex->bufferRegion_ == nullptr)
     {
         LunaBuffer lunaBuffer = LUNA_NULL_HANDLE;
-        const LunaBufferCreationInfo newCreationInfo = {
-            .size = newSize,
-            .flags = bufferRegionIndex->buffer_->creationFlags_,
-            .usage = bufferRegionIndex->buffer_->usageFlags_,
-        };
+        LunaBufferCreationInfo newCreationInfo{};
+        bufferRegionIndex->creationInfo(newCreationInfo);
+        newCreationInfo.size = newSize;
         CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
 
         device.destroyBufferRegionIndex(bufferRegionIndex);
@@ -397,7 +395,9 @@ Buffer::Buffer(const VmaAllocator &allocator,
     creationFlags_(bufferCreateInfo.flags),
     usageFlags_(bufferCreateInfo.usage),
     allocationCreateInfo_(allocationCreateInfo),
-    freeBytes_(bufferCreateInfo.size)
+    freeBytes_(bufferCreateInfo.size),
+    queueFamilyIndices_(bufferCreateInfo.pQueueFamilyIndices,
+                        bufferCreateInfo.pQueueFamilyIndices + bufferCreateInfo.queueFamilyIndexCount)
 {
     VmaAllocationInfo allocationInfo;
     CHECK_RESULT_THROW(vmaCreateBuffer(allocator,
@@ -416,7 +416,9 @@ Buffer::Buffer(const VmaAllocator &allocator,
     creationFlags_(bufferCreateInfo.flags),
     usageFlags_(bufferCreateInfo.usage),
     allocationCreateInfo_(allocationCreateInfo),
-    freeBytes_(bufferCreateInfo.size)
+    freeBytes_(bufferCreateInfo.size),
+    queueFamilyIndices_(bufferCreateInfo.pQueueFamilyIndices,
+                        bufferCreateInfo.pQueueFamilyIndices + bufferCreateInfo.queueFamilyIndexCount)
 {
     VmaAllocationInfo allocationInfo;
     CHECK_RESULT_THROW(vmaCreateBufferWithAlignment(allocator,

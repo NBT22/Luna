@@ -135,6 +135,7 @@ class Buffer
         VkDeviceSize freeBytes_{}; ///< The bytes at the end of the VkBuffer that are not used by any region
         void *data_{};
         std::list<BufferRegion> regions_{};
+        std::vector<uint32_t> queueFamilyIndices_{};
 };
 } // namespace luna
 
@@ -188,6 +189,8 @@ inline void BufferRegionIndex::creationInfo(LunaBufferCreationInfo &creationInfo
     creationInfo.size = size();
     creationInfo.flags = buffer_->creationFlags_;
     creationInfo.usage = buffer_->usageFlags_;
+    creationInfo.queueFamilyIndexCount = buffer_->queueFamilyIndices_.size();
+    creationInfo.queueFamilyIndices = buffer_->queueFamilyIndices_.data();
 }
 inline const VkBuffer &BufferRegionIndex::buffer() const
 {
