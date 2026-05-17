@@ -232,7 +232,7 @@ static VkResult createSwapchain(const Device &device, const LunaSwapchainCreatio
         };
         swapchain.renderSemaphores.emplace_back(static_cast<VkDevice>(device), semaphoreCreateInfo);
     }
-    for (Semaphore &semaphore: swapchain.presentSemaphores)
+    for (Semaphore &semaphore: swapchain.imageReadySemaphores)
     {
         CHECK_RESULT_RETURN(semaphore.create(static_cast<VkDevice>(device)));
     }
@@ -333,7 +333,7 @@ VkResult lunaDestroyInstance()
         {
             semaphore.destroy(static_cast<VkDevice>(device));
         }
-        for (luna::Semaphore &semaphore: luna::swapchain.presentSemaphores)
+        for (luna::Semaphore &semaphore: luna::swapchain.imageReadySemaphores)
         {
             semaphore.destroy(static_cast<VkDevice>(device));
         }

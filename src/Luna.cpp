@@ -541,13 +541,14 @@ VkResult lunaBeginFrame(const LunaDevice device,
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     CHECK_RESULT_RETURN(commandBufferObject.waitForFence(vkDevice));
     CHECK_RESULT_RETURN(commandBufferObject.resetFence(vkDevice));
-    const VkResult acquireImageResult =
-            vkAcquireNextImageKHR(vkDevice,
-                                  luna::swapchain.swapchain,
-                                  UINT64_MAX,
-                                  luna::swapchain.presentSemaphores.at(luna::swapchain.frameIndex),
-                                  VK_NULL_HANDLE,
-                                  &luna::swapchain.imageIndex);
+    luna::Semaphore &semaphore = luna::swapchain.imageReadySemaphores.at(luna::swapchain.frameIndex);
+    assert(!semaphore.isSignaled());
+    const VkResult acquireImageResult = vkAcquireNextImageKHR(vkDevice,
+                                                              luna::swapchain.swapchain,
+                                                              UINT64_MAX,
+                                                              semaphore,
+                                                              VK_NULL_HANDLE,
+                                                              &luna::swapchain.imageIndex);
     switch (acquireImageResult)
     {
         case VK_SUCCESS:
@@ -565,6 +566,8 @@ VkResult lunaBeginFrame(const LunaDevice device,
             return acquireImageResult;
     }
 
+    semaphore.setIsSignaled(true);
+
     CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(vkDevice));
 
     return VK_SUCCESS;
@@ -580,14 +583,11 @@ VkResult lunaEndFrame(const LunaDevice device,
     assert(presentInfo);
     assert(submitInfo && submitInfo->queue != VK_NULL_HANDLE);
 
-    static constexpr VkPipelineStageFlags2 STAGE_MASK = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-    const LunaSemaphore presentSemaphore =
-            luna::helpers::toHandle(luna::swapchain.presentSemaphores.at(luna::swapchain.frameIndex));
-    const LunaSemaphore renderSemaphore =
-            luna::helpers::toHandle(luna::swapchain.renderSemaphores.at(luna::swapchain.imageIndex));
+    luna::Semaphore &imageReadySemaphore = luna::swapchain.imageReadySemaphores.at(luna::swapchain.frameIndex);
+    luna::Semaphore &renderSemaphore = luna::swapchain.renderSemaphores.at(luna::swapchain.imageIndex);
 
-    std::vector<LunaSemaphore> submissionWaitSemaphores{presentSemaphore};
-    std::vector<VkPipelineStageFlags2> submissionWaitDstStageMasks{STAGE_MASK};
+    std::vector<LunaSemaphore> submissionWaitSemaphores{luna::helpers::toHandle(imageReadySemaphore)};
+    std::vector<VkPipelineStageFlags2> submissionWaitDstStageMasks{VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT};
     if (submitInfo->waitSemaphoreCount > 0)
     {
         submissionWaitSemaphores.insert(submissionWaitSemaphores.end(),
@@ -597,7 +597,7 @@ VkResult lunaEndFrame(const LunaDevice device,
                                            submitInfo->waitDstStageMasks,
                                            submitInfo->waitDstStageMasks + submitInfo->waitSemaphoreCount);
     }
-    std::vector<LunaSemaphore> signalSemaphores{renderSemaphore};
+    std::vector<LunaSemaphore> signalSemaphores{luna::helpers::toHandle(renderSemaphore)};
     if (submitInfo->signalSemaphoreCount > 0)
     {
         signalSemaphores.insert(signalSemaphores.end(),
@@ -607,7 +607,6 @@ VkResult lunaEndFrame(const LunaDevice device,
 
     const LunaCommandBufferSubmitInfo finalSubmitInfo = {
         .queue = submitInfo->queue,
-        .stageMask = submitInfo->stageMask,
         .waitSemaphoreCount = static_cast<uint32_t>(submissionWaitSemaphores.size()),
         .waitSemaphores = submissionWaitSemaphores.data(),
         .waitDstStageMasks = submissionWaitDstStageMasks.data(),
@@ -617,14 +616,26 @@ VkResult lunaEndFrame(const LunaDevice device,
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer)
                                 ->endAndSubmit(lunaGetVkDevice(device), finalSubmitInfo));
 
-    std::vector<VkSemaphore> presentationWaitSemaphores{
-        luna::swapchain.renderSemaphores.at(luna::swapchain.imageIndex)};
+    std::vector<VkSemaphore> presentationWaitSemaphores{renderSemaphore};
     if (presentInfo->waitSemaphoreCount > 0)
     {
         presentationWaitSemaphores.insert(presentationWaitSemaphores.end(),
                                           presentInfo->pWaitSemaphores,
                                           presentInfo->pWaitSemaphores + presentInfo->waitSemaphoreCount);
     }
+
+    // TODO (0.3.0): Change this function to take a Luna structure instead of a VkPresentInfoKHR,
+    //  then check that the semaphores the presentation will be waiting on have a pending signal operation
+    // assert(presentationWaitSemaphores.size() <= std::numeric_limits<ssize_t>::max()); // Internal state check
+    // for (ssize_t i = static_cast<ssize_t>(presentationWaitSemaphores.size()) - 1; i >= 0; i--)
+    // {
+    //     const LunaSemaphore semaphore = presentationWaitSemaphores.at(i);
+    //     assert(semaphore != LUNA_NULL_HANDLE);
+    //     if (!luna::helpers::fromHandle<luna::Semaphore>(semaphore)->isSignaled())
+    //     {
+    //         presentationWaitSemaphores.erase(presentationWaitSemaphores.begin() + i);
+    //     }
+    // }
 
     ++luna::swapchain.frameIndex;
     luna::swapchain.frameIndex %= luna::Swapchain::FRAMES_IN_FLIGHT;

@@ -262,9 +262,15 @@ void Device::destroy()
 
     for (BufferRegionIndex &bufferRegionIndex: bufferRegionIndices_)
     {
-        bufferRegionIndex.destroy(logicalDevice_, allocator_);
+        bufferRegionIndex.destroy(*this);
     }
     bufferRegionIndices_.clear();
+
+    for (Buffer &buffer: buffers_)
+    {
+        buffer.destroy(logicalDevice_, allocator_);
+    }
+    buffers_.clear();
 
     for (ShaderModule &shaderModule: shaderModules_)
     {
@@ -504,15 +510,19 @@ void Device::destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex)
     {
         return;
     }
-    const auto shouldDestroy = [&bufferRegionIndex](const BufferRegionIndex &regionIndex) -> bool {
-        return &regionIndex == bufferRegionIndex;
-    };
-    const size_t removedRegionCount = bufferRegionIndices_.remove_if(shouldDestroy);
-    assert(removedRegionCount == 0 || removedRegionCount == 1);
-    if (removedRegionCount == 1)
+    bufferRegionIndex->destroy(*this);
+    bufferRegionIndices_.remove(*bufferRegionIndex);
+    bufferRegionIndex = nullptr;
+}
+void Device::destroyBuffer(Buffer *&buffer)
+{
+    if (buffer == nullptr)
     {
-        bufferRegionIndex = nullptr;
+        return;
     }
+    buffer->destroy(logicalDevice_, allocator_);
+    buffers_.remove(*buffer);
+    buffer = nullptr;
 }
 void Device::destroySampler(const LunaSampler &sampler)
 {

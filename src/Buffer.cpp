@@ -214,7 +214,7 @@ VkResult BufferRegionIndex::resize(Device &device,
         };
         CHECK_RESULT_RETURN(BufferRegion::createBufferRegion(device, newCreationInfo, &lunaBuffer));
 
-        bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
+        device.destroyBufferRegionIndex(bufferRegionIndex);
         bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
     }
 
@@ -253,7 +253,7 @@ VkResult BufferRegionIndex::resize(Device &device,
         } else
         {
             LunaBuffer lunaBuffer = LUNA_NULL_HANDLE;
-            LunaBufferCreationInfo newCreationInfo;
+            LunaBufferCreationInfo newCreationInfo{};
             bufferRegionIndex->creationInfo(newCreationInfo);
             newCreationInfo.size = newSize;
 
@@ -275,7 +275,7 @@ VkResult BufferRegionIndex::resize(Device &device,
                 assert(newBufferRegionData != nullptr); // Internal state check
                 std::copy_n(bufferRegion->data_, bufferRegion->size_, newBufferRegionData);
             }
-            bufferRegionIndex->destroy(static_cast<VkDevice>(device), device.allocator());
+            device.destroyBufferRegionIndex(bufferRegionIndex);
             bufferRegionIndex = helpers::fromHandle<BufferRegionIndex>(lunaBuffer);
         }
     } else
@@ -294,34 +294,37 @@ VkResult BufferRegionIndex::resize(Device &device,
     return VK_SUCCESS;
 }
 
-void BufferRegionIndex::destroy(const VkDevice device, const VmaAllocator &allocator)
+void BufferRegionIndex::destroy(Device &device)
 {
-    for (const VkBufferView view: views_)
+    if (bufferRegion_ == nullptr)
     {
-        vkDestroyBufferView(device, view, nullptr);
+        assert(views_.empty());
+        buffer_ = nullptr;
+        return;
     }
 
-    if (bufferRegion_ != nullptr)
+    for (const VkBufferView view: views_)
     {
-        assert(buffer_);
-        if (&buffer_->regions_.back() == bufferRegion_)
-        {
-            buffer_->freeBytes_ += bufferRegion_->size_;
-        } else
-        {
-            buffer_->unusedBytes_ += bufferRegion_->size_;
-        }
-        buffer_->usedBytes_ -= bufferRegion_->size_;
-        buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool {
-            return region.offset_ == bufferRegion_->offset_;
-        });
-        bufferRegion_ = nullptr;
+        vkDestroyBufferView(static_cast<VkDevice>(device), view, nullptr);
     }
+
+    assert(buffer_);
+    if (&buffer_->regions_.back() == bufferRegion_)
+    {
+        buffer_->freeBytes_ += bufferRegion_->size_;
+    } else
+    {
+        buffer_->unusedBytes_ += bufferRegion_->size_;
+    }
+    buffer_->usedBytes_ -= bufferRegion_->size_;
+    buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool {
+        return region.offset_ == bufferRegion_->offset_;
+    });
+    bufferRegion_ = nullptr;
 
     if (buffer_ != nullptr && buffer_->regions_.empty())
     {
-        buffer_->destroy(device, allocator);
-        buffer_ = nullptr;
+        device.destroyBuffer(buffer_);
     }
 }
 
@@ -429,6 +432,7 @@ Buffer::Buffer(const VmaAllocator &allocator,
 
 void Buffer::destroy(const VkDevice device, const VmaAllocator &allocator)
 {
+    assert(!destroyed_); // Internal state check
     assert(regions_.empty()); // Internal state check
 
     destroyed_ = true;
@@ -450,9 +454,9 @@ VkResult lunaCreateBuffer(const LunaDevice device, const LunaBufferCreationInfo 
 void lunaDestroyBuffer(const LunaDevice device, const LunaBuffer buffer)
 {
     assert(device != LUNA_NULL_HANDLE);
-    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
     luna::BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
-    bufferRegionIndex->destroy(static_cast<VkDevice>(deviceObject), deviceObject.allocator());
+    deviceObject.destroyBufferRegionIndex(bufferRegionIndex);
 }
 
 VkResult lunaGrowBuffer(const LunaDevice device,

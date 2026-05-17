@@ -215,7 +215,6 @@ typedef struct
 typedef struct
 {
         VkQueue queue;
-        VkPipelineStageFlags stageMask;
         uint32_t waitSemaphoreCount;
         const LunaSemaphore *waitSemaphores;
         const VkPipelineStageFlags2 *waitDstStageMasks;

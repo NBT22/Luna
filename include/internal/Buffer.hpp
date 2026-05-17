@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <list>
@@ -69,7 +68,12 @@ class BufferRegionIndex
         BufferRegionIndex() = delete;
         BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion);
 
-        void destroy(VkDevice device, const VmaAllocator &allocator);
+        void destroy(Device &device);
+
+        bool operator==(const BufferRegionIndex &other) const
+        {
+            return this == &other;
+        }
 
         [[nodiscard]] VkResult flushMemory(const VmaAllocator &allocator) const;
         [[nodiscard]] VkResult copyToBuffer(Device &device,
@@ -120,7 +124,7 @@ class Buffer
         void destroy(VkDevice device, const VmaAllocator &allocator);
 
     private: // Buffer private members
-        std::atomic_bool destroyed_{true};
+        bool destroyed_{true};
         VkBuffer buffer_{};
         VmaAllocation allocation_{};
         VkBufferCreateFlags creationFlags_{};

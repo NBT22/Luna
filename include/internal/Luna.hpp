@@ -56,7 +56,7 @@ struct Swapchain
         std::vector<VkImageView> imageViews{};
         std::vector<Semaphore> renderSemaphores{};
         uint32_t frameIndex{};
-        std::array<Semaphore, FRAMES_IN_FLIGHT> presentSemaphores{};
+        std::array<Semaphore, FRAMES_IN_FLIGHT> imageReadySemaphores{};
 };
 } // namespace luna
 

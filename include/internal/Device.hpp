@@ -77,8 +77,8 @@ class Device
                              LunaImage *image);
         VkResult createSemaphore(const LunaSemaphoreCreationInfo &creationInfo, LunaSemaphore *semaphore);
 
-        /// Removes a buffer region index from the list. Calling this function with an invalid or null pointer will have no effect
         void destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex);
+        void destroyBuffer(Buffer *&buffer);
         void destroySampler(const LunaSampler &sampler);
         // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
         void destroyImage(const LunaImage &image);

@@ -21,15 +21,12 @@ class Semaphore
         VkResult create(VkDevice device);
 
         void setIsSignaled(bool value);
-        void setStageMask(VkPipelineStageFlags value);
 
         [[nodiscard]] bool isSignaled() const;
-        [[nodiscard]] const VkPipelineStageFlags &stageMask() const;
         [[nodiscard]] const VkSemaphore &semaphore() const;
 
     private:
         bool isSignaled_{};
-        VkPipelineStageFlags stageMask_{};
         VkSemaphore semaphore_{};
 };
 } // namespace luna
@@ -47,18 +44,10 @@ inline void Semaphore::setIsSignaled(const bool value)
 {
     isSignaled_ = value;
 }
-inline void Semaphore::setStageMask(const VkPipelineStageFlags value)
-{
-    stageMask_ = value;
-}
 
 inline bool Semaphore::isSignaled() const
 {
     return isSignaled_;
-}
-inline const VkPipelineStageFlags &Semaphore::stageMask() const
-{
-    return stageMask_;
 }
 inline const VkSemaphore &Semaphore::semaphore() const
 {
