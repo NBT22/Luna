@@ -342,7 +342,7 @@ int main(void)
         .queueFamilyProperties.queueFlags = VK_QUEUE_GRAPHICS_BIT,
         .presentationSupport = true,
     };
-    const uint32_t queueFamilyIndex = lunaGetQueueFamilyIndex(device, &requiredProperties);
+    const uint32_t queueFamilyIndex = lunaGetDeviceQueueFamilyIndex(device, &requiredProperties);
 
     VkQueue queue = VK_NULL_HANDLE;
     vkGetDeviceQueue(lunaGetVkDevice(device), queueFamilyIndex, 0, &queue);
@@ -411,7 +411,6 @@ int main(void)
 
     const LunaCommandBufferSubmitInfo submitInfo = {
         .queue = queue,
-        .stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
     };
     const VkPresentInfoKHR presentInfo = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,

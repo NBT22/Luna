@@ -599,8 +599,17 @@ VkResult RenderPass::recreateFramebuffer(const VkDevice device,
                                                    queueFamilyIndices,
                                                    allocator,
                                                    depthImage_ != VK_NULL_HANDLE));
-        attachments_.at(attachments_.size() - 3) = depthImageView_;
-        attachments_.at(attachments_.size() - 2) = colorImageView_;
+        if (samples_ != VK_SAMPLE_COUNT_1_BIT)
+        {
+            if (depthImage_ != VK_NULL_HANDLE)
+            {
+                *std::prev(std::prev(std::prev(attachments_.end()))) = depthImageView_;
+            }
+            *std::prev(std::prev(attachments_.end())) = colorImageView_;
+        } else if (depthImage_ != VK_NULL_HANDLE)
+        {
+            *std::prev(std::prev(attachments_.end())) = depthImageView_;
+        }
     }
     framebuffers_.resize(swapchain.imageCount);
     for (uint32_t i = 0; i < swapchain.imageCount; i++)
