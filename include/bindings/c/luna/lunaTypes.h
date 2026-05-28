@@ -501,11 +501,11 @@ typedef struct
 typedef struct
 {
         VkDeviceSize size;
+        VkDeviceSize alignment;
         VkBufferCreateFlags flags;
         VkBufferUsageFlags usage;
         uint32_t queueFamilyIndexCount;
         const uint32_t *queueFamilyIndices;
-        VkDeviceSize alignment;
 
         const VmaAllocationCreateInfo *allocationCreateInfo;
 } LunaBufferCreationInfo;
