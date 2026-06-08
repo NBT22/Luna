@@ -108,11 +108,11 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
     attachmentDescriptions.at(colorAttachmentIndex).format = swapchain.format.format;
     attachmentDescriptions.at(colorAttachmentIndex).samples = samples;
     attachmentDescriptions.at(colorAttachmentIndex).loadOp = loadOp;
-    attachmentDescriptions.at(colorAttachmentIndex).storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachmentDescriptions.at(colorAttachmentIndex).stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachmentDescriptions.at(colorAttachmentIndex).stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     if (samples != VK_SAMPLE_COUNT_1_BIT)
     {
+        attachmentDescriptions.at(colorAttachmentIndex).storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions.at(colorAttachmentIndex).finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         attachmentReferences.at(2).attachment = colorAttachmentIndex + 1;
@@ -127,6 +127,7 @@ static void createColorAttachment(const uint32_t colorAttachmentIndex,
         attachmentDescriptions.at(colorAttachmentIndex + 1).finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     } else
     {
+        attachmentDescriptions.at(colorAttachmentIndex).storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions.at(colorAttachmentIndex).finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 }
@@ -148,29 +149,25 @@ static void createColorAttachment2(const uint32_t colorAttachmentIndex,
         default:
             break;
     }
-    const VkAttachmentStoreOp storeOp = colorAttachmentLoadMode == LUNA_ATTACHMENT_LOAD_MODE_UNDEFINED
-                                                ? VK_ATTACHMENT_STORE_OP_DONT_CARE
-                                                : VK_ATTACHMENT_STORE_OP_STORE;
 
     attachmentReferences.at(1).sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
     attachmentReferences.at(1).attachment = colorAttachmentIndex;
+    attachmentReferences.at(1).layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     attachmentDescriptions.at(colorAttachmentIndex).sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
     attachmentDescriptions.at(colorAttachmentIndex).format = swapchain.format.format;
     attachmentDescriptions.at(colorAttachmentIndex).samples = samples;
     attachmentDescriptions.at(colorAttachmentIndex).loadOp = loadOp;
-    attachmentDescriptions.at(colorAttachmentIndex).storeOp = storeOp;
     attachmentDescriptions.at(colorAttachmentIndex).stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachmentDescriptions.at(colorAttachmentIndex).stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     if (samples != VK_SAMPLE_COUNT_1_BIT)
     {
-        attachmentReferences.at(1).layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
+        attachmentDescriptions.at(colorAttachmentIndex).storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachmentDescriptions.at(colorAttachmentIndex).finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         attachmentReferences.at(2).sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
         attachmentReferences.at(2).attachment = colorAttachmentIndex + 1;
-        attachmentReferences.at(2).layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        attachmentReferences.at(2).layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         attachmentDescriptions.at(colorAttachmentIndex + 1).sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
         attachmentDescriptions.at(colorAttachmentIndex + 1).format = swapchain.format.format;
@@ -182,8 +179,7 @@ static void createColorAttachment2(const uint32_t colorAttachmentIndex,
         attachmentDescriptions.at(colorAttachmentIndex + 1).finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     } else
     {
-        attachmentReferences.at(1).layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
+        attachmentDescriptions.at(colorAttachmentIndex).storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachmentDescriptions.at(colorAttachmentIndex).finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
 }
