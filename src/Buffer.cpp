@@ -44,10 +44,9 @@ VkResult BufferRegion::findSpaceForBufferRegion(Device &device,
                                                 VkDeviceSize &outOffset,
                                                 std::list<BufferRegion>::iterator &outIterator)
 {
+    // TODO (0.3.0): Allow unmapped memory once possible
     constexpr VmaAllocationCreateInfo defaultAllocationCreateInfo = {
-        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-                 VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
+        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
     };
     const VmaAllocationCreateInfo allocationCreateInfo = creationInfo.allocationCreateInfo == nullptr
