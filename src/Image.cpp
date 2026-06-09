@@ -478,7 +478,7 @@ VkResult lunaUpdateImage(const LunaDevice device,
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
-    assert(image);
+    assert(image != LUNA_NULL_HANDLE);
     assert(writeInfo);
 
     const luna::Image *imageObject = luna::helpers::fromHandle<luna::Image>(image);
@@ -526,6 +526,21 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
                                                              *submitInfo));
     }
     return VK_SUCCESS;
+}
+
+VkImage lunaGetVkImage(const LunaImage image) {
+    assert(image != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::Image>(image)->image();
+}
+
+VkImageView lunaGetVkImageView(const LunaImage image) {
+    assert(image != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::Image>(image)->imageView();
+}
+
+VkSampler lunaGetVkSampler(const LunaImage image) {
+    assert(image != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::Image>(image)->sampler();
 }
 
 void lunaDestroyImage(const LunaDevice device, const LunaImage image)

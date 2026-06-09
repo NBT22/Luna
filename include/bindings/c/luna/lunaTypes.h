@@ -143,6 +143,8 @@ typedef struct
         const uint32_t *preserveAttachments;
 } LunaSubpassCreationInfo;
 
+// TODO (0.3.0): Allow providing a color attachment
+// TODO (0.3.0): Allow creating a render pass without needing to have a swapchain
 typedef struct
 {
         VkSampleCountFlagBits samples;
