@@ -56,6 +56,8 @@ VkResult lunaCreateBufferView(LunaDevice device,
                               const LunaBufferViewCreationInfo *creationInfo,
                               LunaBufferView *bufferView);
 
+VkBufferView lunaGetVkBufferView(LunaBufferView bufferView);
+
 // TODO (0.3.0): This currently REQUIRES a queue submission for every call if writing to non-mapped VRAM
 //  This behavior is caused by always using the same buffer for transfer, and therefore overwriting the contents
 VkResult lunaWriteDataToBuffer(LunaDevice device,

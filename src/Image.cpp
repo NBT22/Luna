@@ -543,6 +543,11 @@ VkSampler lunaGetVkSampler(const LunaImage image) {
     return luna::helpers::fromHandle<luna::Image>(image)->sampler();
 }
 
+VkImageLayout lunaGetImageLayout(const LunaImage image) {
+    assert(image != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::Image>(image)->layout();
+}
+
 void lunaDestroyImage(const LunaDevice device, const LunaImage image)
 {
     assert(device != LUNA_NULL_HANDLE);

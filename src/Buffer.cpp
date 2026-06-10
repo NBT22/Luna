@@ -527,6 +527,12 @@ VkResult lunaCreateBufferView(const LunaDevice device,
             ->createBufferView(lunaGetVkDevice(device), *creationInfo, bufferView);
 }
 
+VkBufferView lunaGetVkBufferView(const LunaBufferView bufferView)
+{
+    assert(bufferView != LUNA_NULL_HANDLE);
+    return *luna::helpers::fromHandle<VkBufferView>(bufferView);
+}
+
 VkResult lunaWriteDataToBuffer(const LunaDevice device,
                                const LunaCommandBuffer commandBuffer,
                                const LunaBuffer buffer,

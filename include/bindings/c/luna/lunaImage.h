@@ -51,13 +51,15 @@ VkResult lunaCopyImageToBuffer(LunaDevice device,
                                const VkBufferImageCopy *regions,
                                const LunaCommandBufferSubmitInfo *submitInfo);
 
+// TODO (0.3.0): lunaTransitionImageLayout
+
 VkImage lunaGetVkImage(LunaImage image);
 
 VkImageView lunaGetVkImageView(LunaImage image);
 
 VkSampler lunaGetVkSampler(LunaImage image);
 
-// TODO (0.3.0): lunaTransitionImageLayout
+VkImageLayout lunaGetImageLayout(LunaImage image);
 
 void lunaDestroyImage(LunaDevice device, LunaImage image);
 
