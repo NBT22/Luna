@@ -39,11 +39,7 @@ void BufferRegionIndex::destroyBuffer_(Buffer *buffer)
         buffer->canBeReused_ = true;
         return;
     }
-    buffers.remove_if([&buffer](const Buffer &region) -> bool {
-        return region.data_ == buffer->data_ &&
-               region.allocation_ == buffer->allocation_ &&
-               region.buffer_ == buffer->buffer_;
-    });
+    buffers.remove_if([buffer](const Buffer &region) -> bool { return &region == buffer; });
 }
 
 VkResult BufferRegionIndex::copyToBuffer(const uint8_t *data, const size_t bytes, const size_t offset) const
@@ -339,9 +335,9 @@ VkResult lunaCreateBuffers(const uint32_t count, const LunaBufferCreationInfo *c
 void lunaDestroyBuffer(const LunaBuffer buffer)
 {
     assert(buffer);
-    const luna::BufferRegionIndex &index = *static_cast<const luna::BufferRegionIndex *>(buffer);
-    luna::bufferRegionIndices.remove_if([&index](const luna::BufferRegionIndex &regionIndex) -> bool {
-        return regionIndex == index;
+    const luna::BufferRegionIndex *index = static_cast<const luna::BufferRegionIndex *>(buffer);
+    luna::bufferRegionIndices.remove_if([index](const luna::BufferRegionIndex &regionIndex) -> bool {
+        return &regionIndex == index;
     });
 }
 

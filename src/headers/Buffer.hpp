@@ -56,13 +56,6 @@ class Buffer
 
                         ~BufferRegionIndex();
 
-                        constexpr bool operator==(const BufferRegionIndex &other) const
-                        {
-                            return subRegion_ == other.subRegion_ &&
-                                   bufferRegion_ == other.bufferRegion_ &&
-                                   buffer_ == other.buffer_;
-                        }
-
                         [[nodiscard]] VkResult copyToBuffer(const uint8_t *data, size_t bytes, size_t offset = 0) const;
 
                         [[nodiscard]] size_t offset() const;
@@ -247,7 +240,7 @@ inline void BufferRegionIndex::destroy_()
         const std::list<SubRegion>::iterator iterator = std::find_if(bufferRegion_->subRegions_.begin(),
                                                                      endIterator,
                                                                      [this](const SubRegion &region) -> bool {
-                                                                         return region.offset == subRegion_->offset;
+                                                                         return &region == subRegion_;
                                                                      });
         assert(iterator != endIterator);
         buffer_->freeBytes_ += subRegion_->size;
@@ -274,9 +267,7 @@ inline void BufferRegionIndex::destroy_()
     if (subRegion_ == nullptr || bufferRegion_->subRegions_.empty())
     {
         assert(bufferRegion_->subRegions_.empty());
-        buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool {
-            return region.offset_ == bufferRegion_->offset_;
-        });
+        buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool { return &region == bufferRegion_; });
     }
     if (buffer_->regions_.empty())
     {
