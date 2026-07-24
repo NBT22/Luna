@@ -315,7 +315,7 @@ void BufferRegionIndex::destroy(Device &device)
     }
     buffer_->usedBytes_ -= bufferRegion_->size_;
     buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool {
-        return region.offset_ == bufferRegion_->offset_;
+        return &region == bufferRegion_;
     });
     bufferRegion_ = nullptr;
 
