@@ -1,0 +1,74 @@
+//
+// Created by NBT22 on 3/17/25.
+//
+
+#pragma once
+
+#include <cstdint>
+#include <luna/lunaTypes.h>
+#include <string>
+#include <unordered_map>
+#include <vulkan/vulkan_core.h>
+
+namespace luna
+{
+struct DescriptorSetIndex
+{
+        const VkDescriptorPool *pool;
+        const class DescriptorSetLayout *layout;
+        const VkDescriptorSet *set;
+};
+
+class DescriptorSetLayout
+{
+    public:
+        struct Binding
+        {
+                uint32_t index;
+                VkDescriptorType type;
+        };
+
+        static bool isDestroyed(const DescriptorSetLayout &layout);
+
+        DescriptorSetLayout() = default;
+        explicit DescriptorSetLayout(VkDevice device, const LunaDescriptorSetLayoutCreationInfo &creationInfo);
+
+        operator const VkDescriptorSetLayout &() const;
+
+        void destroy(VkDevice device);
+
+        [[nodiscard]] const Binding &binding(const std::string &bindingName) const;
+        [[nodiscard]] VkDescriptorSetLayout layout() const;
+
+    private:
+        bool isDestroyed_{true};
+        VkDescriptorSetLayout layout_{};
+        std::unordered_map<std::string, Binding> bindingMap_{};
+};
+} // namespace luna
+
+#pragma region Implementation
+
+namespace luna
+{
+inline bool DescriptorSetLayout::isDestroyed(const DescriptorSetLayout &layout)
+{
+    return layout.isDestroyed_;
+}
+
+inline DescriptorSetLayout::operator const VkDescriptorSetLayout &() const
+{
+    return layout_;
+}
+
+inline const DescriptorSetLayout::Binding &DescriptorSetLayout::binding(const std::string &bindingName) const
+{
+    return bindingMap_.at(bindingName);
+}
+inline VkDescriptorSetLayout DescriptorSetLayout::layout() const
+{
+    return layout_;
+}
+} // namespace luna
+
+#pragma endregion Implementation

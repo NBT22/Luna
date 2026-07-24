@@ -2,13 +2,13 @@ set(SYSTEM_DIRECTORY_FLAG $<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG
 
 macro(enableOptions)
     foreach (optionToSet IN ITEMS ${ARGN})
-        set(${optionToSet} ON)
+        set(${optionToSet} ON CACHE BOOL "")
     endforeach ()
 endmacro()
 
 macro(disableOptions)
     foreach (optionToSet IN ITEMS ${ARGN})
-        set(${optionToSet} OFF)
+        set(${optionToSet} OFF CACHE BOOL "")
     endforeach ()
 endmacro()
 
@@ -43,3 +43,8 @@ macro(makePackageAvailable gitRepo versionSplat packageName)
     )
     FetchContent_MakeAvailable(${packageName})
 endmacro()
+
+function(runGenerator generator)
+    find_package(Python COMPONENTS Interpreter REQUIRED)
+    execute_process(WORKING_DIRECTORY ${LUNA_SOURCE_DIR}/generators COMMAND ${Python_EXECUTABLE} ${generator}.py)
+endfunction()

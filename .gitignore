@@ -2,3 +2,6 @@
 /build/
 /cmake-build-*/
 /out/
+/.cache/
+/.artifacts/
+/generated/

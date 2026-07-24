@@ -9,13 +9,13 @@
 #include <vector>
 #include <volk.h>
 #include <vulkan/vulkan_core.h>
-#include "DescriptorSetLayout.hpp"
+#include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
 
 namespace luna
 {
-DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo &creationInfo)
+DescriptorSetLayout::DescriptorSetLayout(const VkDevice device, const LunaDescriptorSetLayoutCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
     std::vector<VkDescriptorBindingFlags> bindingFlags;
@@ -30,7 +30,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
         bindingMap_.emplace(binding.bindingName, Binding{.index = bindingIndex, .type = binding.descriptorType});
         bindings.emplace_back(bindingIndex,
                               binding.descriptorType,
-                              binding.descriptorCount,
+                              binding.descriptorCount == 0 ? 1 : binding.descriptorCount,
                               binding.stageFlags,
                               binding.immutableSamplers);
         bindingFlags.emplace_back(binding.bindingFlags);
@@ -42,6 +42,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
     };
     const VkDescriptorSetLayoutCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        // TODO: This is not a good way to handle it. It does not account for extension usage, and it will silently not apply the flags if the API version isn't set
         .pNext = VK_API_VERSION_MINOR(apiVersion) >= 2 ? &bindingFlagsCreateInfo : nullptr,
         .flags = creationInfo.flags,
         .bindingCount = creationInfo.bindingCount,
@@ -51,7 +52,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LunaDescriptorSetLayoutCreationIn
     isDestroyed_ = false;
 }
 
-void DescriptorSetLayout::destroy()
+void DescriptorSetLayout::destroy(const VkDevice device)
 {
     if (isDestroyed_)
     {
@@ -63,15 +64,14 @@ void DescriptorSetLayout::destroy()
 }
 } // namespace luna
 
-VkResult lunaCreateDescriptorSetLayout(const LunaDescriptorSetLayoutCreationInfo *creationInfo,
+VkResult lunaCreateDescriptorSetLayout(const LunaDevice device,
+                                       const LunaDescriptorSetLayoutCreationInfo *creationInfo,
                                        LunaDescriptorSetLayout *descriptorSetLayout)
 {
-    using namespace luna;
+    assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
-    TRY_CATCH_RESULT(descriptorSetLayouts.emplace_back(*creationInfo));
-    if (descriptorSetLayout != nullptr)
-    {
-        *descriptorSetLayout = &descriptorSetLayouts.back();
-    }
+    CHECK_RESULT_RETURN(
+            luna::helpers::fromHandle<luna::Device>(device)->createDescriptorSetLayout(*creationInfo,
+                                                                                       descriptorSetLayout));
     return VK_SUCCESS;
 }

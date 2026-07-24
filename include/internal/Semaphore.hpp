@@ -1,0 +1,58 @@
+//
+// Created by NBT22 on 5/1/25.
+//
+
+#pragma once
+
+#include <vulkan/vulkan_core.h>
+
+namespace luna
+{
+class Semaphore
+{
+    public:
+        Semaphore() = default;
+        explicit Semaphore(VkDevice device, const VkSemaphoreCreateInfo &semaphoreCreateInfo);
+
+        operator const VkSemaphore &() const;
+
+        void destroy(VkDevice device);
+
+        VkResult create(VkDevice device);
+
+        void setIsSignaled(bool value);
+
+        [[nodiscard]] bool isSignaled() const;
+        [[nodiscard]] const VkSemaphore &semaphore() const;
+
+    private:
+        bool isSignaled_{};
+        VkSemaphore semaphore_{};
+};
+} // namespace luna
+
+#pragma region Implementation
+
+namespace luna
+{
+inline Semaphore::operator const VkSemaphore &() const
+{
+    return semaphore_;
+}
+
+inline void Semaphore::setIsSignaled(const bool value)
+{
+    isSignaled_ = value;
+}
+
+inline bool Semaphore::isSignaled() const
+{
+    return isSignaled_;
+}
+inline const VkSemaphore &Semaphore::semaphore() const
+{
+    return semaphore_;
+}
+} // namespace luna
+
+#pragma endregion Implementation
