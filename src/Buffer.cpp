@@ -194,7 +194,7 @@ VkResult BufferRegion::createBufferRegion(Device &device,
 }
 
 VkResult BufferRegionIndex::resize(Device &device,
-                                   CommandBuffer &commandBuffer,
+                                   [[maybe_unused]] CommandBuffer &commandBuffer,
                                    BufferRegionIndex *&bufferRegionIndex,
                                    const VkDeviceSize newSize)
 {

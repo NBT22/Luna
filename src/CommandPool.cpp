@@ -44,7 +44,9 @@ void CommandPool::destroy(const VkDevice device)
 void CommandPool::destroyCommandBuffer(const VkDevice device, CommandBuffer &commandBuffer)
 {
     commandBuffer.destroy(device);
-    std::ranges::remove(commandBuffers_, &commandBuffer);
+    const std::ranges::borrowed_subrange_t<std::vector<CommandBuffer *> &> &range = std::ranges::remove(commandBuffers_,
+                                                                                                        &commandBuffer);
+    commandBuffers_.erase(range.begin(), range.end());
     commandBufferList_.remove(commandBuffer);
     // commandBuffer is now invalid! DO NOT USE IT!
 }
