@@ -173,7 +173,6 @@ VkResult BufferRegion::createBufferRegion(Device &device,
         return VK_SUCCESS;
     }
 
-    assert(offset <= std::numeric_limits<ptrdiff_t>::max());
     buffer->regions_.emplace(iterator,
                              device,
                              creationInfo.size,
@@ -339,7 +338,6 @@ VkResult BufferRegionIndex::copyToBuffer(Device &device,
                                          const VkPipelineStageFlags stageFlags) const
 {
     assert(bytes <= size() - offset);
-    assert(offset <= std::numeric_limits<ptrdiff_t>::max());
 
     uint8_t *mappedData = BufferRegionIndex::data();
     if (mappedData != nullptr)
