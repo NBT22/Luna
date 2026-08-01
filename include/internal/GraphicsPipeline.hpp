@@ -23,7 +23,10 @@ class GraphicsPipeline
                                            const LunaGraphicsPipelineBindInfo *bindInfo);
 
         GraphicsPipeline() = default;
-        explicit GraphicsPipeline(VkDevice device, const LunaGraphicsPipelineCreationInfo &creationInfo);
+        explicit GraphicsPipeline(VkDevice device,
+                                  const LunaGraphicsPipelineCreationInfo &creationInfo,
+                                  VkRenderPass renderPass,
+                                  uint32_t subpassIndex);
         explicit GraphicsPipeline(VkDevice device, const LunaGraphicsPipelineUsingReflectionCreationInfo &creationInfo);
 
         void destroy(VkDevice device);

@@ -60,6 +60,7 @@ class RenderPass
 
         [[nodiscard]] const RenderPassSubpassIndex &getUnnamedSubpass() const;
         [[nodiscard]] RenderPassSubpassIndex *getSubpassIndexByName(const std::string &name);
+        [[nodiscard]] VkImage depthImage() const;
 
     private:
         void init_(const LunaRenderPassCreationInfo &creationInfo);
@@ -164,6 +165,11 @@ inline void RenderPass::init_(const LunaRenderPassCreationInfo2 &creationInfo)
             unnamedSubpass_ = index;
         }
     }
+}
+
+inline VkImage RenderPass::depthImage() const
+{
+    return depthImage_;
 }
 } // namespace luna
 

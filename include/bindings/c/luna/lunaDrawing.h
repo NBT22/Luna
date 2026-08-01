@@ -22,6 +22,8 @@ VkResult lunaCreateRenderPass2(LunaDevice device,
                                LunaRenderPass *renderPass);
 LunaRenderPassSubpass lunaGetRenderPassSubpassByName(LunaRenderPass renderPass, const char *name);
 
+VkImage lunaGetRenderPassDepthImage(LunaRenderPass renderPass);
+
 VkResult lunaBeginRenderPass(LunaDevice device,
                              LunaCommandBuffer commandBuffer,
                              LunaRenderPass renderPass,

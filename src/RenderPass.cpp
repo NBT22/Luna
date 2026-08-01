@@ -690,6 +690,12 @@ LunaRenderPassSubpass lunaGetRenderPassSubpassByName(const LunaRenderPass render
             luna::helpers::fromHandle<luna::RenderPass>(renderPass)->getSubpassIndexByName(name));
 }
 
+VkImage lunaGetRenderPassDepthImage(const LunaRenderPass renderPass)
+{
+    assert(renderPass != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::RenderPass>(renderPass)->depthImage();
+}
+
 VkResult lunaBeginRenderPass(const LunaDevice device,
                              const LunaCommandBuffer commandBuffer,
                              const LunaRenderPass renderPass,

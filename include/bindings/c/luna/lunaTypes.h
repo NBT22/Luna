@@ -401,7 +401,6 @@ typedef struct
         const VkPipelineColorBlendStateCreateInfo *colorBlendState;
         const VkPipelineDynamicStateCreateInfo *dynamicState;
         LunaPipelineLayoutCreationInfo layoutCreationInfo;
-        LunaRenderPassSubpass subpass;
 } LunaGraphicsPipelineCreationInfo;
 
 typedef struct

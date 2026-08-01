@@ -467,7 +467,10 @@ VkResult GraphicsPipeline::bind(const LunaDevice device,
     return VK_SUCCESS;
 }
 
-GraphicsPipeline::GraphicsPipeline(const VkDevice device, const LunaGraphicsPipelineCreationInfo &creationInfo)
+GraphicsPipeline::GraphicsPipeline(const VkDevice device,
+                                   const LunaGraphicsPipelineCreationInfo &creationInfo,
+                                   const VkRenderPass renderPass,
+                                   const uint32_t subpassIndex)
 {
     assert(isDestroyed_);
     assert(!(creationInfo.shaderStageCount > 0 && // NOLINT(*-simplify-boolean-expr) In order to preserve clarity
@@ -494,7 +497,6 @@ GraphicsPipeline::GraphicsPipeline(const VkDevice device, const LunaGraphicsPipe
                                   shaderStage.specializationInfo);
     }
 
-    const RenderPassSubpassIndex *subpassIndex = helpers::fromHandle<RenderPassSubpassIndex>(creationInfo.subpass);
     const VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .flags = creationInfo.flags,
@@ -510,8 +512,8 @@ GraphicsPipeline::GraphicsPipeline(const VkDevice device, const LunaGraphicsPipe
         .pColorBlendState = creationInfo.colorBlendState,
         .pDynamicState = creationInfo.dynamicState,
         .layout = layout_,
-        .renderPass = *subpassIndex->renderPass,
-        .subpass = subpassIndex->index,
+        .renderPass = renderPass,
+        .subpass = subpassIndex,
     };
     CHECK_RESULT_THROW(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline_));
 
@@ -896,13 +898,34 @@ VkResult GraphicsPipeline::bind(const VkDevice device,
 
 VkResult lunaCreateGraphicsPipeline(const LunaDevice device,
                                     const LunaGraphicsPipelineCreationInfo *creationInfo,
+                                    const LunaRenderPassSubpass subpass,
                                     LunaGraphicsPipeline *pipeline)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(subpass != LUNA_NULL_HANDLE);
+    assert(creationInfo);
+
+    const luna::RenderPassSubpassIndex *subpassIndex = luna::helpers::fromHandle<luna::RenderPassSubpassIndex>(subpass);
+    CHECK_RESULT_RETURN(
+            luna::helpers::fromHandle<luna::Device>(device)->createGraphicsPipeline(*creationInfo,
+                                                                                    pipeline,
+                                                                                    *subpassIndex->renderPass,
+                                                                                    subpassIndex->index));
+    return VK_SUCCESS;
+}
+VkResult lunaCreateGraphicsPipelineWithVkRenderPass(const LunaDevice device,
+                                                    const LunaGraphicsPipelineCreationInfo *creationInfo,
+                                                    const VkRenderPass renderPass,
+                                                    const uint32_t subpassIndex,
+                                                    LunaGraphicsPipeline *pipeline)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(creationInfo);
 
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createGraphicsPipeline(*creationInfo,
-                                                                                                pipeline));
+                                                                                                pipeline,
+                                                                                                renderPass,
+                                                                                                subpassIndex));
     return VK_SUCCESS;
 }
 VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsingReflectionCreationInfo *creationInfo,
@@ -917,6 +940,16 @@ VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsi
     //     *pipeline = luna::helpers::toHandle(&luna::device.graphicsPipelines.back());
     // }
     return VK_ERROR_UNKNOWN;
+}
+
+void lunaDestroyGraphicsPipeline(const LunaDevice device, const LunaGraphicsPipeline pipeline)
+{
+    if (pipeline == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    assert(device != LUNA_NULL_HANDLE);
+    luna::helpers::fromHandle<luna::Device>(device)->destroyGraphicsPipeline(pipeline);
 }
 
 VkResult lunaBindDescriptorSets(const LunaDevice device,

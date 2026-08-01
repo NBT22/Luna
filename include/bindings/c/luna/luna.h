@@ -89,7 +89,14 @@ VkResult lunaCreateShaderModule(LunaDevice device,
  */
 VkResult lunaCreateGraphicsPipeline(LunaDevice device,
                                     const LunaGraphicsPipelineCreationInfo *creationInfo,
+                                    LunaRenderPassSubpass subpass,
                                     LunaGraphicsPipeline *pipeline);
+
+VkResult lunaCreateGraphicsPipelineWithVkRenderPass(LunaDevice device,
+                                                    const LunaGraphicsPipelineCreationInfo *creationInfo,
+                                                    VkRenderPass renderPass,
+                                                    uint32_t subpassIndex,
+                                                    LunaGraphicsPipeline *pipeline);
 
 /**
  * @brief Create a new graphics pipeline.
@@ -98,6 +105,8 @@ VkResult lunaCreateGraphicsPipeline(LunaDevice device,
  */
 VkResult lunaCreateGraphicsPipelineUsingReflection(const LunaGraphicsPipelineUsingReflectionCreationInfo *creationInfo,
                                                    LunaGraphicsPipeline *pipeline);
+
+void lunaDestroyGraphicsPipeline(LunaDevice device, LunaGraphicsPipeline pipeline);
 
 
 /**

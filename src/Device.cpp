@@ -388,9 +388,11 @@ VkResult Device::allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &a
     return VK_SUCCESS;
 }
 VkResult Device::createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
-                                        LunaGraphicsPipeline *pipeline)
+                                        LunaGraphicsPipeline *pipeline,
+                                        const VkRenderPass renderPass,
+                                        const uint32_t subpassIndex)
 {
-    TRY_CATCH_RESULT(graphicsPipelines_.emplace_back(logicalDevice_, creationInfo));
+    TRY_CATCH_RESULT(graphicsPipelines_.emplace_back(logicalDevice_, creationInfo, renderPass, subpassIndex));
     if (pipeline != nullptr)
     {
         *pipeline = helpers::toHandle(&graphicsPipelines_.back());
@@ -553,6 +555,18 @@ void Device::destroySemaphore(const LunaSemaphore &semaphore)
     Semaphore &semaphoreObject = *helpers::fromHandle<Semaphore>(semaphore);
     semaphoreObject.destroy(logicalDevice_);
     semaphores_.remove(semaphoreObject);
+}
+void Device::destroyGraphicsPipeline(const LunaGraphicsPipeline &graphicsPipeline)
+{
+    if (graphicsPipeline == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    GraphicsPipeline &pipeline = *helpers::fromHandle<GraphicsPipeline>(graphicsPipeline);
+    pipeline.destroy(logicalDevice_);
+    graphicsPipelines_.remove_if([&pipeline](const GraphicsPipeline &graphicsPipeline) -> bool {
+        return &pipeline == &graphicsPipeline;
+    });
 }
 
 uint32_t Device::findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const

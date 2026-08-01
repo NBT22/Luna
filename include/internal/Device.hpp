@@ -57,7 +57,9 @@ class Device
         VkResult allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
                                         LunaDescriptorSet *descriptorSets);
         VkResult createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
-                                        LunaGraphicsPipeline *pipeline);
+                                        LunaGraphicsPipeline *pipeline,
+                                        VkRenderPass renderPass,
+                                        uint32_t subpassIndex);
         VkResult createComputePipeline(VkDevice device,
                                        const LunaComputePipelineCreationInfo &creationInfo,
                                        LunaComputePipeline *pipeline);
@@ -83,6 +85,7 @@ class Device
         // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
         void destroyImage(const LunaImage &image);
         void destroySemaphore(const LunaSemaphore &semaphore);
+        void destroyGraphicsPipeline(const LunaGraphicsPipeline &graphicsPipeline);
 
         [[nodiscard]] uint32_t findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const;
 
