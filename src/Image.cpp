@@ -131,7 +131,8 @@ Image::Image(Device &device,
              CommandBuffer &commandBuffer,
              const LunaImageCreationInfo &creationInfo,
              const uint32_t depth,
-             const uint32_t arrayLayers)
+             const uint32_t arrayLayers,
+             const VkImageViewType viewType)
 {
     assert(creationInfo.sampler == LUNA_NULL_HANDLE || creationInfo.samplerCreationInfo == nullptr);
     if (creationInfo.sampler != LUNA_NULL_HANDLE)
@@ -193,12 +194,27 @@ Image::Image(Device &device,
         }
     }
     CHECK_RESULT_THROW(write(device, commandBuffer, creationInfo.writeInfo));
-    CHECK_RESULT_THROW(helpers::createImageView(static_cast<VkDevice>(device),
-                                                image_,
-                                                creationInfo.format,
-                                                aspectMask_,
-                                                mipmapLevels,
-                                                &imageView_));
+
+    constexpr VkComponentMapping componentMapping = {
+        .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+        .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+        .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+        .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+    };
+    const VkImageSubresourceRange subresourceRange = {
+        .aspectMask = aspectMask_,
+        .levelCount = mipmapLevels,
+        .layerCount = arrayLayers,
+    };
+    const VkImageViewCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image_,
+        .viewType = viewType,
+        .format = creationInfo.format,
+        .components = componentMapping,
+        .subresourceRange = subresourceRange,
+    };
+    CHECK_RESULT_THROW(vkCreateImageView(static_cast<VkDevice>(device), &createInfo, nullptr, &imageView_));
 }
 
 VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaImageWriteInfo &writeInfo) const
@@ -415,23 +431,7 @@ VkResult lunaCreateImage(const LunaDevice device,
             *creationInfo,
             0,
             1,
-            image));
-    return VK_SUCCESS;
-}
-VkResult lunaCreateImageArray(const LunaDevice device,
-                              const LunaCommandBuffer commandBuffer,
-                              const LunaImageCreationInfo *creationInfo,
-                              const uint32_t arrayLayers,
-                              LunaImage *image)
-{
-    assert(device != LUNA_NULL_HANDLE);
-    assert(commandBuffer != LUNA_NULL_HANDLE);
-    assert(creationInfo && arrayLayers);
-    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
-            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
-            *creationInfo,
-            0,
-            arrayLayers,
+            VK_IMAGE_VIEW_TYPE_2D,
             image));
     return VK_SUCCESS;
 }
@@ -449,15 +449,32 @@ VkResult lunaCreateImage3D(const LunaDevice device,
             *creationInfo,
             depth,
             1,
+            VK_IMAGE_VIEW_TYPE_3D,
             image));
     return VK_SUCCESS;
 }
-VkResult lunaCreateImage3DArray(const LunaDevice device,
-                                const LunaCommandBuffer commandBuffer,
-                                const LunaImageCreationInfo *creationInfo,
-                                const uint32_t depth,
-                                const uint32_t arrayLayers,
-                                LunaImage *image)
+VkResult lunaCreateImageCube(const LunaDevice device,
+                             const LunaCommandBuffer commandBuffer,
+                             const LunaImageCreationInfo *creationInfo,
+                             LunaImage *image)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(creationInfo);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+            *creationInfo,
+            0,
+            6,
+            VK_IMAGE_VIEW_TYPE_CUBE,
+            image));
+    return VK_SUCCESS;
+}
+VkResult lunaCreateImageArray(const LunaDevice device,
+                              const LunaCommandBuffer commandBuffer,
+                              const LunaImageCreationInfo *creationInfo,
+                              const uint32_t arrayLayers,
+                              LunaImage *image)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
@@ -465,8 +482,27 @@ VkResult lunaCreateImage3DArray(const LunaDevice device,
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
             *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
             *creationInfo,
-            depth,
+            0,
             arrayLayers,
+            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+            image));
+    return VK_SUCCESS;
+}
+VkResult lunaCreateImageCubeArray(const LunaDevice device,
+                                  const LunaCommandBuffer commandBuffer,
+                                  const LunaImageCreationInfo *creationInfo,
+                                  const uint32_t arrayLayers,
+                                  LunaImage *image)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(creationInfo && arrayLayers);
+    CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createImage(
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+            *creationInfo,
+            0,
+            arrayLayers * 6,
+            VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
             image));
     return VK_SUCCESS;
 }
@@ -528,22 +564,26 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
     return VK_SUCCESS;
 }
 
-VkImage lunaGetVkImage(const LunaImage image) {
+VkImage lunaGetVkImage(const LunaImage image)
+{
     assert(image != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::Image>(image)->image();
 }
 
-VkImageView lunaGetVkImageView(const LunaImage image) {
+VkImageView lunaGetVkImageView(const LunaImage image)
+{
     assert(image != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::Image>(image)->imageView();
 }
 
-VkSampler lunaGetVkSampler(const LunaImage image) {
+VkSampler lunaGetVkSampler(const LunaImage image)
+{
     assert(image != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::Image>(image)->sampler();
 }
 
-VkImageLayout lunaGetImageLayout(const LunaImage image) {
+VkImageLayout lunaGetImageLayout(const LunaImage image)
+{
     assert(image != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::Image>(image)->layout();
 }

@@ -33,7 +33,8 @@ class Image
               CommandBuffer &commandBuffer,
               const LunaImageCreationInfo &creationInfo,
               uint32_t depth,
-              uint32_t arrayLayers);
+              uint32_t arrayLayers,
+              VkImageViewType viewType);
 
         constexpr bool operator==(const Image &other) const;
 

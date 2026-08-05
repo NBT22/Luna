@@ -21,22 +21,25 @@ VkResult lunaCreateImage(LunaDevice device,
                          LunaCommandBuffer commandBuffer,
                          const LunaImageCreationInfo *creationInfo,
                          LunaImage *image);
-VkResult lunaCreateImageArray(LunaDevice device,
-                              LunaCommandBuffer commandBuffer,
-                              const LunaImageCreationInfo *creationInfo,
-                              uint32_t arrayLayers,
-                              LunaImage *image);
 VkResult lunaCreateImage3D(LunaDevice device,
                            LunaCommandBuffer commandBuffer,
                            const LunaImageCreationInfo *creationInfo,
                            uint32_t depth,
                            LunaImage *image);
-VkResult lunaCreateImage3DArray(LunaDevice device,
-                                LunaCommandBuffer commandBuffer,
-                                const LunaImageCreationInfo *creationInfo,
-                                uint32_t depth,
-                                uint32_t arrayLayers,
-                                LunaImage *image);
+VkResult lunaCreateImageCube(LunaDevice device,
+                             LunaCommandBuffer commandBuffer,
+                             const LunaImageCreationInfo *creationInfo,
+                             LunaImage *image);
+VkResult lunaCreateImageArray(LunaDevice device,
+                              LunaCommandBuffer commandBuffer,
+                              const LunaImageCreationInfo *creationInfo,
+                              uint32_t arrayLayers,
+                              LunaImage *image);
+VkResult lunaCreateImageCubeArray(LunaDevice device,
+                                  LunaCommandBuffer commandBuffer,
+                                  const LunaImageCreationInfo *creationInfo,
+                                  uint32_t arrayLayers,
+                                  LunaImage *image);
 
 VkResult lunaUpdateImage(LunaDevice device,
                          LunaCommandBuffer commandBuffer,

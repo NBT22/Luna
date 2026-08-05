@@ -467,12 +467,13 @@ VkResult Device::createSampler(const LunaSamplerCreationInfo &creationInfo, Luna
 }
 VkResult Device::createImage(CommandBuffer &commandBuffer,
                              const LunaImageCreationInfo &creationInfo,
-                             uint32_t depth,
-                             uint32_t arrayLayers,
+                             const uint32_t depth,
+                             const uint32_t arrayLayers,
+                             const VkImageViewType viewType,
                              LunaImage *image)
 {
     assert(creationInfo.queueFamilyIndexCount != 0);
-    TRY_CATCH_RESULT(images_.emplace_back(*this, commandBuffer, creationInfo, depth, arrayLayers));
+    TRY_CATCH_RESULT(images_.emplace_back(*this, commandBuffer, creationInfo, depth, arrayLayers, viewType));
     if (creationInfo.writeInfo.descriptorSet != LUNA_NULL_HANDLE)
     {
         images_.back().updateDescriptorBinding(logicalDevice_,

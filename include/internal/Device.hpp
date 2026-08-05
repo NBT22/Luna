@@ -76,6 +76,7 @@ class Device
                              const LunaImageCreationInfo &creationInfo,
                              uint32_t depth,
                              uint32_t arrayLayers,
+                             VkImageViewType viewType,
                              LunaImage *image);
         VkResult createSemaphore(const LunaSemaphoreCreationInfo &creationInfo, LunaSemaphore *semaphore);
 

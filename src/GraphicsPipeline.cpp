@@ -830,10 +830,13 @@ void GraphicsPipeline::destroy(const VkDevice device)
 }
 VkResult GraphicsPipeline::pushConstants(const VkDevice device, CommandBuffer &commandBuffer) const
 {
-    const std::vector<LunaPushConstantsRange> &pushConstantsRanges = pushConstantsRanges_;
+    if (pushConstantsRanges_.empty())
+    {
+        return VK_SUCCESS;
+    }
     CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
     uint32_t offset = 0;
-    for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges)
+    for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges_)
     {
         const void *pushConstantsData = static_cast<const uint8_t *>(pushConstantsRange.dataPointer) +
                                         pushConstantsRange.dataPointerOffset;
