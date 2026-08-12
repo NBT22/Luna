@@ -100,6 +100,10 @@ inline VkResult CommandBuffer::beginSingleUseCommandBuffer(const VkDevice device
 }
 inline VkResult CommandBuffer::end()
 {
+    if (!isRecording_)
+    {
+        return VK_SUCCESS;
+    }
     CHECK_RESULT_RETURN(vkEndCommandBuffer(commandBuffer_));
     isRecording_ = false;
     return VK_SUCCESS;
@@ -162,6 +166,10 @@ inline VkResult CommandBuffer::submit(const VkDevice device, const LunaCommandBu
 }
 inline VkResult CommandBuffer::endAndSubmit(const VkDevice device, const LunaCommandBufferSubmitInfo &submitInfo)
 {
+    if (!isRecording_)
+    {
+        return VK_SUCCESS;
+    }
     CHECK_RESULT_RETURN(end());
     CHECK_RESULT_RETURN(submit(device, submitInfo));
     return VK_SUCCESS;
