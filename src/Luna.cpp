@@ -264,8 +264,9 @@ void lunaWriteDescriptorSets(const LunaDevice device,
                              const LunaWriteDescriptorSet *descriptorWrites)
 {
     using namespace luna;
-    std::list<VkDescriptorImageInfo> descriptorImageInfos;
-    std::list<VkDescriptorBufferInfo> descriptorBufferInfos;
+    std::list<std::vector<VkDescriptorImageInfo>> descriptorImageInfos;
+    std::list<std::vector<VkDescriptorBufferInfo>> descriptorBufferInfos;
+    std::list<std::vector<VkBufferView>> texelBufferViews;
     std::vector<VkWriteDescriptorSet> writes;
     writes.reserve(descriptorWriteCount);
     for (uint32_t i = 0; i < descriptorWriteCount; i++)
@@ -274,12 +275,17 @@ void lunaWriteDescriptorSets(const LunaDevice device,
         const LunaDescriptorSet descriptorSet = descriptorWrite.descriptorSet;
         const DescriptorSetIndex *descriptorSetIndex = luna::helpers::fromHandle<DescriptorSetIndex>(descriptorSet);
         const DescriptorSetLayout::Binding &binding = descriptorSetIndex->layout->binding(descriptorWrite.bindingName);
-        if (descriptorWrite.imageInfo != nullptr)
+        if (descriptorWrite.imageInfos != nullptr)
         {
-            const Image *image = luna::helpers::fromHandle<Image>(descriptorWrite.imageInfo->image);
-            descriptorImageInfos.emplace_back(image->sampler(descriptorWrite.imageInfo->sampler),
-                                              image->imageView(),
-                                              descriptorWrite.imageInfo->imageLayout);
+            std::vector<VkDescriptorImageInfo> imageInfos{};
+            for (uint32_t j = 0; j < descriptorWrite.descriptorCount; j++)
+            {
+                const Image *image = luna::helpers::fromHandle<Image>(descriptorWrite.imageInfos[j].image);
+                imageInfos.emplace_back(image->sampler(descriptorWrite.imageInfos[j].sampler),
+                                        image->imageView(),
+                                        descriptorWrite.imageInfos[j].imageLayout);
+            }
+            descriptorImageInfos.push_back(imageInfos);
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
@@ -287,21 +293,27 @@ void lunaWriteDescriptorSets(const LunaDevice device,
                                 descriptorWrite.descriptorArrayElement,
                                 descriptorWrite.descriptorCount == 0 ? 1 : descriptorWrite.descriptorCount,
                                 binding.type,
-                                &descriptorImageInfos.back(),
+                                descriptorImageInfos.back().data(),
                                 nullptr,
                                 nullptr);
         }
-        if (descriptorWrite.bufferInfo != nullptr)
+        if (descriptorWrite.bufferInfos != nullptr)
         {
-            const LunaBuffer buffer = descriptorWrite.bufferInfo->buffer;
-            const BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(buffer);
-            assert(bufferRegionIndex != nullptr);
-            assert(descriptorWrite.bufferInfo->offset < bufferRegionIndex->size());
-            descriptorBufferInfos.emplace_back(bufferRegionIndex->buffer(),
-                                               bufferRegionIndex->offset() + descriptorWrite.bufferInfo->offset,
-                                               descriptorWrite.bufferInfo->range == 0
-                                                       ? bufferRegionIndex->size() - descriptorWrite.bufferInfo->offset
-                                                       : descriptorWrite.bufferInfo->range);
+            std::vector<VkDescriptorBufferInfo> bufferInfos{};
+            for (uint32_t j = 0; j < descriptorWrite.descriptorCount; j++)
+            {
+                const LunaBuffer buffer = descriptorWrite.bufferInfos[j].buffer;
+                const BufferRegionIndex *bufferRegionIndex = luna::helpers::fromHandle<BufferRegionIndex>(buffer);
+                assert(bufferRegionIndex != nullptr);
+                assert(descriptorWrite.bufferInfos[j].offset < bufferRegionIndex->size());
+                bufferInfos.emplace_back(bufferRegionIndex->buffer(),
+                                         bufferRegionIndex->offset() + descriptorWrite.bufferInfos[j].offset,
+                                         descriptorWrite.bufferInfos[j].range == 0
+                                                 ? bufferRegionIndex->size() - descriptorWrite.bufferInfos[j].offset
+                                                 : descriptorWrite.bufferInfos[j].range);
+            }
+            descriptorBufferInfos.push_back(bufferInfos);
+
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
@@ -310,11 +322,18 @@ void lunaWriteDescriptorSets(const LunaDevice device,
                                 descriptorWrite.descriptorCount == 0 ? 1 : descriptorWrite.descriptorCount,
                                 binding.type,
                                 nullptr,
-                                &descriptorBufferInfos.back(),
+                                descriptorBufferInfos.back().data(),
                                 nullptr);
         }
-        if (descriptorWrite.texelBufferView != LUNA_NULL_HANDLE)
+        if (descriptorWrite.texelBufferViews != nullptr)
         {
+            std::vector<VkBufferView> bufferViews{};
+            for (uint32_t j = 0; j < descriptorWrite.descriptorCount; j++)
+            {
+                assert(descriptorWrite.texelBufferViews[j] != LUNA_NULL_HANDLE);
+                bufferViews.emplace_back(*helpers::fromHandle<VkBufferView>(descriptorWrite.texelBufferViews[j]));
+            }
+            texelBufferViews.push_back(bufferViews);
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
@@ -324,7 +343,7 @@ void lunaWriteDescriptorSets(const LunaDevice device,
                                 binding.type,
                                 nullptr,
                                 nullptr,
-                                helpers::fromHandle<VkBufferView>(descriptorWrite.texelBufferView));
+                                texelBufferViews.back().data());
         }
     }
     vkUpdateDescriptorSets(static_cast<VkDevice>(*luna::helpers::fromHandle<Device>(device)),

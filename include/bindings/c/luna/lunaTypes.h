@@ -276,9 +276,9 @@ typedef struct
         const char *bindingName;
         uint32_t descriptorArrayElement;
         uint32_t descriptorCount;
-        const LunaDescriptorImageInfo *imageInfo;
-        const LunaDescriptorBufferInfo *bufferInfo;
-        LunaBufferView texelBufferView;
+        const LunaDescriptorImageInfo *imageInfos;
+        const LunaDescriptorBufferInfo *bufferInfos;
+        const LunaBufferView *texelBufferViews;
 } LunaWriteDescriptorSet;
 
 typedef struct
