@@ -717,6 +717,14 @@ typedef struct
         VkExternalFenceHandleTypeFlags exportHandleTypes;
 } LunaFenceCreationInfo;
 
+// TODO: Support for multiple swapchains
+typedef struct
+{
+        const void *pNext;
+        uint32_t waitSemaphoreCount;
+        const LunaSemaphore *waitSemaphores;
+} LunaPresentInfo;
+
 #ifdef __cplusplus
 // NOLINTEND(*-macro-usage, *-enum-size, *-use-using, *-use-enum-class)
 }

@@ -96,10 +96,10 @@ VkResult lunaPushConstants(LunaDevice device, LunaCommandBuffer commandBuffer, L
 
 VkResult lunaResizeSwapchain(LunaDevice device, const LunaSwapchainResizeInfo *resizeInfo);
 
-VkResult lunaBeginFrame(LunaDevice device, LunaCommandBuffer commandBuffer, bool allowSuboptimalSwapchain);
+VkResult lunaBeginFrame(LunaDevice device, LunaCommandBuffer commandBuffer);
 VkResult lunaEndFrame(LunaDevice device,
                       LunaCommandBuffer commandBuffer,
-                      const VkPresentInfoKHR *presentInfo,
+                      const LunaPresentInfo *presentInfo,
                       const LunaCommandBufferSubmitInfo *submitInfo);
 
 #ifdef __cplusplus

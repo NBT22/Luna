@@ -518,10 +518,12 @@ VkResult lunaResizeSwapchain(const LunaDevice device, const LunaSwapchainResizeI
     luna::swapchain.safeToUse.wait(false);
     luna::swapchain.safeToUse = false;
     luna::swapchain.extent = resizeInfo->newSize;
-    assert(capabilities.minImageExtent.width <= luna::swapchain.extent.width &&
-           luna::swapchain.extent.width <= capabilities.maxImageExtent.width);
-    assert(capabilities.minImageExtent.height <= luna::swapchain.extent.height &&
-           luna::swapchain.extent.height <= capabilities.maxImageExtent.height);
+    luna::swapchain.extent.width = std::clamp(luna::swapchain.extent.width,
+                                              capabilities.minImageExtent.width,
+                                              capabilities.maxImageExtent.width);
+    luna::swapchain.extent.height = std::clamp(luna::swapchain.extent.height,
+                                               capabilities.minImageExtent.height,
+                                               capabilities.maxImageExtent.height);
 
     for (uint32_t i = 0; i < luna::swapchain.imageCount; i++)
     {
@@ -549,9 +551,7 @@ VkResult lunaResizeSwapchain(const LunaDevice device, const LunaSwapchainResizeI
     return VK_SUCCESS;
 }
 
-VkResult lunaBeginFrame(const LunaDevice device,
-                        const LunaCommandBuffer commandBuffer,
-                        const bool allowSuboptimalSwapchain)
+VkResult lunaBeginFrame(const LunaDevice device, const LunaCommandBuffer commandBuffer)
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
@@ -568,33 +568,21 @@ VkResult lunaBeginFrame(const LunaDevice device,
                                                               semaphore,
                                                               VK_NULL_HANDLE,
                                                               &luna::swapchain.imageIndex);
-    switch (acquireImageResult)
+    if (acquireImageResult != VK_SUCCESS && acquireImageResult != VK_SUBOPTIMAL_KHR)
     {
-        case VK_SUCCESS:
-            break;
-        case VK_SUBOPTIMAL_KHR:
-            if (allowSuboptimalSwapchain)
-            {
-                break;
-            }
-            return acquireImageResult;
-        case VK_ERROR_OUT_OF_DATE_KHR:
-            return acquireImageResult;
-        default:
-            assert(acquireImageResult != VK_SUCCESS);
-            return acquireImageResult;
+        CHECK_RESULT_RETURN(acquireImageResult);
     }
 
     semaphore.setIsSignaled(true);
 
     CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(vkDevice));
 
-    return VK_SUCCESS;
+    return acquireImageResult;
 }
 
 VkResult lunaEndFrame(const LunaDevice device,
                       const LunaCommandBuffer commandBuffer,
-                      const VkPresentInfoKHR *presentInfo,
+                      const LunaPresentInfo *presentInfo,
                       const LunaCommandBufferSubmitInfo *submitInfo)
 {
     assert(device != LUNA_NULL_HANDLE);
@@ -636,25 +624,14 @@ VkResult lunaEndFrame(const LunaDevice device,
                                 ->endAndSubmit(lunaGetVkDevice(device), finalSubmitInfo));
 
     std::vector<VkSemaphore> presentationWaitSemaphores{renderSemaphore};
-    if (presentInfo->waitSemaphoreCount > 0)
+    for (uint32_t i = 0; i < presentInfo->waitSemaphoreCount; i++)
     {
-        presentationWaitSemaphores.insert(presentationWaitSemaphores.end(),
-                                          presentInfo->pWaitSemaphores,
-                                          presentInfo->pWaitSemaphores + presentInfo->waitSemaphoreCount);
+        const luna::Semaphore *semaphore = luna::helpers::fromHandle<luna::Semaphore>(presentInfo->waitSemaphores[i]);
+        if (semaphore != nullptr && semaphore->isSignaled())
+        {
+            presentationWaitSemaphores.emplace_back(*semaphore);
+        }
     }
-
-    // TODO (0.3.0): Change this function to take a Luna structure instead of a VkPresentInfoKHR,
-    //  then check that the semaphores the presentation will be waiting on have a pending signal operation
-    // assert(presentationWaitSemaphores.size() <= std::numeric_limits<ssize_t>::max()); // Internal state check
-    // for (ssize_t i = static_cast<ssize_t>(presentationWaitSemaphores.size()) - 1; i >= 0; i--)
-    // {
-    //     const LunaSemaphore semaphore = presentationWaitSemaphores.at(i);
-    //     assert(semaphore != LUNA_NULL_HANDLE);
-    //     if (!luna::helpers::fromHandle<luna::Semaphore>(semaphore)->isSignaled())
-    //     {
-    //         presentationWaitSemaphores.erase(presentationWaitSemaphores.begin() + i);
-    //     }
-    // }
 
     ++luna::swapchain.frameIndex;
     luna::swapchain.frameIndex %= luna::Swapchain::FRAMES_IN_FLIGHT;
@@ -664,11 +641,14 @@ VkResult lunaEndFrame(const LunaDevice device,
         .pNext = presentInfo->pNext,
         .waitSemaphoreCount = static_cast<uint32_t>(presentationWaitSemaphores.size()),
         .pWaitSemaphores = presentationWaitSemaphores.data(),
-        .swapchainCount = presentInfo->swapchainCount,
-        .pSwapchains = presentInfo->pSwapchains,
-        .pImageIndices = presentInfo->pImageIndices,
-        .pResults = presentInfo->pResults,
+        .swapchainCount = 1,
+        .pSwapchains = &luna::swapchain.swapchain,
+        .pImageIndices = &luna::swapchain.imageIndex,
     };
-    // TODO: Handling the result like this doesn't ever call the CHECK_RESULT_RETURN macro
-    return vkQueuePresentKHR(submitInfo->queue, &finalPresentInfo);
+    const VkResult presentResult = vkQueuePresentKHR(submitInfo->queue, &finalPresentInfo);
+    if (presentResult != VK_SUCCESS && presentResult != VK_SUBOPTIMAL_KHR)
+    {
+        CHECK_RESULT_RETURN(presentResult);
+    }
+    return presentResult;
 }
