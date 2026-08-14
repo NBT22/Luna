@@ -18,6 +18,7 @@ class ComputePipeline
 
         void destroy(VkDevice device);
 
+        [[nodiscard]] VkResult pushConstants(VkDevice device, CommandBuffer &commandBuffer) const;
         [[nodiscard]] VkResult bind(VkCommandBuffer commandBuffer,
                                     const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const;
 

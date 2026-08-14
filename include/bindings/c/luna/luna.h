@@ -122,6 +122,8 @@ VkResult lunaCreateComputePipeline(LunaDevice device,
 
 void lunaDestroyComputePipeline(LunaDevice device, LunaComputePipeline pipeline);
 
+VkResult lunaPushConstantsCompute(LunaDevice device, LunaCommandBuffer commandBuffer, LunaComputePipeline pipeline);
+
 /**
  * @brief Dispatch a compute pipeline.
  * @param[in] info A pointer to the @c LunaDispatchInfo structure containing information about what to dispatch.

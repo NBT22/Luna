@@ -51,6 +51,29 @@ void ComputePipeline::destroy(const VkDevice device)
     pushConstantsRanges_.shrink_to_fit();
 }
 
+VkResult ComputePipeline::pushConstants(const VkDevice device, CommandBuffer &commandBuffer) const
+{
+    if (pushConstantsRanges_.empty())
+    {
+        return VK_SUCCESS;
+    }
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(device));
+    uint32_t offset = 0;
+    for (const LunaPushConstantsRange &pushConstantsRange: pushConstantsRanges_)
+    {
+        const void *pushConstantsData = static_cast<const uint8_t *>(pushConstantsRange.dataPointer) +
+                                        pushConstantsRange.dataPointerOffset;
+        vkCmdPushConstants(commandBuffer,
+                           layout_,
+                           pushConstantsRange.stageFlags,
+                           offset,
+                           pushConstantsRange.size,
+                           pushConstantsData);
+        offset += pushConstantsRange.size;
+    }
+    return VK_SUCCESS;
+}
+
 VkResult ComputePipeline::bind(const VkCommandBuffer commandBuffer,
                                const LunaDescriptorSetBindInfo &descriptorSetBindInfo) const
 {
@@ -98,6 +121,18 @@ void lunaDestroyComputePipeline(const LunaDevice device, const LunaComputePipeli
     }
     assert(device != LUNA_NULL_HANDLE);
     luna::helpers::fromHandle<luna::Device>(device)->destroyComputePipeline(pipeline);
+}
+
+VkResult lunaPushConstantsCompute(const LunaDevice device,
+                                  const LunaCommandBuffer commandBuffer,
+                                  const LunaComputePipeline pipeline)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+
+    return luna::helpers::fromHandle<luna::ComputePipeline>(pipeline)->pushConstants(
+            lunaGetVkDevice(device),
+            *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer));
 }
 
 VkResult lunaDispatch(const LunaDevice device, const LunaCommandBuffer commandBuffer, const LunaDispatchInfo *info)
