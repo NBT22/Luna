@@ -569,6 +569,18 @@ void Device::destroyGraphicsPipeline(const LunaGraphicsPipeline &graphicsPipelin
         return &pipeline == &graphicsPipeline;
     });
 }
+void Device::destroyComputePipeline(const LunaComputePipeline &computePipeline)
+{
+    if (computePipeline == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    ComputePipeline &pipeline = *helpers::fromHandle<ComputePipeline>(computePipeline);
+    pipeline.destroy(logicalDevice_);
+    computePipelines_.remove_if([&pipeline](const ComputePipeline &computePiepline) -> bool {
+        return &pipeline == &computePiepline;
+    });
+}
 
 uint32_t Device::findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const
 {

@@ -87,6 +87,7 @@ class Device
         void destroyImage(const LunaImage &image);
         void destroySemaphore(const LunaSemaphore &semaphore);
         void destroyGraphicsPipeline(const LunaGraphicsPipeline &graphicsPipeline);
+        void destroyComputePipeline(const LunaComputePipeline &computePipeline);
 
         [[nodiscard]] uint32_t findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const;
 

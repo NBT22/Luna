@@ -90,6 +90,16 @@ VkResult lunaCreateComputePipeline(const LunaDevice device,
     return VK_SUCCESS;
 }
 
+void lunaDestroyComputePipeline(const LunaDevice device, const LunaComputePipeline pipeline)
+{
+    if (pipeline == LUNA_NULL_HANDLE)
+    {
+        return;
+    }
+    assert(device != LUNA_NULL_HANDLE);
+    luna::helpers::fromHandle<luna::Device>(device)->destroyComputePipeline(pipeline);
+}
+
 VkResult lunaDispatch(const LunaDevice device, const LunaCommandBuffer commandBuffer, const LunaDispatchInfo *info)
 {
     assert(info);

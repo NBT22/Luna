@@ -119,6 +119,9 @@ void lunaDestroyGraphicsPipeline(LunaDevice device, LunaGraphicsPipeline pipelin
 VkResult lunaCreateComputePipeline(LunaDevice device,
                                    const LunaComputePipelineCreationInfo *creationInfo,
                                    LunaComputePipeline *pipeline);
+
+void lunaDestroyComputePipeline(LunaDevice device, LunaComputePipeline pipeline);
+
 /**
  * @brief Dispatch a compute pipeline.
  * @param[in] info A pointer to the @c LunaDispatchInfo structure containing information about what to dispatch.
