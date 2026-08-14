@@ -618,7 +618,6 @@ typedef struct
         LunaGraphicsPipeline pipeline;
         const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
         LunaBuffer buffer;
-        LunaBuffer countBuffer;
         uint32_t maxDrawCount;
         uint32_t stride;
 } LunaDrawIndirectCountInfo;
@@ -648,7 +647,6 @@ typedef struct
         LunaGraphicsPipeline pipeline;
         const LunaGraphicsPipelineBindInfo *pipelineBindInfo;
         LunaBuffer buffer;
-        LunaBuffer countBuffer;
         uint32_t maxDrawCount;
         uint32_t stride;
 } LunaDrawIndexedIndirectCountInfo;

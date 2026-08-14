@@ -52,6 +52,13 @@ VkResult lunaFillBuffer(LunaDevice device,
                         uint32_t data,
                         const LunaCommandBufferSubmitInfo *submitInfo);
 
+VkResult lunaWriteUintToBuffer(LunaDevice device,
+                               LunaCommandBuffer commandBuffer,
+                               LunaBuffer buffer,
+                               VkDeviceSize offset,
+                               uint32_t value,
+                               const LunaCommandBufferSubmitInfo *submitInfo);
+
 VkResult lunaCreateBufferView(LunaDevice device,
                               const LunaBufferViewCreationInfo *creationInfo,
                               LunaBufferView *bufferView);

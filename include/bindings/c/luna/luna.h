@@ -50,12 +50,12 @@ VkResult lunaCreateDescriptorSetLayout(LunaDevice device,
  * @brief Allocate a new descriptor set.
  * @param device
  * @param[in] allocationInfo A pointer to the @c LunaDescriptorSetAllocationInfo structure containing information about how the descriptor set should be allocated.
- * @param[out] descriptorSets A pointer to the @c LunaDescriptorSet handle in which the resulting descriptor set will be returned.
+ * @param[out] descriptorSets A pointer to the list of @c LunaDescriptorSet handles in which the resulting descriptor sets will be returned.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkAllocateDescriptorSets.html
  */
 VkResult lunaAllocateDescriptorSets(LunaDevice device,
                                     const LunaDescriptorSetAllocationInfo *allocationInfo,
-                                    LunaDescriptorSet *descriptorSets);
+                                    LunaDescriptorSet **descriptorSets);
 /**
  * @brief Update the contents of a descriptor set.
  * @param device

@@ -313,9 +313,7 @@ void BufferRegionIndex::destroy(Device &device)
         buffer_->unusedBytes_ += bufferRegion_->size_;
     }
     buffer_->usedBytes_ -= bufferRegion_->size_;
-    buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool {
-        return &region == bufferRegion_;
-    });
+    buffer_->regions_.remove_if([this](const BufferRegion &region) -> bool { return &region == bufferRegion_; });
     bufferRegion_ = nullptr;
 
     if (buffer_ != nullptr && buffer_->regions_.empty())
@@ -507,6 +505,34 @@ VkResult lunaFillBuffer(const LunaDevice device,
                     bufferRegionIndex.offset(),
                     bufferRegionIndex.size(),
                     data);
+    if (submitInfo != nullptr)
+    {
+        CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(deviceObject), *submitInfo));
+    }
+    return VK_SUCCESS;
+}
+
+VkResult lunaWriteUintToBuffer(const LunaDevice device,
+                               const LunaCommandBuffer commandBuffer,
+                               const LunaBuffer buffer,
+                               const VkDeviceSize offset,
+                               const uint32_t value,
+                               const LunaCommandBufferSubmitInfo *submitInfo)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(commandBuffer != LUNA_NULL_HANDLE);
+    assert(buffer != LUNA_NULL_HANDLE);
+
+    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
+    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
+    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject)));
+
+    const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
+    vkCmdFillBuffer(commandBufferObject,
+                    bufferRegionIndex.buffer(),
+                    bufferRegionIndex.offset() + offset,
+                    sizeof(uint32_t),
+                    value);
     if (submitInfo != nullptr)
     {
         CHECK_RESULT_RETURN(commandBufferObject.endAndSubmit(static_cast<VkDevice>(deviceObject), *submitInfo));
@@ -730,10 +756,7 @@ VkResult lunaDrawBufferIndirectCount(const LunaDevice device,
                                      const LunaBuffer vertexBuffer,
                                      const LunaDrawIndirectCountInfo *drawInfo)
 {
-    assert(drawInfo &&
-           drawInfo->pipeline != LUNA_NULL_HANDLE &&
-           drawInfo->buffer != LUNA_NULL_HANDLE &&
-           drawInfo->countBuffer != LUNA_NULL_HANDLE);
+    assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE && drawInfo->buffer != LUNA_NULL_HANDLE);
     CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
                                                      commandBuffer,
                                                      drawInfo->pipeline,
@@ -743,15 +766,13 @@ VkResult lunaDrawBufferIndirectCount(const LunaDevice device,
                                               &vertexBuffer,
                                               0,
                                               vertexBuffer == LUNA_NULL_HANDLE ? 0 : 1));
-    const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
-    const luna::BufferRegionIndex *countBufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->countBuffer);
+    const luna::BufferRegionIndex &drawParameterBufferRegionIndex =
+            *luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
     vkCmdDrawIndirectCount(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
-                           drawParameterBufferRegionIndex->buffer(),
-                           drawParameterBufferRegionIndex->offset(),
-                           countBufferRegionIndex->buffer(),
-                           countBufferRegionIndex->offset(),
+                           drawParameterBufferRegionIndex.buffer(),
+                           drawParameterBufferRegionIndex.offset() + sizeof(uint32_t),
+                           drawParameterBufferRegionIndex.buffer(),
+                           drawParameterBufferRegionIndex.offset(),
                            drawInfo->maxDrawCount,
                            drawInfo->stride == 0 ? sizeof(VkDrawIndirectCommand) : drawInfo->stride);
     return VK_SUCCESS;
@@ -819,14 +840,9 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaDevice device,
                                             const VkIndexType indexType,
                                             const LunaDrawIndexedIndirectCountInfo *drawInfo)
 {
-    assert(drawInfo &&
-           drawInfo->pipeline != LUNA_NULL_HANDLE &&
-           drawInfo->buffer != LUNA_NULL_HANDLE &&
-           drawInfo->countBuffer != LUNA_NULL_HANDLE);
-    const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
-    const luna::BufferRegionIndex *countBufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->countBuffer);
+    assert(drawInfo && drawInfo->pipeline != LUNA_NULL_HANDLE && drawInfo->buffer != LUNA_NULL_HANDLE);
+    const luna::BufferRegionIndex &drawParameterBufferRegionIndex =
+            *luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
     CHECK_RESULT_RETURN(luna::GraphicsPipeline::bind(device,
                                                      commandBuffer,
                                                      drawInfo->pipeline,
@@ -838,10 +854,10 @@ VkResult lunaDrawBufferIndexedIndirectCount(const LunaDevice device,
                                               vertexBuffer == LUNA_NULL_HANDLE ? 0 : 1));
     CHECK_RESULT_RETURN(lunaBindIndexBuffer(device, commandBuffer, indexBuffer, indexType));
     vkCmdDrawIndexedIndirectCount(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
-                                  drawParameterBufferRegionIndex->buffer(),
-                                  drawParameterBufferRegionIndex->offset(),
-                                  countBufferRegionIndex->buffer(),
-                                  countBufferRegionIndex->offset(),
+                                  drawParameterBufferRegionIndex.buffer(),
+                                  drawParameterBufferRegionIndex.offset() + sizeof(uint32_t),
+                                  drawParameterBufferRegionIndex.buffer(),
+                                  drawParameterBufferRegionIndex.offset(),
                                   drawInfo->maxDrawCount,
                                   drawInfo->stride == 0 ? sizeof(VkDrawIndexedIndirectCommand) : drawInfo->stride);
     return VK_SUCCESS;

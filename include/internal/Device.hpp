@@ -55,7 +55,7 @@ class Device
         VkResult createDescriptorPool(const LunaDescriptorPoolCreationInfo &creationInfo,
                                       LunaDescriptorPool *descriptorPool);
         VkResult allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
-                                        LunaDescriptorSet *descriptorSets);
+                                        LunaDescriptorSet **descriptorSets);
         VkResult createGraphicsPipeline(const LunaGraphicsPipelineCreationInfo &creationInfo,
                                         LunaGraphicsPipeline *pipeline,
                                         VkRenderPass renderPass,
@@ -111,6 +111,7 @@ class Device
         VkDevice logicalDevice_{};
         VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingPipelineFeatures_{};
         VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures_{};
+        VkPhysicalDeviceSynchronization2Features synchronization2Features_{};
         VkPhysicalDeviceVulkan14Features vulkan14Features_{};
         VkPhysicalDeviceVulkan13Features vulkan13Features_{};
         VkPhysicalDeviceVulkan12Features vulkan12Features_{};
@@ -315,6 +316,20 @@ inline bool Device::checkFeatureSupport_(const VkBool32 *requiredFeatures) const
                     (sizeof(VkPhysicalDeviceAccelerationStructureFeaturesKHR) - 16) / sizeof(VkBool32);
             const VkBool32 *supportedFeatureArray = &accelerationStructureFeatures_.accelerationStructure;
             for (size_t i = 0; i < accelerationStructureFeatureCount; i++)
+            {
+                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+                {
+                    return false;
+                }
+            }
+            break;
+        }
+        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES:
+        {
+            constexpr size_t synchronization2FeatureCount = (sizeof(VkPhysicalDeviceSynchronization2Features) - 16) /
+                                                            sizeof(VkBool32);
+            const VkBool32 *supportedFeatureArray = &synchronization2Features_.synchronization2;
+            for (size_t i = 0; i < synchronization2FeatureCount; i++)
             {
                 if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
                 {

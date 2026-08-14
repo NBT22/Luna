@@ -86,9 +86,13 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         default:
             assert(1 <= VK_API_VERSION_MINOR(apiVersion) && VK_API_VERSION_MINOR(apiVersion) <= 4);
     }
+    synchronization2Features_ = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+        .pNext = &vulkan11Features_,
+    };
     rayTracingPipelineFeatures_ = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-        .pNext = &vulkan11Features_,
+        .pNext = &synchronization2Features_,
     };
     accelerationStructureFeatures_ = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
@@ -362,7 +366,7 @@ VkResult Device::createDescriptorPool(const LunaDescriptorPoolCreationInfo &crea
     return VK_SUCCESS;
 }
 VkResult Device::allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &allocationInfo,
-                                        LunaDescriptorSet *descriptorSets)
+                                        LunaDescriptorSet **descriptorSets)
 {
     if (allocationInfo.setLayoutCount != 0)
     {
@@ -382,7 +386,7 @@ VkResult Device::allocateDescriptorSets(const LunaDescriptorSetAllocationInfo &a
             };
             CHECK_RESULT_RETURN(vkAllocateDescriptorSets(logicalDevice_, &allocateInfo, descriptorSet));
             descriptorSetIndices_.emplace_back(pool, layout, descriptorSet);
-            descriptorSets[i] = helpers::toHandle(&descriptorSetIndices_.back());
+            *descriptorSets[i] = helpers::toHandle(&descriptorSetIndices_.back());
         }
     }
     return VK_SUCCESS;
