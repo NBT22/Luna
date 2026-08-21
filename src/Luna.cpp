@@ -170,7 +170,6 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
             .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
             .dependencyFlags = dependencyInfo.flags,
             .memoryBarrierCount = dependencyInfo.memoryBarrierCount,
-            .bufferMemoryBarrierCount = dependencyInfo.bufferMemoryBarrierCount,
             .imageMemoryBarrierCount = dependencyInfo.imageMemoryBarrierCount,
         };
         std::vector<VkMemoryBarrier2> memoryBarriers;
@@ -210,6 +209,33 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                                                             : bufferMemoryBarrier.size);
         }
 
+        for (uint32_t i = 0; i < dependencyInfo.multiBufferMemoryBarrierCount; i++)
+        {
+            const LunaMultiBufferMemoryBarrier &bufferMemoryBarrier = dependencyInfo.multiBufferMemoryBarriers[i];
+            for (uint32_t j = 0; j < bufferMemoryBarrier.bufferCount; j++)
+            {
+                assert(bufferMemoryBarrier.buffers[j] != LUNA_NULL_HANDLE);
+                const BufferRegionIndex &bufferRegionIndex =
+                        *luna::helpers::fromHandle<BufferRegionIndex>(bufferMemoryBarrier.buffers[j]);
+                if (bufferRegionIndex.size() == 0)
+                {
+                    continue;
+                }
+                bufferMemoryBarriers.emplace_back(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+                                                  nullptr,
+                                                  bufferMemoryBarrier.sourceStageMask,
+                                                  bufferMemoryBarrier.sourceAccessMask,
+                                                  bufferMemoryBarrier.destinationStageMask,
+                                                  bufferMemoryBarrier.destinationAccessMask,
+                                                  bufferMemoryBarrier.srcQueueFamilyIndex,
+                                                  bufferMemoryBarrier.dstQueueFamilyIndex,
+                                                  bufferRegionIndex.buffer(),
+                                                  bufferRegionIndex.offset(),
+                                                  bufferMemoryBarrier.size == 0 ? bufferRegionIndex.size()
+                                                                                : bufferMemoryBarrier.size);
+            }
+        }
+
         imageMemoryBarriers.reserve(dependencyInfo.imageMemoryBarrierCount);
         for (uint32_t i = 0; i < dependencyInfo.imageMemoryBarrierCount; i++)
         {
@@ -229,9 +255,9 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                              imageMemoryBarrier.subresourceRange);
         }
         assert(dependencyInfo.memoryBarrierCount == memoryBarriers.size());
-        assert(dependencyInfo.bufferMemoryBarrierCount == bufferMemoryBarriers.size());
         assert(dependencyInfo.imageMemoryBarrierCount == imageMemoryBarriers.size());
         vkDependencyInfo.pMemoryBarriers = memoryBarriers.data();
+        vkDependencyInfo.bufferMemoryBarrierCount = bufferMemoryBarriers.size();
         vkDependencyInfo.pBufferMemoryBarriers = bufferMemoryBarriers.data();
         vkDependencyInfo.pImageMemoryBarriers = imageMemoryBarriers.data();
         if (vkCmdPipelineBarrier2 == nullptr)

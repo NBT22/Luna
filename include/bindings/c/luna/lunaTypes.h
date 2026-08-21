@@ -678,6 +678,19 @@ typedef struct
         VkAccessFlags2 sourceAccessMask;
         VkPipelineStageFlags2 destinationStageMask;
         VkAccessFlags2 destinationAccessMask;
+        uint32_t srcQueueFamilyIndex;
+        uint32_t dstQueueFamilyIndex;
+        uint32_t bufferCount;
+        const LunaBuffer *buffers;
+        VkDeviceSize size;
+} LunaMultiBufferMemoryBarrier;
+
+typedef struct
+{
+        VkPipelineStageFlags2 sourceStageMask;
+        VkAccessFlags2 sourceAccessMask;
+        VkPipelineStageFlags2 destinationStageMask;
+        VkAccessFlags2 destinationAccessMask;
         VkImageLayout oldLayout;
         VkImageLayout newLayout;
         uint32_t srcQueueFamilyIndex;
@@ -693,6 +706,8 @@ typedef struct
         const LunaMemoryBarrier *memoryBarriers;
         uint32_t bufferMemoryBarrierCount;
         const LunaBufferMemoryBarrier *bufferMemoryBarriers;
+        uint32_t multiBufferMemoryBarrierCount;
+        const LunaMultiBufferMemoryBarrier *multiBufferMemoryBarriers;
         uint32_t imageMemoryBarrierCount;
         const LunaImageMemoryBarrier *imageMemoryBarriers;
 } LunaDependencyInfo;
