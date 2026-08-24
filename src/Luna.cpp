@@ -350,18 +350,21 @@ void lunaWriteDescriptorSets(const LunaDevice device,
                                                  ? bufferRegionIndex.size() - descriptorWrite.bufferInfos[j].offset
                                                  : descriptorWrite.bufferInfos[j].range);
             }
-            descriptorBufferInfos.push_back(bufferInfos);
+            if (!bufferInfos.empty())
+            {
+                descriptorBufferInfos.push_back(bufferInfos);
 
-            writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                                nullptr,
-                                *descriptorSetIndex->set,
-                                binding.index,
-                                descriptorWrite.descriptorArrayElement,
-                                bufferInfos.size(),
-                                binding.type,
-                                nullptr,
-                                descriptorBufferInfos.back().data(),
-                                nullptr);
+                writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                    nullptr,
+                                    *descriptorSetIndex->set,
+                                    binding.index,
+                                    descriptorWrite.descriptorArrayElement,
+                                    bufferInfos.size(),
+                                    binding.type,
+                                    nullptr,
+                                    descriptorBufferInfos.back().data(),
+                                    nullptr);
+            }
         }
         if (descriptorWrite.texelBufferViews != nullptr)
         {
