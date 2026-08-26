@@ -636,6 +636,10 @@ VkDeviceAddress lunaGetBufferDeviceAddress(const LunaDevice device, const LunaBu
     assert(device != LUNA_NULL_HANDLE);
     assert(buffer != LUNA_NULL_HANDLE);
     const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
+    if (bufferRegionIndex.size() == 0)
+    {
+        return 0;
+    }
     const VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
         .buffer = bufferRegionIndex.buffer(),
