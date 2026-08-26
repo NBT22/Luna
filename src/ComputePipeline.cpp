@@ -39,7 +39,7 @@ ComputePipeline::ComputePipeline(const VkDevice device, const LunaComputePipelin
         .stage = shaderStageCreateInfo,
         .layout = layout_,
     };
-    vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline_);
+    CHECK_RESULT_THROW(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline_));
 }
 
 void ComputePipeline::destroy(const VkDevice device)
