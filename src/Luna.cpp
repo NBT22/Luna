@@ -582,15 +582,11 @@ VkResult lunaResizeSwapchain(const LunaDevice device, const LunaSwapchainResizeI
     return VK_SUCCESS;
 }
 
-VkResult lunaBeginFrame(const LunaDevice device, const LunaCommandBuffer commandBuffer)
+VkResult lunaBeginFrame(const LunaDevice device)
 {
     assert(device != LUNA_NULL_HANDLE);
-    assert(commandBuffer != LUNA_NULL_HANDLE);
 
     const VkDevice vkDevice = lunaGetVkDevice(device);
-    luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(commandBufferObject.waitForFence(vkDevice));
-    CHECK_RESULT_RETURN(commandBufferObject.resetFence(vkDevice));
     luna::Semaphore &semaphore = luna::swapchain.imageReadySemaphores.at(luna::swapchain.frameIndex);
     assert(!semaphore.isSignaled());
     const VkResult acquireImageResult = vkAcquireNextImageKHR(vkDevice,
@@ -605,8 +601,6 @@ VkResult lunaBeginFrame(const LunaDevice device, const LunaCommandBuffer command
     }
 
     semaphore.setIsSignaled(true);
-
-    CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(vkDevice));
 
     return acquireImageResult;
 }

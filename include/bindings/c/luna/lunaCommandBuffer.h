@@ -64,7 +64,7 @@ VkResult lunaEndAndSubmitCommandBuffer(LunaDevice device,
                                        LunaCommandBuffer commandBuffer,
                                        const LunaCommandBufferSubmitInfo *submitInfo);
 
-VkResult lunaResetCommandBuffer(LunaCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
+VkResult lunaResetCommandBuffer(LunaDevice device, LunaCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
 
 VkCommandBuffer lunaGetVkCommandBuffer(LunaCommandBuffer commandBuffer);
 

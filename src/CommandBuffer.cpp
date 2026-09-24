@@ -78,13 +78,13 @@ VkResult lunaEndAndSubmitCommandBuffer(const LunaDevice device,
     return VK_SUCCESS;
 }
 
-VkResult lunaResetCommandBuffer(const LunaCommandBuffer commandBuffer, const VkCommandBufferResetFlags flags)
+VkResult lunaResetCommandBuffer(const LunaDevice device,
+                                const LunaCommandBuffer commandBuffer,
+                                const VkCommandBufferResetFlags flags)
 {
     assert(commandBuffer != LUNA_NULL_HANDLE);
 
-    const luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
-    CHECK_RESULT_RETURN(vkResetCommandBuffer(commandBufferObject, flags));
-    return VK_SUCCESS;
+    return luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer)->reset(lunaGetVkDevice(device), flags);
 }
 
 VkCommandBuffer lunaGetVkCommandBuffer(const LunaCommandBuffer commandBuffer)

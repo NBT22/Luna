@@ -96,7 +96,7 @@ VkResult lunaPushConstants(LunaDevice device, LunaCommandBuffer commandBuffer, L
 
 VkResult lunaResizeSwapchain(LunaDevice device, const LunaSwapchainResizeInfo *resizeInfo);
 
-VkResult lunaBeginFrame(LunaDevice device, LunaCommandBuffer commandBuffer);
+VkResult lunaBeginFrame(LunaDevice device);
 VkResult lunaEndFrame(LunaDevice device,
                       LunaCommandBuffer commandBuffer,
                       const LunaPresentInfo *presentInfo,

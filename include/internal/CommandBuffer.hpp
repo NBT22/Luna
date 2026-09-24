@@ -31,6 +31,7 @@ class CommandBuffer
         VkResult endAndSubmit(VkDevice device, const LunaCommandBufferSubmitInfo &submitInfo);
         VkResult waitForFence(VkDevice device, uint64_t timeout = UINT64_MAX) const;
         VkResult resetFence(VkDevice device);
+        VkResult reset(VkDevice device, VkCommandBufferResetFlags flags);
         VkResult ensureIsRecording(VkDevice device);
 
         [[nodiscard]] bool isRecording() const;
@@ -86,9 +87,7 @@ inline void CommandBuffer::destroy(const VkDevice device)
 inline VkResult CommandBuffer::beginSingleUseCommandBuffer(const VkDevice device)
 {
     assert(!isRecording_);
-    CHECK_RESULT_RETURN(waitForFence(device));
-    CHECK_RESULT_RETURN(resetFence(device));
-    CHECK_RESULT_RETURN(vkResetCommandBuffer(commandBuffer_, 0));
+    CHECK_RESULT_RETURN(reset(device, 0));
 
     constexpr VkCommandBufferBeginInfo commandBufferBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -189,6 +188,14 @@ inline VkResult CommandBuffer::resetFence(const VkDevice device)
 {
     fence_.setWillBeSignaled(false);
     return vkResetFences(device, 1, &fence_);
+}
+inline VkResult CommandBuffer::reset(const VkDevice device, const VkCommandBufferResetFlags flags)
+{
+    CHECK_RESULT_RETURN(waitForFence(device));
+    CHECK_RESULT_RETURN(resetFence(device));
+    CHECK_RESULT_RETURN(vkResetCommandBuffer(commandBuffer_, flags));
+    isRecording_ = false;
+    return VK_SUCCESS;
 }
 inline VkResult CommandBuffer::ensureIsRecording(const VkDevice device)
 {
