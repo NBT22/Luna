@@ -106,7 +106,3 @@ if (LUNA_ENABLE_LTO)
         message(WARNING "LTO option enabled, but LTO/IPO is not supported!")
     endif ()
 endif ()
-
-if (LUNA_EXAMPLES)
-    add_subdirectory(example)
-endif ()
