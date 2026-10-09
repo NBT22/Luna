@@ -252,11 +252,21 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
         extent.depth = 1;
     }
 
-    CHECK_RESULT_RETURN(BufferRegionIndex::resize(device, commandBuffer, device.stagingBuffer(), writeInfo.bytes));
-    CHECK_RESULT_RETURN(device.stagingBuffer()->copyToBuffer(device,
-                                                             commandBuffer,
-                                                             static_cast<const uint8_t *>(writeInfo.pixels),
-                                                             writeInfo.bytes));
+    Buffer &stagingBuffer = device.stagingBuffer();
+    const LunaBufferCreationInfo stagingBufferRegionCreationInfo = {
+        .size = writeInfo.bytes,
+        .alignment = 4,
+        .memoryType = LUNA_MEMORY_TYPE_HOST_VISIBLE,
+    };
+    // TODO: This gets leaked
+    const BufferRegion *stagingBufferRegion =
+            helpers::fromHandle<BufferRegion>(stagingBuffer.createRegion(stagingBufferRegionCreationInfo));
+    if (stagingBufferRegion == nullptr)
+    {
+        return VK_ERROR_UNKNOWN;
+    }
+    std::copy_n(static_cast<const char *>(writeInfo.pixels), writeInfo.bytes, stagingBufferRegion->data());
+
     helpers::pipelineBarrier(commandBuffer,
                              writeInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE ? VK_PIPELINE_STAGE_2_TRANSFER_BIT
                                                                                    : writeInfo.sourceStageMask,
@@ -273,13 +283,13 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
         .layerCount = arrayLayers_,
     };
     const VkBufferImageCopy bufferCopyInfo = {
-        .bufferOffset = device.stagingBuffer()->offset(),
+        .bufferOffset = stagingBufferRegion->offset(),
         .imageSubresource = writeInfo.subresourceLayers == nullptr ? subresourceLayers : *writeInfo.subresourceLayers,
         .imageOffset = writeInfo.offset == nullptr ? VkOffset3D{} : *writeInfo.offset,
         .imageExtent = extent,
     };
     vkCmdCopyBufferToImage(commandBuffer,
-                           device.stagingBuffer()->buffer(),
+                           stagingBufferRegion->buffer(),
                            image_,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                            1,
@@ -541,18 +551,17 @@ VkResult lunaCopyImageToBuffer(const LunaDevice device,
 {
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
-    assert(image != LUNA_NULL_HANDLE && buffer != LUNA_NULL_HANDLE);
+    assert(image != LUNA_NULL_HANDLE);
+    assert(buffer != LUNA_NULL_HANDLE);
 
     const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
     luna::CommandBuffer &commandBufferObject = *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer);
     CHECK_RESULT_RETURN(commandBufferObject.ensureIsRecording(static_cast<VkDevice>(deviceObject)));
     const luna::Image &imageObject = *luna::helpers::fromHandle<luna::Image>(image);
-    const luna::BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<luna::BufferRegionIndex>(buffer);
-
     vkCmdCopyImageToBuffer(commandBufferObject,
                            imageObject.image(),
                            imageObject.layout(),
-                           bufferRegionIndex.buffer(),
+                           luna::helpers::fromHandle<luna::BufferRegion>(buffer)->buffer(),
                            regionCount,
                            regions);
     if (submitInfo != nullptr)

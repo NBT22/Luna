@@ -33,7 +33,6 @@ LUNA_DEFINE_HANDLE(LunaShaderModule);
 LUNA_DEFINE_HANDLE(LunaGraphicsPipeline);
 LUNA_DEFINE_HANDLE(LunaComputePipeline);
 LUNA_DEFINE_HANDLE(LunaBuffer);
-LUNA_DEFINE_HANDLE(LunaBufferView);
 LUNA_DEFINE_HANDLE(LunaSampler);
 LUNA_DEFINE_HANDLE(LunaImage);
 LUNA_DEFINE_HANDLE(LunaCommandPool);
@@ -278,7 +277,7 @@ typedef struct
         uint32_t descriptorCount;
         const LunaDescriptorImageInfo *imageInfos;
         const LunaDescriptorBufferInfo *bufferInfos;
-        const LunaBufferView *texelBufferViews;
+        const VkBufferView *texelBufferViews;
 } LunaWriteDescriptorSet;
 
 typedef struct
@@ -499,23 +498,19 @@ typedef struct
         const LunaCommandBufferSubmitInfo *submitInfo;
 } LunaDispatchInfo;
 
+typedef enum
+{
+    LUNA_MEMORY_TYPE_DEVICE_LOCAL,
+    LUNA_MEMORY_TYPE_HOST_VISIBLE,
+    LUNA_MEMORY_TYPE_HOST_CACHED,
+} LunaMemoryType;
+
 typedef struct
 {
         VkDeviceSize size;
         VkDeviceSize alignment;
-        VkBufferCreateFlags flags;
-        VkBufferUsageFlags usage;
-        uint32_t queueFamilyIndexCount;
-        const uint32_t *queueFamilyIndices;
-
-        const VmaAllocationCreateInfo *allocationCreateInfo;
+        LunaMemoryType memoryType;
 } LunaBufferCreationInfo;
-
-typedef struct
-{
-        LunaBuffer buffer;
-        VkFormat format;
-} LunaBufferViewCreationInfo;
 
 typedef struct
 {

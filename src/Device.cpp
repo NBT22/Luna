@@ -19,11 +19,6 @@
 #include "Instance.hpp"
 #include "Luna.hpp"
 
-static constexpr VmaAllocationCreateInfo ALLOCATION_CREATE_INFO = {
-    .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-    .usage = VMA_MEMORY_USAGE_AUTO,
-};
-
 namespace luna
 {
 Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
@@ -185,9 +180,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         // .vkGetMemoryWin32HandleKHR = vkGetMemoryWin32HandleKHR,
     };
     const VmaAllocatorCreateInfo allocationCreateInfo = {
-        .flags = creationInfo.allocatorCreateFlags == 0
-                         ? static_cast<VmaAllocatorCreateFlags>(VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT)
-                         : creationInfo.allocatorCreateFlags,
+        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
         .physicalDevice = physicalDevice_,
         .device = logicalDevice_,
         .pVulkanFunctions = &vmaVulkanFunctions,
@@ -196,22 +189,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     };
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
-    std::vector<uint32_t> queueFamilyIndices;
-    queueFamilyIndices.reserve(queueFamilies_.size());
-    for (uint32_t i = 0; i < queueFamilies_.size(); i++)
-    {
-        queueFamilyIndices.emplace_back(i);
-    }
-    const LunaBufferCreationInfo bufferCreationInfo = {
-        .size = 1 << 16,
-        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        .queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size()),
-        .queueFamilyIndices = queueFamilyIndices.data(),
-        .allocationCreateInfo = &ALLOCATION_CREATE_INFO,
-    };
-    LunaBuffer stagingBufferHandle = LUNA_NULL_HANDLE;
-    CHECK_RESULT_THROW(BufferRegion::createBufferRegion(*this, bufferCreationInfo, &stagingBufferHandle));
-    stagingBuffer_ = helpers::fromHandle<BufferRegionIndex>(stagingBufferHandle);
+    stagingBuffer_ = &buffers_.emplace_back(LUNA_MEMORY_TYPE_HOST_VISIBLE, allocator_);
 
     isDestroyed_ = false;
 }
@@ -264,16 +242,6 @@ void Device::destroy()
     descriptorSetIndices_.clear();
     descriptorSets_.clear();
 
-    for (BufferRegionIndex &bufferRegionIndex: bufferRegionIndices_)
-    {
-        bufferRegionIndex.destroy(*this);
-    }
-    bufferRegionIndices_.clear();
-
-    for (Buffer &buffer: buffers_)
-    {
-        buffer.destroy(logicalDevice_, allocator_);
-    }
     buffers_.clear();
 
     for (ShaderModule &shaderModule: shaderModules_)
@@ -414,29 +382,35 @@ VkResult Device::createComputePipeline(const VkDevice device,
     }
     return VK_SUCCESS;
 }
-VkResult Device::createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
-                              const VmaAllocationCreateInfo &allocationCreateInfo,
-                              Buffer *&outBuffer)
+VkResult Device::createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *&outBuffer)
 {
-    TRY_CATCH_RESULT(buffers_.emplace_back(allocator_, bufferCreateInfo, allocationCreateInfo));
-    outBuffer = &buffers_.back();
-    return VK_SUCCESS;
-}
-VkResult Device::createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
-                              const VmaAllocationCreateInfo &allocationCreateInfo,
-                              VkDeviceSize alignment,
-                              Buffer *&outBuffer)
-{
-    TRY_CATCH_RESULT(buffers_.emplace_back(allocator_, bufferCreateInfo, allocationCreateInfo, alignment));
-    outBuffer = &buffers_.back();
-    return VK_SUCCESS;
-}
-VkResult Device::createBufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, LunaBuffer *outBuffer)
-{
-    TRY_CATCH_RESULT(bufferRegionIndices_.emplace_back(buffer, bufferRegion));
+    for (Buffer &buffer: buffers_)
+    {
+        if (buffer.memoryType() != creationInfo.memoryType)
+        {
+            continue;
+        }
+        const LunaBuffer lunaBuffer = buffer.createRegion(creationInfo);
+        if (lunaBuffer == LUNA_NULL_HANDLE)
+        {
+            continue;
+        }
+        if (outBuffer != nullptr)
+        {
+            *outBuffer = lunaBuffer;
+        }
+        return VK_SUCCESS;
+    }
+
+    TRY_CATCH_RESULT(buffers_.emplace_back(creationInfo.memoryType, allocator_));
+    const LunaBuffer lunaBuffer = buffers_.back().createRegion(creationInfo);
+    if (lunaBuffer == LUNA_NULL_HANDLE)
+    {
+        return VK_ERROR_UNKNOWN;
+    }
     if (outBuffer != nullptr)
     {
-        *outBuffer = helpers::toHandle(&bufferRegionIndices_.back());
+        *outBuffer = lunaBuffer;
     }
     return VK_SUCCESS;
 }
@@ -511,26 +485,6 @@ VkResult Device::createSemaphore(const LunaSemaphoreCreationInfo &creationInfo, 
     return VK_SUCCESS;
 }
 
-void Device::destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex)
-{
-    if (bufferRegionIndex == nullptr)
-    {
-        return;
-    }
-    bufferRegionIndex->destroy(*this);
-    bufferRegionIndices_.remove(*bufferRegionIndex);
-    bufferRegionIndex = nullptr;
-}
-void Device::destroyBuffer(Buffer *&buffer)
-{
-    if (buffer == nullptr)
-    {
-        return;
-    }
-    buffer->destroy(logicalDevice_, allocator_);
-    buffers_.remove(*buffer);
-    buffer = nullptr;
-}
 void Device::destroySampler(const LunaSampler &sampler)
 {
     if (sampler == LUNA_NULL_HANDLE)

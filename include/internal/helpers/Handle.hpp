@@ -18,7 +18,7 @@ struct DescriptorSetIndex;
 class ShaderModule;
 class GraphicsPipeline;
 class ComputePipeline;
-class BufferRegionIndex;
+class BufferRegion;
 class Image;
 class CommandPool;
 class CommandBuffer;
@@ -37,8 +37,7 @@ template<typename T> concept HandleData = std::same_as<T, Device> ||
                                           std::same_as<T, ShaderModule> ||
                                           std::same_as<T, GraphicsPipeline> ||
                                           std::same_as<T, ComputePipeline> ||
-                                          std::same_as<T, BufferRegionIndex> ||
-                                          std::same_as<T, VkBufferView> ||
+                                          std::same_as<T, BufferRegion> ||
                                           std::same_as<T, VkSampler> ||
                                           std::same_as<T, Image> ||
                                           std::same_as<T, CommandPool> ||

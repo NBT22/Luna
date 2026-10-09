@@ -26,63 +26,40 @@ VkResult lunaCreateBuffer(LunaDevice device, const LunaBufferCreationInfo *creat
 
 /**
  * @brief Destroy a buffer.
- * @param device
  * @param[in] buffer The @c LunaBuffer handle to destroy.
  * @see https://registry.khronos.org/vulkan/specs/latest/man/html/vkDestroyBuffer.html
  */
-void lunaDestroyBuffer(LunaDevice device, LunaBuffer buffer);
+void lunaDestroyBuffer(LunaBuffer buffer);
 
 /**
- * @brief Ensure a buffer is at least @c size bytes, resizing if it is not.
- * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
- * @param[in] size The new size to make the buffer.
- */
-VkResult lunaGrowBuffer(LunaDevice device, LunaCommandBuffer commandBuffer, LunaBuffer *buffer, VkDeviceSize size);
-
-/**
- * @brief Resize a buffer, keeping the contents intact.
+ * @brief Resize a buffer.
+ * @warning The buffer's contents will be undefined after calling this function
  * @param[in,out] buffer A pointer to the @c LunaBuffer handle containing the buffer to resize.
  * @param[in] newSize The new size to make the buffer.
  */
-VkResult lunaResizeBuffer(LunaDevice device, LunaCommandBuffer commandBuffer, LunaBuffer *buffer, VkDeviceSize newSize);
+VkResult lunaResizeBuffer(LunaDevice device, LunaBuffer *buffer, VkDeviceSize newSize);
 
-VkResult lunaFillBuffer(LunaDevice device,
-                        LunaCommandBuffer commandBuffer,
-                        LunaBuffer buffer,
-                        uint32_t data,
-                        const LunaCommandBufferSubmitInfo *submitInfo);
+VkResult lunaFillBuffer(LunaDevice device, LunaCommandBuffer commandBuffer, LunaBuffer buffer, uint32_t data);
 
 VkResult lunaWriteUintToBuffer(LunaDevice device,
                                LunaCommandBuffer commandBuffer,
                                LunaBuffer buffer,
                                VkDeviceSize offset,
-                               uint32_t value,
-                               const LunaCommandBufferSubmitInfo *submitInfo);
+                               uint32_t value);
 
-VkResult lunaCreateBufferView(LunaDevice device,
-                              const LunaBufferViewCreationInfo *creationInfo,
-                              LunaBufferView *bufferView);
-
-VkBufferView lunaGetVkBufferView(LunaBufferView bufferView);
-
-// TODO (0.3.0): This currently REQUIRES a queue submission for every call if writing to non-mapped VRAM
-//  This behavior is caused by always using the same buffer for transfer, and therefore overwriting the contents
 VkResult lunaWriteDataToBuffer(LunaDevice device,
                                LunaCommandBuffer commandBuffer,
                                LunaBuffer buffer,
                                const LunaBufferWriteInfo *writeInfo);
 
+VkBuffer lunaGetVkBuffer(LunaBuffer buffer);
 void *lunaGetBufferDataPointer(LunaBuffer buffer);
 VkDeviceSize lunaGetBufferSize(LunaBuffer buffer);
-VkBufferCreateFlags lunaGetBufferCreationFlags(LunaBuffer buffer);
-VkBufferUsageFlags lunaGetBufferUsageFlags(LunaBuffer buffer);
-void lunaGetBufferAllocationCreateInfo(LunaBuffer buffer, VmaAllocationCreateInfo *allocationCreateInfo);
-void lunaGetBufferCreationInfo(LunaBuffer buffer,
-                               LunaBufferCreationInfo *creationInfo,
-                               VmaAllocationCreateInfo *allocationCreateInfo);
-VkDeviceAddress lunaGetBufferDeviceAddress(LunaDevice device, LunaBuffer buffer);
-VkBuffer lunaGetVkBuffer(LunaBuffer buffer);
 VkDeviceSize lunaGetBufferOffset(LunaBuffer buffer);
+VkDeviceAddress lunaGetBufferDeviceAddress(LunaDevice device, LunaBuffer buffer);
+
+// TODO: Better solution for this
+void clearStagingBuffer(LunaDevice device);
 
 #ifdef __cplusplus
 }

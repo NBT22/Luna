@@ -11,131 +11,117 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 #include "helpers/Handle.hpp"
+#include "Luna.hpp"
 
 namespace luna
 {
-class Buffer;
-class BufferRegion
-{
-        friend class BufferRegionIndex;
-
-    public: // BufferRegion public static members
-        static VkResult createBufferRegion(Device &device,
-                                           const LunaBufferCreationInfo &creationInfo,
-                                           LunaBuffer *outBuffer);
-
-    private: // BufferRegion private static members
-        /**
-         * Find space for a buffer region, creating a new @c Buffer if needed
-         * @param device
-         * @param[in] creationInfo The creation information for the buffer region
-         * @param[out] outBuffer The buffer to place the region in
-         * @param[out] outOffset The offset into the buffer at which to place the region
-         * @param[out] outIterator An iterator to the buffer region that the new buffer region should be placed before
-         * @return @c VK_SUCCESS if space was found for the region, or a meaningful result code otherwise
-         */
-        static VkResult findSpaceForBufferRegion(Device &device,
-                                                 const LunaBufferCreationInfo &creationInfo,
-                                                 Buffer *&outBuffer,
-                                                 VkDeviceSize &outOffset,
-                                                 std::list<BufferRegion>::iterator &outIterator);
-
-    public: // BufferRegion public members
-        BufferRegion(Device &device,
-                     VkDeviceSize size,
-                     uint8_t *data,
-                     VkDeviceSize offset,
-                     Buffer *buffer,
-                     LunaBuffer *outBuffer);
-
-        [[nodiscard]] VkDeviceSize size() const;
-        [[nodiscard]] VkDeviceSize offset() const;
-
-    private: // BufferRegion private members
-        VkDeviceSize size_{};
-        uint8_t *data_{};
-        VkDeviceSize offset_{};
-};
-class BufferRegionIndex
-{
-    public:
-        [[nodiscard]] static VkResult resize(Device &device,
-                                             CommandBuffer &commandBuffer,
-                                             BufferRegionIndex *&bufferRegionIndex,
-                                             VkDeviceSize newSize);
-
-    public:
-        BufferRegionIndex() = delete;
-        BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion);
-
-        void destroy(Device &device);
-
-        bool operator==(const BufferRegionIndex &other) const
-        {
-            return this == &other;
-        }
-
-        [[nodiscard]] VkResult flushMemory(const VmaAllocator &allocator) const;
-        [[nodiscard]] VkResult copyToBuffer(Device &device,
-                                            CommandBuffer &commandBuffer,
-                                            const uint8_t *data,
-                                            VkDeviceSize bytes,
-                                            VkDeviceSize offset = 0,
-                                            VkPipelineStageFlags stageFlags = 0) const;
-        [[nodiscard]] VkResult createBufferView(VkDevice device,
-                                                const LunaBufferViewCreationInfo &creationInfo,
-                                                LunaBufferView *lunaView);
-
-        [[nodiscard]] VkDeviceSize offset() const;
-        [[nodiscard]] VkDeviceSize size() const;
-        [[nodiscard]] uint8_t *data() const;
-        [[nodiscard]] VkBufferCreateFlags creationFlags() const;
-        [[nodiscard]] VkBufferUsageFlags usageFlags() const;
-        void allocationCreateInfo(VmaAllocationCreateInfo &allocationCreateInfo) const;
-        void creationInfo(LunaBufferCreationInfo &creationInfo) const;
-        [[nodiscard]] const VkBuffer &buffer() const;
-
-    private:
-        Buffer *buffer_{};
-        BufferRegion *bufferRegion_{};
-        std::list<VkBufferView> views_{};
-};
-// TODO (0.3.0): Buffer writes need synchronization using vkCmdPipelineBarrier
+class BufferRegion;
 class Buffer
 {
-        friend class BufferRegion;
-        friend class BufferRegionIndex;
+        static constexpr VkBufferCreateInfo BUFFER_CREATE_INFO = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = 256 * 1024 * 1024,
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                     VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                     VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
+                     VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        };
+
+        static constexpr VmaAllocationCreateInfo DEVICE_LOCAL_ALLOCATION_CREATE_INFO = {
+            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+        };
+        static constexpr VmaAllocationCreateInfo HOST_VISIBLE_ALLOCATION_CREATE_INFO = {
+            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO,
+        };
+        static constexpr VmaAllocationCreateInfo HOST_CACHED_ALLOCATION_CREATE_INFO = {
+            .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO,
+        };
+
+        static constexpr const VmaAllocationCreateInfo &allocationCreateInfo(const LunaMemoryType memoryType)
+        {
+            switch (memoryType)
+            {
+                case LUNA_MEMORY_TYPE_HOST_CACHED:
+                    return HOST_CACHED_ALLOCATION_CREATE_INFO;
+                case LUNA_MEMORY_TYPE_DEVICE_LOCAL:
+                    // TODO: Enable this once the staging buffer is working
+                    // return DEVICE_LOCAL_ALLOCATION_CREATE_INFO;
+                case LUNA_MEMORY_TYPE_HOST_VISIBLE:
+                default:
+                    return HOST_VISIBLE_ALLOCATION_CREATE_INFO;
+            }
+        }
 
     public:
         Buffer() = default;
-        explicit Buffer(const VmaAllocator &allocator,
-                        const VkBufferCreateInfo &bufferCreateInfo,
-                        const VmaAllocationCreateInfo &allocationCreateInfo);
-        explicit Buffer(const VmaAllocator &allocator,
-                        const VkBufferCreateInfo &bufferCreateInfo,
-                        const VmaAllocationCreateInfo &allocationCreateInfo,
-                        VkDeviceSize alignment);
+        Buffer(LunaMemoryType memoryType, const VmaAllocator &allocator);
+        Buffer(const Buffer &other) = delete;
+        Buffer(Buffer &&other) noexcept = delete;
 
-        operator const VkBuffer &() const;
-        operator const VkBuffer *() const;
+        ~Buffer();
+
+        Buffer &operator=(const Buffer &other) = delete;
+        Buffer &operator=(Buffer &&other) noexcept = delete;
+
+        explicit operator const VkBuffer &() const;
+        explicit operator const VkBuffer *() const;
 
         bool operator==(const Buffer &other) const;
 
-        void destroy(VkDevice device, const VmaAllocator &allocator);
+        [[nodiscard]] LunaBuffer createRegion(const LunaBufferCreationInfo &creationInfo);
+        void destroyRegion(const BufferRegion &targetRegion);
 
-    private: // Buffer private members
-        bool destroyed_{true};
+        void clearRegions();
+
+        [[nodiscard]] LunaMemoryType memoryType() const;
+        [[nodiscard]] VmaVirtualBlock virtualBlock() const;
+        [[nodiscard]] char *data() const;
+
+    private:
+        VmaAllocator allocator_{};
         VkBuffer buffer_{};
         VmaAllocation allocation_{};
-        VkBufferCreateFlags creationFlags_{};
-        VkBufferUsageFlags usageFlags_{};
-        VmaAllocationCreateInfo allocationCreateInfo_{};
-        VkDeviceSize usedBytes_{};
-        VkDeviceSize unusedBytes_{}; ///< The bytes within the buffer that make up the dead space between buffer regions
-        VkDeviceSize freeBytes_{}; ///< The bytes at the end of the VkBuffer that are not used by any region
+        LunaMemoryType memoryType_{};
+        VmaVirtualBlock virtualBlock_{};
         void *data_{};
         std::list<BufferRegion> regions_{};
-        std::vector<uint32_t> queueFamilyIndices_{};
+};
+class BufferRegion
+{
+    public:
+        static void destroy(const BufferRegion &region);
+
+        BufferRegion() = delete;
+        BufferRegion(Buffer *buffer, VkDeviceSize alignment);
+        BufferRegion(Buffer *buffer,
+                     VkDeviceSize size,
+                     VkDeviceSize offset,
+                     VkDeviceSize alignment,
+                     VmaVirtualAllocation allocation);
+
+        ~BufferRegion();
+
+        [[nodiscard]] char *data() const;
+        [[nodiscard]] VkBuffer buffer() const;
+        [[nodiscard]] VkDeviceSize size() const;
+        [[nodiscard]] VkDeviceSize offset() const;
+        [[nodiscard]] VkDeviceSize alignment() const;
+        [[nodiscard]] LunaMemoryType memoryType() const;
+
+    private:
+        Buffer *buffer_{};
+        VkDeviceSize size_{};
+        VkDeviceSize offset_{};
+        VkDeviceSize alignment_{};
+        VmaVirtualAllocation allocation_{};
 };
 } // namespace luna
 
@@ -145,68 +131,16 @@ class Buffer
 
 namespace luna
 {
-inline BufferRegionIndex::BufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion):
-    buffer_(buffer),
-    bufferRegion_(bufferRegion)
-{}
-
-inline VkDeviceSize BufferRegionIndex::offset() const
+inline Buffer::~Buffer()
 {
-    assert(bufferRegion_);
-    return bufferRegion_->offset_;
-}
-inline VkDeviceSize BufferRegionIndex::size() const
-{
-    if (bufferRegion_ == nullptr)
+    if (buffer_ == VK_NULL_HANDLE)
     {
-        return 0;
+        return;
     }
-    return bufferRegion_->size_;
+    regions_.clear();
+    vmaDestroyVirtualBlock(virtualBlock_);
+    vmaDestroyBuffer(allocator_, buffer_, allocation_);
 }
-inline uint8_t *BufferRegionIndex::data() const
-{
-    assert(bufferRegion_);
-    if (bufferRegion_->data_ == nullptr)
-    {
-        return nullptr;
-    }
-    return bufferRegion_->data_;
-}
-inline VkBufferCreateFlags BufferRegionIndex::creationFlags() const
-{
-    return buffer_->creationFlags_;
-}
-inline VkBufferUsageFlags BufferRegionIndex::usageFlags() const
-{
-    return buffer_->usageFlags_;
-}
-inline void BufferRegionIndex::allocationCreateInfo(VmaAllocationCreateInfo &allocationCreateInfo) const
-{
-    allocationCreateInfo = buffer_->allocationCreateInfo_;
-}
-inline void BufferRegionIndex::creationInfo(LunaBufferCreationInfo &creationInfo) const
-{
-    creationInfo.size = size();
-    creationInfo.flags = buffer_->creationFlags_;
-    creationInfo.usage = buffer_->usageFlags_;
-    creationInfo.queueFamilyIndexCount = buffer_->queueFamilyIndices_.size();
-    creationInfo.queueFamilyIndices = buffer_->queueFamilyIndices_.data();
-}
-inline const VkBuffer &BufferRegionIndex::buffer() const
-{
-    return *buffer_;
-}
-
-
-inline VkDeviceSize BufferRegion::size() const
-{
-    return size_;
-}
-inline VkDeviceSize BufferRegion::offset() const
-{
-    return offset_;
-}
-
 
 inline Buffer::operator const VkBuffer &() const
 {
@@ -219,9 +153,115 @@ inline Buffer::operator const VkBuffer *() const
 
 inline bool Buffer::operator==(const Buffer &other) const
 {
-    return data_ == other.data_ && allocation_ == other.allocation_ && buffer_ == other.buffer_;
+    // This should be enough to uniquely identify the Buffer
+    return this == &other || (buffer_ == other.buffer_ && allocation_ == other.allocation_);
 }
 
+inline LunaBuffer Buffer::createRegion(const LunaBufferCreationInfo &creationInfo)
+{
+    if (creationInfo.memoryType != memoryType_)
+    {
+        assert(creationInfo.memoryType == memoryType_); // Internal state check.
+        return LUNA_NULL_HANDLE;
+    }
+    if (creationInfo.size == 0)
+    {
+        return helpers::toHandle(&regions_.emplace_back(this, creationInfo.alignment));
+    }
+    const VmaVirtualAllocationCreateInfo virtualAllocationCreateInfo = {
+        .size = creationInfo.size,
+        .alignment = creationInfo.alignment,
+    };
+    VmaVirtualAllocation virtualAllocation{};
+    VkDeviceSize offset{};
+    if (vmaVirtualAllocate(virtualBlock_, &virtualAllocationCreateInfo, &virtualAllocation, &offset) != VK_SUCCESS)
+    {
+        return LUNA_NULL_HANDLE;
+    }
+    return helpers::toHandle(&regions_.emplace_back(this,
+                                                    creationInfo.size,
+                                                    offset,
+                                                    creationInfo.alignment,
+                                                    virtualAllocation));
+}
+inline void Buffer::destroyRegion(const BufferRegion &targetRegion)
+{
+    regions_.remove_if([&targetRegion](const BufferRegion &region) -> bool { return &targetRegion == &region; });
+}
+
+inline void Buffer::clearRegions()
+{
+    regions_.clear();
+}
+
+inline LunaMemoryType Buffer::memoryType() const
+{
+    return memoryType_;
+}
+inline VmaVirtualBlock Buffer::virtualBlock() const
+{
+    return virtualBlock_;
+}
+inline char *Buffer::data() const
+{
+    return static_cast<char *>(data_);
+}
+
+inline void BufferRegion::destroy(const BufferRegion &region)
+{
+    assert(region.buffer_ != nullptr); // Internal state check.
+    region.buffer_->destroyRegion(region);
+}
+
+inline BufferRegion::BufferRegion(Buffer *buffer, const VkDeviceSize alignment): buffer_(buffer), alignment_(alignment)
+{}
+inline BufferRegion::BufferRegion(Buffer *buffer,
+                                  const VkDeviceSize size,
+                                  const VkDeviceSize offset,
+                                  const VkDeviceSize alignment,
+                                  const VmaVirtualAllocation allocation):
+    buffer_(buffer),
+    size_(size),
+    offset_(offset),
+    alignment_(alignment),
+    allocation_(allocation)
+{
+    assert(buffer != nullptr);
+}
+
+inline BufferRegion::~BufferRegion()
+{
+    assert(buffer_ != nullptr); // Internal state check.
+    vmaVirtualFree(buffer_->virtualBlock(), allocation_);
+}
+
+inline char *BufferRegion::data() const
+{
+    assert(buffer_ != nullptr); // Internal state check.
+    return buffer_->data() == nullptr ? nullptr : buffer_->data() + offset_;
+}
+inline VkBuffer BufferRegion::buffer() const
+{
+    assert(buffer_ != nullptr); // Internal state check.
+    return static_cast<VkBuffer>(*buffer_);
+}
+inline VkDeviceSize BufferRegion::size() const
+{
+    return size_;
+}
+inline VkDeviceSize BufferRegion::offset() const
+{
+    return offset_;
+}
+inline VkDeviceSize BufferRegion::alignment() const
+{
+    return alignment_;
+}
+inline LunaMemoryType BufferRegion::memoryType() const
+{
+    assert(buffer_ != nullptr); // Internal state check.
+    return buffer_->memoryType();
+}
 } // namespace luna
 
 #pragma endregion Implementation

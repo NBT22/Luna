@@ -119,17 +119,16 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
             sourceStageMask |= bufferMemoryBarrier.sourceStageMask;
             destinationStageMask |= bufferMemoryBarrier.destinationStageMask;
             assert(bufferMemoryBarrier.buffer);
-            const BufferRegionIndex &bufferRegionIndex =
-                    *luna::helpers::fromHandle<BufferRegionIndex>(bufferMemoryBarrier.buffer);
+            const BufferRegion &bufferRegion = *luna::helpers::fromHandle<BufferRegion>(bufferMemoryBarrier.buffer);
             bufferMemoryBarriers.emplace_back(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
                                               nullptr,
                                               bufferMemoryBarrier.sourceAccessMask,
                                               bufferMemoryBarrier.destinationAccessMask,
                                               bufferMemoryBarrier.srcQueueFamilyIndex,
                                               bufferMemoryBarrier.dstQueueFamilyIndex,
-                                              bufferRegionIndex.buffer(),
-                                              bufferRegionIndex.offset() + bufferMemoryBarrier.offset,
-                                              bufferMemoryBarrier.size == 0 ? bufferRegionIndex.size()
+                                              bufferRegion.buffer(),
+                                              bufferRegion.offset() + bufferMemoryBarrier.offset,
+                                              bufferMemoryBarrier.size == 0 ? bufferRegion.size()
                                                                             : bufferMemoryBarrier.size);
         }
 
@@ -193,8 +192,7 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
         {
             const LunaBufferMemoryBarrier &bufferMemoryBarrier = dependencyInfo.bufferMemoryBarriers[i];
             assert(bufferMemoryBarrier.buffer);
-            const BufferRegionIndex &bufferRegionIndex =
-                    *luna::helpers::fromHandle<BufferRegionIndex>(bufferMemoryBarrier.buffer);
+            const BufferRegion &bufferRegion = *luna::helpers::fromHandle<BufferRegion>(bufferMemoryBarrier.buffer);
             bufferMemoryBarriers.emplace_back(VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
                                               nullptr,
                                               bufferMemoryBarrier.sourceStageMask,
@@ -203,9 +201,9 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                               bufferMemoryBarrier.destinationAccessMask,
                                               bufferMemoryBarrier.srcQueueFamilyIndex,
                                               bufferMemoryBarrier.dstQueueFamilyIndex,
-                                              bufferRegionIndex.buffer(),
-                                              bufferRegionIndex.offset() + bufferMemoryBarrier.offset,
-                                              bufferMemoryBarrier.size == 0 ? bufferRegionIndex.size()
+                                              bufferRegion.buffer(),
+                                              bufferRegion.offset() + bufferMemoryBarrier.offset,
+                                              bufferMemoryBarrier.size == 0 ? bufferRegion.size()
                                                                             : bufferMemoryBarrier.size);
         }
 
@@ -215,9 +213,9 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
             for (uint32_t j = 0; j < bufferMemoryBarrier.bufferCount; j++)
             {
                 assert(bufferMemoryBarrier.buffers[j] != LUNA_NULL_HANDLE);
-                const BufferRegionIndex &bufferRegionIndex =
-                        *luna::helpers::fromHandle<BufferRegionIndex>(bufferMemoryBarrier.buffers[j]);
-                if (bufferRegionIndex.size() == 0)
+                const BufferRegion &bufferRegion =
+                        *luna::helpers::fromHandle<BufferRegion>(bufferMemoryBarrier.buffers[j]);
+                if (bufferRegion.size() == 0)
                 {
                     continue;
                 }
@@ -229,9 +227,9 @@ void pipelineBarrier(const VkCommandBuffer commandBuffer, const LunaDependencyIn
                                                   bufferMemoryBarrier.destinationAccessMask,
                                                   bufferMemoryBarrier.srcQueueFamilyIndex,
                                                   bufferMemoryBarrier.dstQueueFamilyIndex,
-                                                  bufferRegionIndex.buffer(),
-                                                  bufferRegionIndex.offset(),
-                                                  bufferMemoryBarrier.size == 0 ? bufferRegionIndex.size()
+                                                  bufferRegion.buffer(),
+                                                  bufferRegion.offset(),
+                                                  bufferMemoryBarrier.size == 0 ? bufferRegion.size()
                                                                                 : bufferMemoryBarrier.size);
             }
         }
@@ -299,7 +297,6 @@ void lunaWriteDescriptorSets(const LunaDevice device,
     using namespace luna;
     std::list<std::vector<VkDescriptorImageInfo>> descriptorImageInfos;
     std::list<std::vector<VkDescriptorBufferInfo>> descriptorBufferInfos;
-    std::list<std::vector<VkBufferView>> texelBufferViews;
     std::vector<VkWriteDescriptorSet> writes;
     writes.reserve(descriptorWriteCount);
     for (uint32_t i = 0; i < descriptorWriteCount; i++)
@@ -336,18 +333,18 @@ void lunaWriteDescriptorSets(const LunaDevice device,
             std::vector<VkDescriptorBufferInfo> bufferInfos{};
             for (uint32_t j = 0; j < descriptorCount; j++)
             {
-                assert(descriptorWrite.bufferInfos[j].buffer != LUNA_NULL_HANDLE);
                 const LunaBuffer buffer = descriptorWrite.bufferInfos[j].buffer;
-                const BufferRegionIndex &bufferRegionIndex = *luna::helpers::fromHandle<BufferRegionIndex>(buffer);
-                if (bufferRegionIndex.size() == 0)
+                assert(buffer != LUNA_NULL_HANDLE);
+                const BufferRegion &bufferRegion = *luna::helpers::fromHandle<BufferRegion>(buffer);
+                if (bufferRegion.size() == 0)
                 {
                     continue;
                 }
-                assert(descriptorWrite.bufferInfos[j].offset < bufferRegionIndex.size());
-                bufferInfos.emplace_back(bufferRegionIndex.buffer(),
-                                         bufferRegionIndex.offset() + descriptorWrite.bufferInfos[j].offset,
+                assert(descriptorWrite.bufferInfos[j].offset < bufferRegion.size());
+                bufferInfos.emplace_back(bufferRegion.buffer(),
+                                         bufferRegion.offset() + descriptorWrite.bufferInfos[j].offset,
                                          descriptorWrite.bufferInfos[j].range == 0
-                                                 ? bufferRegionIndex.size() - descriptorWrite.bufferInfos[j].offset
+                                                 ? bufferRegion.size() - descriptorWrite.bufferInfos[j].offset
                                                  : descriptorWrite.bufferInfos[j].range);
             }
             if (!bufferInfos.empty())
@@ -368,23 +365,16 @@ void lunaWriteDescriptorSets(const LunaDevice device,
         }
         if (descriptorWrite.texelBufferViews != nullptr)
         {
-            std::vector<VkBufferView> bufferViews{};
-            for (uint32_t j = 0; j < descriptorCount; j++)
-            {
-                assert(descriptorWrite.texelBufferViews[j] != LUNA_NULL_HANDLE);
-                bufferViews.emplace_back(*helpers::fromHandle<VkBufferView>(descriptorWrite.texelBufferViews[j]));
-            }
-            texelBufferViews.push_back(bufferViews);
             writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                                 nullptr,
                                 *descriptorSetIndex->set,
                                 binding.index,
                                 descriptorWrite.descriptorArrayElement,
-                                bufferViews.size(),
+                                descriptorCount,
                                 binding.type,
                                 nullptr,
                                 nullptr,
-                                texelBufferViews.back().data());
+                                descriptorWrite.texelBufferViews);
         }
     }
     vkUpdateDescriptorSets(static_cast<VkDevice>(*luna::helpers::fromHandle<Device>(device)),
@@ -436,11 +426,10 @@ VkResult lunaDrawIndirect(const LunaDevice device,
                                                      commandBuffer,
                                                      drawInfo->pipeline,
                                                      drawInfo->pipelineBindInfo));
-    const luna::BufferRegionIndex *bufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    const luna::BufferRegion *bufferRegion = luna::helpers::fromHandle<luna::BufferRegion>(drawInfo->buffer);
     vkCmdDrawIndirect(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
-                      bufferRegionIndex->buffer(),
-                      bufferRegionIndex->offset(),
+                      bufferRegion->buffer(),
+                      bufferRegion->offset(),
                       drawInfo->drawCount,
                       drawInfo->stride == 0 ? sizeof(VkDrawIndirectCommand) : drawInfo->stride);
     return VK_SUCCESS;
@@ -457,13 +446,12 @@ VkResult lunaDrawIndirectCount(const LunaDevice device,
                                                      commandBuffer,
                                                      drawInfo->pipeline,
                                                      drawInfo->pipelineBindInfo));
-    const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    const luna::BufferRegion *bufferRegion = luna::helpers::fromHandle<luna::BufferRegion>(drawInfo->buffer);
     vkCmdDrawIndirectCount(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
-                           drawParameterBufferRegionIndex->buffer(),
-                           drawParameterBufferRegionIndex->offset() + sizeof(uint32_t),
-                           drawParameterBufferRegionIndex->buffer(),
-                           drawParameterBufferRegionIndex->offset(),
+                           bufferRegion->buffer(),
+                           bufferRegion->offset() + sizeof(uint32_t),
+                           bufferRegion->buffer(),
+                           bufferRegion->offset(),
                            drawInfo->maxDrawCount,
                            drawInfo->stride == 0 ? sizeof(VkDrawIndirectCommand) : drawInfo->stride);
     return VK_SUCCESS;
@@ -500,11 +488,10 @@ VkResult lunaDrawIndexedIndirect(const LunaDevice device,
                                                      commandBuffer,
                                                      drawInfo->pipeline,
                                                      drawInfo->pipelineBindInfo));
-    const luna::BufferRegionIndex *bufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    const luna::BufferRegion *bufferRegion = luna::helpers::fromHandle<luna::BufferRegion>(drawInfo->buffer);
     vkCmdDrawIndexedIndirect(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
-                             bufferRegionIndex->buffer(),
-                             bufferRegionIndex->offset(),
+                             bufferRegion->buffer(),
+                             bufferRegion->offset(),
                              drawInfo->drawCount,
                              drawInfo->stride == 0 ? sizeof(VkDrawIndexedIndirectCommand) : drawInfo->stride);
     return VK_SUCCESS;
@@ -521,13 +508,12 @@ VkResult lunaDrawIndexedIndirectCount(const LunaDevice device,
                                                      commandBuffer,
                                                      drawInfo->pipeline,
                                                      drawInfo->pipelineBindInfo));
-    const luna::BufferRegionIndex *drawParameterBufferRegionIndex =
-            luna::helpers::fromHandle<luna::BufferRegionIndex>(drawInfo->buffer);
+    const luna::BufferRegion *bufferRegion = luna::helpers::fromHandle<luna::BufferRegion>(drawInfo->buffer);
     vkCmdDrawIndexedIndirectCount(*luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
-                                  drawParameterBufferRegionIndex->buffer(),
-                                  drawParameterBufferRegionIndex->offset() + sizeof(uint32_t),
-                                  drawParameterBufferRegionIndex->buffer(),
-                                  drawParameterBufferRegionIndex->offset(),
+                                  bufferRegion->buffer(),
+                                  bufferRegion->offset() + sizeof(uint32_t),
+                                  bufferRegion->buffer(),
+                                  bufferRegion->offset(),
                                   drawInfo->maxDrawCount,
                                   drawInfo->stride == 0 ? sizeof(VkDrawIndexedIndirectCommand) : drawInfo->stride);
     return VK_SUCCESS;

@@ -15,19 +15,6 @@
 
 namespace luna
 {
-class CommandPool;
-class ShaderModule;
-class RenderPass;
-class DescriptorSetLayout;
-struct DescriptorSetIndex;
-class GraphicsPipeline;
-class ComputePipeline;
-class Buffer;
-class BufferRegion;
-class BufferRegionIndex;
-class Image;
-class Semaphore;
-
 template<typename T> struct FamilyValues
 {
         T graphics{};
@@ -63,14 +50,7 @@ class Device
         VkResult createComputePipeline(VkDevice device,
                                        const LunaComputePipelineCreationInfo &creationInfo,
                                        LunaComputePipeline *pipeline);
-        VkResult createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
-                              const VmaAllocationCreateInfo &allocationCreateInfo,
-                              Buffer *&outBuffer);
-        VkResult createBuffer(const VkBufferCreateInfo &bufferCreateInfo,
-                              const VmaAllocationCreateInfo &allocationCreateInfo,
-                              VkDeviceSize alignment,
-                              Buffer *&outBuffer);
-        VkResult createBufferRegionIndex(Buffer *buffer, BufferRegion *bufferRegion, LunaBuffer *outBuffer);
+        VkResult createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *&outBuffer);
         VkResult createSampler(const LunaSamplerCreationInfo &creationInfo, LunaSampler *sampler);
         VkResult createImage(CommandBuffer &commandBuffer,
                              const LunaImageCreationInfo &creationInfo,
@@ -80,8 +60,6 @@ class Device
                              LunaImage *image);
         VkResult createSemaphore(const LunaSemaphoreCreationInfo &creationInfo, LunaSemaphore *semaphore);
 
-        void destroyBufferRegionIndex(BufferRegionIndex *&bufferRegionIndex);
-        void destroyBuffer(Buffer *&buffer);
         void destroySampler(const LunaSampler &sampler);
         // TODO: Some form of scheduling so that this doesn't destroy images which are currently in use
         void destroyImage(const LunaImage &image);
@@ -95,7 +73,7 @@ class Device
         [[nodiscard]] const LunaQueueFamilyProperties *queueFamilies() const noexcept;
         [[nodiscard]] VmaAllocator allocator() const noexcept;
         [[nodiscard]] std::list<Buffer> &buffers() noexcept;
-        [[nodiscard]] BufferRegionIndex *&stagingBuffer() noexcept;
+        [[nodiscard]] Buffer &stagingBuffer() const noexcept;
 
     private:
         VkResult initQueueFamilies_(VkPhysicalDevice physicalDevice,
@@ -131,13 +109,10 @@ class Device
         std::list<GraphicsPipeline> graphicsPipelines_;
         std::list<ComputePipeline> computePipelines_;
         std::list<Buffer> buffers_;
-        std::list<BufferRegionIndex> bufferRegionIndices_;
         std::list<VkSampler> samplers_{};
         std::list<Image> images_;
         std::list<Semaphore> semaphores_;
-        // TODO (0.3.0): This should be able to have a minimum size (and just always resize to `std::max(newSize, minSize)`),
-        //  that way it can shrink if it grows to an absurd size
-        BufferRegionIndex *stagingBuffer_{};
+        Buffer *stagingBuffer_{};
 };
 } // namespace luna
 
@@ -175,9 +150,10 @@ inline std::list<Buffer> &Device::buffers() noexcept
 {
     return buffers_;
 }
-inline BufferRegionIndex *&Device::stagingBuffer() noexcept
+inline Buffer &Device::stagingBuffer() const noexcept
 {
-    return stagingBuffer_;
+    assert(stagingBuffer_ != nullptr); // Internal state check.
+    return *stagingBuffer_;
 }
 
 inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice,
