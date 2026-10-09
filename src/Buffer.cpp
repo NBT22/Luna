@@ -119,6 +119,8 @@ VkResult lunaWriteDataToBuffer(const LunaDevice device,
                                const LunaBuffer buffer,
                                const LunaBufferWriteInfo *writeInfo)
 {
+    (void)device;
+    (void)commandBuffer;
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(writeInfo != nullptr);
