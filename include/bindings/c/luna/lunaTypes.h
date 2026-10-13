@@ -512,12 +512,36 @@ typedef struct
         LunaMemoryType memoryType;
 } LunaBufferCreationInfo;
 
+typedef enum
+{
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_NONE,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_VERTEX_BUFFER,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_INDEX_BUFFER,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_INDIRECT_BUFFER,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_FRAGMENT_SHADER_UNIFORM_BUFFER,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_UNIFORM_BUFFER,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_COMPUTE_SHADER_STORAGE_BUFFER,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_BUFFER_DEVICE_ADDRESS,
+    LUNA_BUFFER_SYNCHRONIZATION_TYPE_COMPUTE_SHADER_BUFFER_DEVICE_ADDRESS,
+} LunaBufferSynchronizationType;
+
 typedef struct
 {
-        VkDeviceSize bytes;
+        VkDeviceSize size;
         const void *data;
         VkDeviceSize offset;
-        VkPipelineStageFlags stageFlags;
+
+        union
+        {
+                LunaBufferSynchronizationType synchronizationType;
+                struct
+                {
+                        VkPipelineStageFlags2 sourceStageMask;
+                        VkAccessFlags2 sourceAccessMask;
+                        VkPipelineStageFlags2 destinationStageMask;
+                        VkAccessFlags2 destinationAccessMask;
+                };
+        };
 } LunaBufferWriteInfo;
 
 typedef struct

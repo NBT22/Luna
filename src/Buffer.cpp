@@ -22,22 +22,135 @@
 
 namespace luna
 {
-Buffer::Buffer(const LunaMemoryType memoryType, const VmaAllocator &allocator):
+Buffer::Buffer(const LunaMemoryType memoryType, const VmaAllocator &allocator, const VkDeviceSize size):
     allocator_(allocator),
     memoryType_(memoryType)
 {
+    assert(size > 0 && size % (VkDeviceSize{32} * 1024 * 1024) == 0);
+    const VkBufferCreateInfo bufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                 VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                 VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
+                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
     VmaAllocationInfo allocationInfo;
     CHECK_RESULT_THROW(vmaCreateBuffer(allocator,
-                                       &BUFFER_CREATE_INFO,
+                                       &bufferCreateInfo,
                                        &allocationCreateInfo(memoryType),
                                        &buffer_,
                                        &allocation_,
                                        &allocationInfo));
-    static constexpr VmaVirtualBlockCreateInfo VIRTUAL_BLOCK_CREATE_INFO = {
-        .size = BUFFER_CREATE_INFO.size,
+    const VmaVirtualBlockCreateInfo virtualBlockCreateInfo = {
+        .size = size,
     };
-    CHECK_RESULT_THROW(vmaCreateVirtualBlock(&VIRTUAL_BLOCK_CREATE_INFO, &virtualBlock_));
+    CHECK_RESULT_THROW(vmaCreateVirtualBlock(&virtualBlockCreateInfo, &virtualBlock_));
     data_ = allocationInfo.pMappedData;
+}
+
+VkResult BufferRegion::writeData(Device &device, CommandBuffer &commandBuffer, const LunaBufferWriteInfo &writeInfo)
+{
+    CHECK_RESULT_RETURN(commandBuffer.ensureIsRecording(static_cast<VkDevice>(device)));
+
+    const bool smallWrite = writeInfo.size < 4096;
+
+    const bool useSynchronizationType = writeInfo.sourceStageMask != VK_PIPELINE_STAGE_2_NONE &&
+                                        writeInfo.sourceAccessMask == VK_ACCESS_2_NONE &&
+                                        writeInfo.destinationStageMask == VK_PIPELINE_STAGE_2_NONE &&
+                                        writeInfo.destinationAccessMask == VK_ACCESS_2_NONE;
+
+    VkPipelineStageFlags2 stageMask = writeInfo.sourceStageMask;
+    VkAccessFlags2 accessMask = writeInfo.sourceAccessMask;
+    if (useSynchronizationType)
+    {
+        switch (writeInfo.synchronizationType)
+        {
+            case LUNA_BUFFER_SYNCHRONIZATION_TYPE_VERTEX_BUFFER:
+                stageMask = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT;
+                accessMask = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
+                break;
+            case LUNA_BUFFER_SYNCHRONIZATION_TYPE_INDEX_BUFFER:
+                stageMask = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT;
+                accessMask = VK_ACCESS_2_INDEX_READ_BIT;
+                break;
+            case LUNA_BUFFER_SYNCHRONIZATION_TYPE_INDIRECT_BUFFER:
+                stageMask = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+                accessMask = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
+                break;
+            case LUNA_BUFFER_SYNCHRONIZATION_TYPE_FRAGMENT_SHADER_UNIFORM_BUFFER:
+                stageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+                accessMask = VK_ACCESS_2_UNIFORM_READ_BIT;
+                break;
+            case LUNA_BUFFER_SYNCHRONIZATION_TYPE_UNIFORM_BUFFER:
+                stageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+                            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT |
+                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+                accessMask = VK_ACCESS_2_UNIFORM_READ_BIT;
+                break;
+            case LUNA_BUFFER_SYNCHRONIZATION_TYPE_COMPUTE_SHADER_STORAGE_BUFFER:
+                stageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+                accessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+                break;
+            default:
+                break;
+        }
+    }
+
+    if (stageMask != VK_PIPELINE_STAGE_2_NONE && accessMask != VK_ACCESS_2_NONE)
+    {
+        const LunaBufferMemoryBarrier preWriteBarrier = {
+            .sourceStageMask = stageMask,
+            .sourceAccessMask = stageMask,
+            .destinationStageMask = smallWrite ? VK_PIPELINE_STAGE_2_CLEAR_BIT : VK_PIPELINE_STAGE_2_COPY_BIT,
+            .destinationAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            .buffer = helpers::toHandle(this),
+        };
+        const LunaDependencyInfo preWriteDependencyInfo = {
+            .bufferMemoryBarrierCount = 1,
+            .bufferMemoryBarriers = &preWriteBarrier,
+        };
+        helpers::pipelineBarrier(commandBuffer, preWriteDependencyInfo);
+    }
+
+    if (smallWrite)
+    {
+        vkCmdUpdateBuffer(commandBuffer, buffer(), offset() + writeInfo.offset, writeInfo.size, writeInfo.data);
+    } else
+    {
+        const BufferRegion *stagingBufferRegion = device.writeDataToStagingBuffer(writeInfo.data, writeInfo.size);
+        const VkBufferCopy copyRegion = {
+            .srcOffset = stagingBufferRegion->offset(),
+            .dstOffset = offset() + writeInfo.offset,
+            .size = writeInfo.size,
+        };
+        vkCmdCopyBuffer(commandBuffer, stagingBufferRegion->buffer(), buffer(), 1, &copyRegion);
+    }
+
+    if (!useSynchronizationType)
+    {
+        stageMask = writeInfo.sourceStageMask;
+        accessMask = writeInfo.sourceAccessMask;
+    }
+
+    const LunaBufferMemoryBarrier postWriteBarrier = {
+        .sourceStageMask = smallWrite ? VK_PIPELINE_STAGE_2_CLEAR_BIT : VK_PIPELINE_STAGE_2_COPY_BIT,
+        .sourceAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .destinationStageMask = stageMask,
+        .destinationAccessMask = accessMask,
+        .buffer = helpers::toHandle(this),
+    };
+    const LunaDependencyInfo postWriteDependencyInfo = {
+        .bufferMemoryBarrierCount = 1,
+        .bufferMemoryBarriers = &postWriteBarrier,
+    };
+    helpers::pipelineBarrier(commandBuffer, postWriteDependencyInfo);
+    return VK_SUCCESS;
 }
 } // namespace luna
 
@@ -119,21 +232,26 @@ VkResult lunaWriteDataToBuffer(const LunaDevice device,
                                const LunaBuffer buffer,
                                const LunaBufferWriteInfo *writeInfo)
 {
-    (void)device;
-    (void)commandBuffer;
     assert(device != LUNA_NULL_HANDLE);
     assert(commandBuffer != LUNA_NULL_HANDLE);
     assert(writeInfo != nullptr);
-    if (writeInfo->bytes != 0)
+    if (writeInfo->size != 0)
     {
         assert(buffer != LUNA_NULL_HANDLE);
         assert(writeInfo->data != nullptr);
 
-        const luna::BufferRegion &bufferRegion = *luna::helpers::fromHandle<luna::BufferRegion>(buffer);
-        assert(bufferRegion.data() != nullptr); // TODO: Add support for non-mapped memory
-        std::copy_n(static_cast<const char *>(writeInfo->data),
-                    writeInfo->bytes,
-                    bufferRegion.data() + writeInfo->offset);
+        luna::BufferRegion &bufferRegion = *luna::helpers::fromHandle<luna::BufferRegion>(buffer);
+        if (bufferRegion.data() == nullptr)
+        {
+            CHECK_RESULT_RETURN(bufferRegion.writeData(*luna::helpers::fromHandle<luna::Device>(device),
+                                                       *luna::helpers::fromHandle<luna::CommandBuffer>(commandBuffer),
+                                                       *writeInfo));
+        } else
+        {
+            std::copy_n(static_cast<const char *>(writeInfo->data),
+                        writeInfo->size,
+                        bufferRegion.data() + writeInfo->offset);
+        }
     }
     return VK_SUCCESS;
 }
@@ -181,11 +299,10 @@ VkDeviceAddress lunaGetBufferDeviceAddress(const LunaDevice device, const LunaBu
     return vkGetBufferDeviceAddress(lunaGetVkDevice(device), &bufferDeviceAddressInfo) + bufferRegion.offset();
 }
 
-void clearStagingBuffer(const LunaDevice device)
+void lunaClearStagingBuffer(const LunaDevice device)
 {
     assert(device != LUNA_NULL_HANDLE);
-    const luna::Device &deviceObject = *luna::helpers::fromHandle<luna::Device>(device);
-    deviceObject.stagingBuffer().clearRegions();
+    luna::helpers::fromHandle<luna::Device>(device)->clearStagingBuffer();
 }
 
 VkResult lunaBindVertexBuffers(const LunaDevice device,

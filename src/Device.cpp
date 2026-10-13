@@ -189,8 +189,6 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     };
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
-    stagingBuffer_ = &buffers_.emplace_back(LUNA_MEMORY_TYPE_HOST_VISIBLE, allocator_);
-
     isDestroyed_ = false;
 }
 
@@ -242,7 +240,7 @@ void Device::destroy()
     descriptorSetIndices_.clear();
     descriptorSets_.clear();
 
-    buffers_.clear();
+    bufferPools_.clear();
 
     for (ShaderModule &shaderModule: shaderModules_)
     {
@@ -384,17 +382,13 @@ VkResult Device::createComputePipeline(const VkDevice device,
 }
 VkResult Device::createBufferRegion(const LunaBufferCreationInfo &creationInfo, LunaBuffer *&outBuffer)
 {
-    for (Buffer &buffer: buffers_)
+    for (BufferPool &pool: bufferPools_)
     {
-        if (buffer.memoryType() != creationInfo.memoryType)
+        if (pool.memoryType() != creationInfo.memoryType)
         {
             continue;
         }
-        const LunaBuffer lunaBuffer = buffer.createRegion(creationInfo);
-        if (lunaBuffer == LUNA_NULL_HANDLE)
-        {
-            continue;
-        }
+        const LunaBuffer lunaBuffer = pool.createRegion(creationInfo);
         if (outBuffer != nullptr)
         {
             *outBuffer = lunaBuffer;
@@ -402,12 +396,8 @@ VkResult Device::createBufferRegion(const LunaBufferCreationInfo &creationInfo, 
         return VK_SUCCESS;
     }
 
-    TRY_CATCH_RESULT(buffers_.emplace_back(creationInfo.memoryType, allocator_));
-    const LunaBuffer lunaBuffer = buffers_.back().createRegion(creationInfo);
-    if (lunaBuffer == LUNA_NULL_HANDLE)
-    {
-        return VK_ERROR_UNKNOWN;
-    }
+    TRY_CATCH_RESULT(bufferPools_.emplace_back(creationInfo.memoryType, &allocator_));
+    const LunaBuffer lunaBuffer = bufferPools_.back().createRegion(creationInfo);
     if (outBuffer != nullptr)
     {
         *outBuffer = lunaBuffer;
@@ -492,7 +482,7 @@ void Device::destroySampler(const LunaSampler &sampler)
         return;
     }
     const VkSampler vkSampler = *helpers::fromHandle<VkSampler>(sampler);
-    samplers_.remove(vkSampler);
+    std::erase(samplers_, vkSampler);
     vkDestroySampler(logicalDevice_, vkSampler, nullptr);
 }
 void Device::destroyImage(const LunaImage &image)
@@ -503,7 +493,7 @@ void Device::destroyImage(const LunaImage &image)
     }
     Image &imageObject = *helpers::fromHandle<Image>(image);
     imageObject.destroy(logicalDevice_, allocator_);
-    images_.remove(imageObject);
+    std::erase(images_, imageObject);
 }
 void Device::destroySemaphore(const LunaSemaphore &semaphore)
 {
@@ -513,7 +503,7 @@ void Device::destroySemaphore(const LunaSemaphore &semaphore)
     }
     Semaphore &semaphoreObject = *helpers::fromHandle<Semaphore>(semaphore);
     semaphoreObject.destroy(logicalDevice_);
-    semaphores_.remove(semaphoreObject);
+    std::erase(semaphores_, semaphoreObject);
 }
 void Device::destroyGraphicsPipeline(const LunaGraphicsPipeline &graphicsPipeline)
 {
@@ -523,7 +513,7 @@ void Device::destroyGraphicsPipeline(const LunaGraphicsPipeline &graphicsPipelin
     }
     GraphicsPipeline &pipeline = *helpers::fromHandle<GraphicsPipeline>(graphicsPipeline);
     pipeline.destroy(logicalDevice_);
-    graphicsPipelines_.remove_if([&pipeline](const GraphicsPipeline &graphicsPipeline) -> bool {
+    std::erase_if(graphicsPipelines_, [&pipeline](const GraphicsPipeline &graphicsPipeline) -> bool {
         return &pipeline == &graphicsPipeline;
     });
 }
@@ -535,7 +525,7 @@ void Device::destroyComputePipeline(const LunaComputePipeline &computePipeline)
     }
     ComputePipeline &pipeline = *helpers::fromHandle<ComputePipeline>(computePipeline);
     pipeline.destroy(logicalDevice_);
-    computePipelines_.remove_if([&pipeline](const ComputePipeline &computePiepline) -> bool {
+    std::erase_if(computePipelines_, [&pipeline](const ComputePipeline &computePiepline) -> bool {
         return &pipeline == &computePiepline;
     });
 }

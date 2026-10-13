@@ -68,12 +68,12 @@ class Device
         void destroyComputePipeline(const LunaComputePipeline &computePipeline);
 
         [[nodiscard]] uint32_t findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const;
+        [[nodiscard]] const BufferRegion *writeDataToStagingBuffer(const void *data, VkDeviceSize size);
+        void clearStagingBuffer();
 
         [[nodiscard]] bool isDestroyed() const noexcept;
         [[nodiscard]] const LunaQueueFamilyProperties *queueFamilies() const noexcept;
         [[nodiscard]] VmaAllocator allocator() const noexcept;
-        [[nodiscard]] std::list<Buffer> &buffers() noexcept;
-        [[nodiscard]] Buffer &stagingBuffer() const noexcept;
 
     private:
         VkResult initQueueFamilies_(VkPhysicalDevice physicalDevice,
@@ -108,11 +108,11 @@ class Device
         std::list<DescriptorSetIndex> descriptorSetIndices_;
         std::list<GraphicsPipeline> graphicsPipelines_;
         std::list<ComputePipeline> computePipelines_;
-        std::list<Buffer> buffers_;
+        std::list<BufferPool> bufferPools_;
         std::list<VkSampler> samplers_{};
         std::list<Image> images_;
         std::list<Semaphore> semaphores_;
-        Buffer *stagingBuffer_{};
+        BufferPool stagingBuffer_{LUNA_MEMORY_TYPE_HOST_VISIBLE, &allocator_};
 };
 } // namespace luna
 
@@ -134,6 +134,28 @@ inline Device::operator const VkDevice &() const
     return logicalDevice_;
 }
 
+inline const BufferRegion *Device::writeDataToStagingBuffer(const void *data, const VkDeviceSize size)
+{
+    const LunaBufferCreationInfo stagingBufferRegionCreationInfo = {
+        .size = size,
+        .alignment = 4,
+        .memoryType = LUNA_MEMORY_TYPE_HOST_VISIBLE,
+    };
+    // TODO: This gets leaked
+    const BufferRegion *stagingBufferRegion =
+            helpers::fromHandle<BufferRegion>(stagingBuffer_.createRegion(stagingBufferRegionCreationInfo));
+    if (stagingBufferRegion == nullptr)
+    {
+        return nullptr;
+    }
+    std::copy_n(static_cast<const char *>(data), size, stagingBufferRegion->data());
+    return stagingBufferRegion;
+}
+inline void Device::clearStagingBuffer()
+{
+    stagingBuffer_.clearAllRegions();
+}
+
 inline bool Device::isDestroyed() const noexcept
 {
     return isDestroyed_;
@@ -145,15 +167,6 @@ inline const LunaQueueFamilyProperties *Device::queueFamilies() const noexcept
 inline VmaAllocator Device::allocator() const noexcept
 {
     return allocator_;
-}
-inline std::list<Buffer> &Device::buffers() noexcept
-{
-    return buffers_;
-}
-inline Buffer &Device::stagingBuffer() const noexcept
-{
-    assert(stagingBuffer_ != nullptr); // Internal state check.
-    return *stagingBuffer_;
 }
 
 inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice,

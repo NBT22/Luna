@@ -59,7 +59,7 @@ VkDeviceSize lunaGetBufferOffset(LunaBuffer buffer);
 VkDeviceAddress lunaGetBufferDeviceAddress(LunaDevice device, LunaBuffer buffer);
 
 // TODO: Better solution for this
-void clearStagingBuffer(LunaDevice device);
+void lunaClearStagingBuffer(LunaDevice device);
 
 #ifdef __cplusplus
 }

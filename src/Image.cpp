@@ -252,20 +252,7 @@ VkResult Image::write(Device &device, CommandBuffer &commandBuffer, const LunaIm
         extent.depth = 1;
     }
 
-    Buffer &stagingBuffer = device.stagingBuffer();
-    const LunaBufferCreationInfo stagingBufferRegionCreationInfo = {
-        .size = writeInfo.bytes,
-        .alignment = 4,
-        .memoryType = LUNA_MEMORY_TYPE_HOST_VISIBLE,
-    };
-    // TODO: This gets leaked
-    const BufferRegion *stagingBufferRegion =
-            helpers::fromHandle<BufferRegion>(stagingBuffer.createRegion(stagingBufferRegionCreationInfo));
-    if (stagingBufferRegion == nullptr)
-    {
-        return VK_ERROR_UNKNOWN;
-    }
-    std::copy_n(static_cast<const char *>(writeInfo.pixels), writeInfo.bytes, stagingBufferRegion->data());
+    const BufferRegion *stagingBufferRegion = device.writeDataToStagingBuffer(writeInfo.pixels, writeInfo.bytes);
 
     helpers::pipelineBarrier(commandBuffer,
                              writeInfo.sourceStageMask == VK_PIPELINE_STAGE_2_NONE ? VK_PIPELINE_STAGE_2_TRANSFER_BIT

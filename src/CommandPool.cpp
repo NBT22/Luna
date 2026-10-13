@@ -45,7 +45,7 @@ void CommandPool::destroyCommandBuffer(const VkDevice device, CommandBuffer &com
 {
     commandBuffer.destroy(device);
     std::erase(commandBuffers_, &commandBuffer);
-    commandBufferList_.remove(commandBuffer);
+    std::erase(commandBufferList_, commandBuffer);
     // commandBuffer is now invalid! DO NOT USE IT!
 }
 VkResult CommandPool::allocateCommandBuffer(VkDevice device, VkCommandBufferLevel commandBufferLevel)
