@@ -312,8 +312,10 @@ void lunaWriteDescriptorSets(const LunaDevice device,
             for (uint32_t j = 0; j < descriptorCount; j++)
             {
                 const Image *image = luna::helpers::fromHandle<Image>(descriptorWrite.imageInfos[j].image);
-                imageInfos.emplace_back(image->sampler(descriptorWrite.imageInfos[j].sampler),
-                                        image->imageView(),
+                imageInfos.emplace_back(image == nullptr
+                                                ? *helpers::fromHandle<VkSampler>(descriptorWrite.imageInfos[j].sampler)
+                                                : image->sampler(descriptorWrite.imageInfos[j].sampler),
+                                        image == nullptr ? nullptr : image->imageView(),
                                         descriptorWrite.imageInfos[j].imageLayout);
             }
             descriptorImageInfos.push_back(imageInfos);

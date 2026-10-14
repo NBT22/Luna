@@ -134,7 +134,6 @@ Image::Image(Device &device,
              const uint32_t arrayLayers,
              const VkImageViewType viewType)
 {
-    assert(creationInfo.sampler == LUNA_NULL_HANDLE || creationInfo.samplerCreationInfo == nullptr);
     if (creationInfo.sampler != LUNA_NULL_HANDLE)
     {
         sampler_ = sampler(creationInfo.sampler);
