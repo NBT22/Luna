@@ -69,7 +69,7 @@ class Device
 
         [[nodiscard]] uint32_t findQueueFamilyIndex(const LunaQueueFamilyProperties &requiredProperties) const;
         [[nodiscard]] const BufferRegion *writeDataToStagingBuffer(const void *data, VkDeviceSize size);
-        void clearStagingBuffer();
+        void clearStagingBuffer() const;
 
         [[nodiscard]] bool isDestroyed() const noexcept;
         [[nodiscard]] const LunaQueueFamilyProperties *queueFamilies() const noexcept;
@@ -112,7 +112,7 @@ class Device
         std::list<VkSampler> samplers_{};
         std::list<Image> images_;
         std::list<Semaphore> semaphores_;
-        BufferPool stagingBuffer_{LUNA_MEMORY_TYPE_HOST_VISIBLE, &allocator_};
+        BufferPool *stagingBuffer_{};
 };
 } // namespace luna
 
@@ -143,7 +143,7 @@ inline const BufferRegion *Device::writeDataToStagingBuffer(const void *data, co
     };
     // TODO: This gets leaked
     const BufferRegion *stagingBufferRegion =
-            helpers::fromHandle<BufferRegion>(stagingBuffer_.createRegion(stagingBufferRegionCreationInfo));
+            helpers::fromHandle<BufferRegion>(stagingBuffer_->createRegion(stagingBufferRegionCreationInfo));
     if (stagingBufferRegion == nullptr)
     {
         return nullptr;
@@ -151,9 +151,9 @@ inline const BufferRegion *Device::writeDataToStagingBuffer(const void *data, co
     std::copy_n(static_cast<const char *>(data), size, stagingBufferRegion->data());
     return stagingBufferRegion;
 }
-inline void Device::clearStagingBuffer()
+inline void Device::clearStagingBuffer() const
 {
-    stagingBuffer_.clearAllRegions();
+    stagingBuffer_->clearAllRegions();
 }
 
 inline bool Device::isDestroyed() const noexcept

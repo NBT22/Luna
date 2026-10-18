@@ -189,6 +189,8 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     };
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
+    stagingBuffer_ = &bufferPools_.emplace_back(LUNA_MEMORY_TYPE_HOST_VISIBLE, &allocator_);
+
     isDestroyed_ = false;
 }
 
