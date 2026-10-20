@@ -11,6 +11,7 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/utility/vk_safe_struct.hpp>
+#include <vulkan/utility/vk_struct_helper.hpp>
 #include <vulkan/vulkan_core.h>
 #include "helpers/Handle.hpp"
 
@@ -81,8 +82,16 @@ class Device
                                     VkSurfaceKHR surface,
                                     std::vector<float> &priorities,
                                     std::vector<VkDeviceQueueCreateInfo> &creationInfos);
-        [[nodiscard]] bool checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const;
-        [[nodiscard]] bool checkFeatureSupport_(const VkBool32 *requiredFeatures) const;
+        [[nodiscard]] static bool checkFeatureSupport_(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
+                                                       const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures);
+        [[nodiscard]] static bool checkFeatureSupport_(const VkPhysicalDeviceFeatures *requiredFeatures,
+                                                       const VkPhysicalDeviceFeatures *supportedFeatures);
+        template<typename T> [[nodiscard]] static bool checkFeatureSupport_(const T *requiredFeatures,
+                                                                            const T *supportedFeatures,
+                                                                            uint32_t memberCount);
+        [[nodiscard]] static bool checkFeatureSupport_(const VkBool32 *required,
+                                                       const VkBool32 *supported,
+                                                       uint32_t memberCount);
         [[nodiscard]] bool checkUsability_(VkPhysicalDevice device, VkSurfaceKHR surface);
 
         bool isDestroyed_{true};
@@ -194,146 +203,98 @@ inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice
     }
     return VK_SUCCESS;
 }
-inline bool Device::checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
+inline bool Device::checkFeatureSupport_(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
+                                         const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
 {
-    // const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures.features);
-    // constexpr size_t featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
-    // const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_.features);
-    // for (size_t i = 0; i < featureCount; i++)
-    // {
-    //     if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //     {
-    //         return false;
-    //     }
-    // }
-    //
-    // if (requiredFeatures.pNext != nullptr)
-    // {
-    //     return checkFeatureSupport_(static_cast<const VkBool32 *>(requiredFeatures.pNext));
-    // }
+    if (!checkFeatureSupport_(&requiredFeatures.features, &supportedFeatures.features))
+    {
+        return false;
+    }
+    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan11Features>(requiredFeatures.ptr()),
+                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan11Features>(supportedFeatures.ptr()),
+                              12))
+    {
+        return false;
+    }
+    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan12Features>(requiredFeatures.ptr()),
+                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan12Features>(supportedFeatures.ptr()),
+                              47))
+    {
+        return false;
+    }
+    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan13Features>(requiredFeatures.ptr()),
+                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan13Features>(supportedFeatures.ptr()),
+                              15))
+    {
+        return false;
+    }
+    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan14Features>(requiredFeatures.ptr()),
+                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan14Features>(supportedFeatures.ptr()),
+                              21))
+    {
+        return false;
+    }
+    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceRayQueryFeaturesKHR>(requiredFeatures.ptr()),
+                              vku::FindStructInPNextChain<VkPhysicalDeviceRayQueryFeaturesKHR>(supportedFeatures.ptr()),
+                              1))
+    {
+        return false;
+    }
+    if (!checkFeatureSupport_(
+                vku::FindStructInPNextChain<VkPhysicalDeviceRayTracingPipelineFeaturesKHR>(requiredFeatures.ptr()),
+                vku::FindStructInPNextChain<VkPhysicalDeviceRayTracingPipelineFeaturesKHR>(supportedFeatures.ptr()),
+                5))
+    {
+        return false;
+    }
+    if (!checkFeatureSupport_(
+                vku::FindStructInPNextChain<VkPhysicalDeviceAccelerationStructureFeaturesKHR>(requiredFeatures.ptr()),
+                vku::FindStructInPNextChain<VkPhysicalDeviceAccelerationStructureFeaturesKHR>(supportedFeatures.ptr()),
+                5))
+    {
+        return false;
+    }
 
     return true;
 }
-inline bool Device::checkFeatureSupport_(const VkBool32 *requiredFeatures) const
+template<typename T> bool Device::checkFeatureSupport_(const T *requiredFeatures,
+                                                       const T *supportedFeatures,
+                                                       const uint32_t memberCount)
 {
-    // assert(requiredFeatures);
-    // static_assert(alignof(void *) == alignof(VkPhysicalDeviceVulkan11Features) &&
-    //               alignof(void *) == alignof(VkPhysicalDeviceVulkan12Features) &&
-    //               alignof(void *) == alignof(VkPhysicalDeviceVulkan13Features) &&
-    //               alignof(void *) == alignof(VkPhysicalDeviceVulkan14Features));
-    // constexpr size_t featuresOffset = 2 * alignof(void *) / sizeof(VkBool32);
-    // const VkBool32 *requiredFeatureArray = requiredFeatures + featuresOffset;
-    // switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
-    // {
-    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
-    //     {
-    //         constexpr size_t vulkan11FeatureCount = (sizeof(VkPhysicalDeviceVulkan11Features) - 16) / sizeof(VkBool32);
-    //         const VkBool32 *supportedFeatureArray = &vulkan11Features_.storageBuffer16BitAccess;
-    //         for (size_t i = 0; i < vulkan11FeatureCount; i++)
-    //         {
-    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
-    //     {
-    //         constexpr size_t vulkan12FeatureCount = (sizeof(VkPhysicalDeviceVulkan12Features) - 16) / sizeof(VkBool32);
-    //         const VkBool32 *supportedFeatureArray = &vulkan12Features_.samplerMirrorClampToEdge;
-    //         for (size_t i = 0; i < vulkan12FeatureCount; i++)
-    //         {
-    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES:
-    //     {
-    //         constexpr size_t vulkan13FeatureCount = (sizeof(VkPhysicalDeviceVulkan13Features) - 16) / sizeof(VkBool32);
-    //         const VkBool32 *supportedFeatureArray = &vulkan13Features_.robustImageAccess;
-    //         for (size_t i = 0; i < vulkan13FeatureCount; i++)
-    //         {
-    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES:
-    //     {
-    //         constexpr size_t vulkan14FeatureCount = (sizeof(VkPhysicalDeviceVulkan14Features) - 16) / sizeof(VkBool32);
-    //         const VkBool32 *supportedFeatureArray = &vulkan14Features_.globalPriorityQuery;
-    //         for (size_t i = 0; i < vulkan14FeatureCount; i++)
-    //         {
-    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR:
-    //     {
-    //         constexpr size_t rayTracingPipelineFeatureCount = (sizeof(VkPhysicalDeviceRayTracingPipelineFeaturesKHR) -
-    //                                                            16) /
-    //                                                           sizeof(VkBool32);
-    //         const VkBool32 *supportedFeatureArray = &rayTracingPipelineFeatures_.rayTracingPipeline;
-    //         for (size_t i = 0; i < rayTracingPipelineFeatureCount; i++)
-    //         {
-    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR:
-    //     {
-    //         constexpr size_t accelerationStructureFeatureCount =
-    //                 (sizeof(VkPhysicalDeviceAccelerationStructureFeaturesKHR) - 16) / sizeof(VkBool32);
-    //         const VkBool32 *supportedFeatureArray = &accelerationStructureFeatures_.accelerationStructure;
-    //         for (size_t i = 0; i < accelerationStructureFeatureCount; i++)
-    //         {
-    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES:
-    //     {
-    //         constexpr size_t synchronization2FeatureCount = (sizeof(VkPhysicalDeviceSynchronization2Features) - 16) /
-    //                                                         sizeof(VkBool32);
-    //         const VkBool32 *supportedFeatureArray = &synchronization2Features_.synchronization2;
-    //         for (size_t i = 0; i < synchronization2FeatureCount; i++)
-    //         {
-    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         break;
-    //     }
-    //     default:
-    //         [[maybe_unused]] const VkStructureType &structureType = static_cast<VkStructureType>(*requiredFeatures);
-    //         assert(structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES ||
-    //                structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES ||
-    //                structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES ||
-    //                structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
-    // }
-    //
-    // constexpr size_t pNextOffset = alignof(void *) / sizeof(VkBool32);
-    // const void *pNext = *reinterpret_cast<const void *const *>(requiredFeatures + pNextOffset);
-    // if (pNext != nullptr)
-    // {
-    //     return checkFeatureSupport_(static_cast<const VkBool32 *>(pNext));
-    // }
+    if (requiredFeatures == nullptr || supportedFeatures == nullptr)
+    {
+        assert(requiredFeatures == nullptr && supportedFeatures == nullptr); // Internal state check
+        return true;
+    }
+    return checkFeatureSupport_(reinterpret_cast<const VkBool32 *>(reinterpret_cast<const char *>(requiredFeatures) +
+                                                                   sizeof(VkBaseInStructure)),
+                                reinterpret_cast<const VkBool32 *>(reinterpret_cast<const char *>(supportedFeatures) +
+                                                                   sizeof(VkBaseInStructure)),
+                                memberCount);
+}
+inline bool Device::checkFeatureSupport_(const VkPhysicalDeviceFeatures *requiredFeatures,
+                                         const VkPhysicalDeviceFeatures *supportedFeatures)
+{
+    if (requiredFeatures == nullptr || supportedFeatures == nullptr)
+    {
+        assert(requiredFeatures == nullptr && supportedFeatures == nullptr); // Internal state check
+        return true;
+    }
+    return checkFeatureSupport_(reinterpret_cast<const VkBool32 *>(requiredFeatures),
+                                reinterpret_cast<const VkBool32 *>(supportedFeatures),
+                                sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
+}
+inline bool Device::checkFeatureSupport_(const VkBool32 *required,
+                                         const VkBool32 *supported,
+                                         const uint32_t memberCount)
+{
+    for (uint32_t i = 0; i < memberCount; i++)
+    {
+        if (required[i] != VK_FALSE && supported[i] == VK_FALSE)
+        {
+            return false;
+        }
+    }
     return true;
 }
 inline bool Device::checkUsability_(const VkPhysicalDevice device, const VkSurfaceKHR surface)

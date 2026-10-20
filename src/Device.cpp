@@ -34,12 +34,13 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     }
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
     CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()));
-    vku::safe_VkPhysicalDeviceFeatures2 requiredFeatures{&creationInfo.requiredFeatures};
+    vku::safe_VkPhysicalDeviceFeatures2 supportedFeatures{&creationInfo.requiredFeatures};
     for (const VkPhysicalDevice physicalDevice: physicalDevices)
     {
-        vkGetPhysicalDeviceFeatures2(physicalDevice, requiredFeatures.ptr());
+        vkGetPhysicalDeviceFeatures2(physicalDevice, supportedFeatures.ptr());
         // checkUsability can throw an error, but it will be caught by the function calling this constructor
-        if (!checkFeatureSupport_(creationInfo.requiredFeatures) ||
+        if (!checkFeatureSupport_(vku::safe_VkPhysicalDeviceFeatures2{&creationInfo.requiredFeatures},
+                                  supportedFeatures) ||
             !checkUsability_(physicalDevice, creationInfo.surface))
         {
             continue;
