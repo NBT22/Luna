@@ -294,7 +294,8 @@ inline LunaBuffer BufferPool::createRegion(const LunaBufferCreationInfo &creatio
     assert(allocator_ != nullptr); // Internal state check.
     Buffer &buffer = buffers_.emplace_back(memoryType_,
                                            *allocator_,
-                                           (creationInfo.size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE);
+                                           std::min((creationInfo.size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE,
+                                                    BLOCK_SIZE));
     const LunaBuffer lunaBuffer = buffer.createRegion(creationInfo);
     assert(lunaBuffer != LUNA_NULL_HANDLE);
     return lunaBuffer;
