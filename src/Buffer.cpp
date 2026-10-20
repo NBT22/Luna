@@ -37,7 +37,9 @@ Buffer::Buffer(const LunaMemoryType memoryType, const VmaAllocator &allocator, c
                  VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
                  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                  VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
-                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                 VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |
+                 VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
     VmaAllocationInfo allocationInfo;
