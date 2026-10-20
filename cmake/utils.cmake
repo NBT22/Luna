@@ -39,7 +39,7 @@ macro(makePackageAvailable gitRepo versionSplat packageName)
             GIT_PROGRESS TRUE
             EXCLUDE_FROM_ALL
             SYSTEM
-            FIND_PACKAGE_ARGS ${ARGN}
+            OVERRIDE_FIND_PACKAGE
     )
     FetchContent_MakeAvailable(${packageName})
 endmacro()
