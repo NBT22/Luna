@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <luna/luna.h>
 #include <luna/lunaDevice.h>
@@ -13,6 +12,9 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <volk.h>
+#include <vulkan/utility/vk_safe_struct.hpp>
+#include <vulkan/utility/vk_safe_struct_utils.hpp>
+#include <vulkan/utility/vk_struct_helper.hpp>
 #include <vulkan/vulkan_core.h>
 #include "Device.hpp"
 #include "helpers/Handle.hpp"
@@ -32,74 +34,10 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     }
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
     CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()));
-    switch (VK_API_VERSION_MINOR(apiVersion))
-    {
-        case 1:
-            vulkan11Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-            };
-            break;
-        case 2:
-            vulkan12Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-            };
-            vulkan11Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-                .pNext = &vulkan12Features_,
-            };
-            break;
-        case 3:
-            vulkan13Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-            };
-            vulkan12Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-                .pNext = &vulkan13Features_,
-            };
-            vulkan11Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-                .pNext = &vulkan12Features_,
-            };
-            break;
-        case 4:
-            vulkan14Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
-            };
-            vulkan13Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-                .pNext = &vulkan14Features_,
-            };
-            vulkan12Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-                .pNext = &vulkan13Features_,
-            };
-            vulkan11Features_ = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-                .pNext = &vulkan12Features_,
-            };
-            break;
-        default:
-            assert(1 <= VK_API_VERSION_MINOR(apiVersion) && VK_API_VERSION_MINOR(apiVersion) <= 4);
-    }
-    synchronization2Features_ = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
-        .pNext = &vulkan11Features_,
-    };
-    rayTracingPipelineFeatures_ = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-        .pNext = &synchronization2Features_,
-    };
-    accelerationStructureFeatures_ = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-        .pNext = &rayTracingPipelineFeatures_,
-    };
-    features_ = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = &accelerationStructureFeatures_,
-    };
+    vku::safe_VkPhysicalDeviceFeatures2 requiredFeatures{&creationInfo.requiredFeatures};
     for (const VkPhysicalDevice physicalDevice: physicalDevices)
     {
-        vkGetPhysicalDeviceFeatures2(physicalDevice, &features_);
+        vkGetPhysicalDeviceFeatures2(physicalDevice, requiredFeatures.ptr());
         // checkUsability can throw an error, but it will be caught by the function calling this constructor
         if (!checkFeatureSupport_(creationInfo.requiredFeatures) ||
             !checkUsability_(physicalDevice, creationInfo.surface))
@@ -130,21 +68,27 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         createInfo.pQueuePriorities = priorities.data();
     }
 
-    const VkPhysicalDeviceSynchronization2Features synchronization2Features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+    const VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
         .pNext = creationInfo.requiredFeatures.pNext,
-        .synchronization2 = vulkan13Features_.synchronization2,
+        .synchronization2 = VK_TRUE,
     };
-    const void *pNext = VK_API_VERSION_MINOR(apiVersion) >= 3 ? &synchronization2Features
-                                                              : creationInfo.requiredFeatures.pNext;
+
+    std::vector<const char *> extensions{};
+    extensions.reserve(creationInfo.extensionCount + 1);
+    for (uint32_t i = 0; i < creationInfo.extensionCount; i++)
+    {
+        extensions.emplace_back(creationInfo.extensionNames[i]);
+    }
+    extensions.emplace_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = pNext,
+        .pNext = &synchronization2Features,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
-        .enabledExtensionCount = creationInfo.extensionCount,
-        .ppEnabledExtensionNames = creationInfo.extensionNames,
+        .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+        .ppEnabledExtensionNames = extensions.data(),
         .pEnabledFeatures = &creationInfo.requiredFeatures.features,
     };
     CHECK_RESULT_THROW(vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_));

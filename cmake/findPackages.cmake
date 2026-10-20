@@ -29,26 +29,16 @@ function(findDependencies)
 
     makePackageAvailable(https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git v3.*.* VulkanMemoryAllocator CONFIG)
 
-    find_package(Vulkan COMPONENTS volk QUIET)
-    if (Vulkan_INCLUDE_DIRS STREQUAL "Vulkan_INCLUDE_DIR-NOTFOUND") # Unable to find Vulkan headers
-        if (NOT DEFINED VULKAN_HEADERS_SOURCE_DIR)
-            makePackageAvailable(https://github.com/KhronosGroup/Vulkan-Headers.git vulkan-sdk-1.4.*.* Headers)
-            find_package(Vulkan COMPONENTS volk QUIET) # This is kept to check if volk is installed on the system
-        endif ()
-        set(Vulkan_INCLUDE_DIR ${VULKAN_HEADERS_SOURCE_DIR}/include)
-        target_include_directories(Luna PUBLIC ${Vulkan_INCLUDE_DIR})
+    if (NOT DEFINED VULKAN_HEADERS_SOURCE_DIR)
+        makePackageAvailable(https://github.com/KhronosGroup/Vulkan-Headers.git vulkan-sdk-1.4.*.* Headers)
     endif ()
-    if (Vulkan_FOUND) # Able to find Volk
-        add_library(_LunaInternal_volk INTERFACE)
-        target_link_libraries(_LunaInternal_volk INTERFACE Vulkan::volk)
-        add_library(volk::volk_headers ALIAS _LunaInternal_volk)
-    else () # No Vulkan installation
-        set(VOLK_HEADERS_ONLY ON)
-        set(VULKAN_HEADERS_INSTALL_DIR ${Vulkan_INCLUDE_DIR}/../)
-        makePackageAvailable(https://github.com/zeux/volk.git vulkan-sdk-1.4.*.* volk)
-    endif ()
+    target_include_directories(Luna PUBLIC ${VULKAN_HEADERS_SOURCE_DIR}/include)
+    set(VOLK_HEADERS_ONLY ON)
+    set(VULKAN_HEADERS_INSTALL_DIR ${VULKAN_HEADERS_SOURCE_DIR})
+    makePackageAvailable(https://github.com/zeux/volk.git vulkan-sdk-1.4.*.* volk)
+    makePackageAvailable(https://github.com/KhronosGroup/Vulkan-Utility-Libraries.git vulkan-sdk-1.4.*.* UtilityLibraries)
 
-    target_link_libraries(Luna PUBLIC volk::volk_headers GPUOpen::VulkanMemoryAllocator)
+    target_link_libraries(Luna PUBLIC volk::volk_headers GPUOpen::VulkanMemoryAllocator Vulkan::SafeStruct)
 
     if (LUNA_DEFINE_VK_NO_PROTOTYPES)
         target_compile_options(Luna PUBLIC $<IF:$<OR:$<COMPILE_LANG_AND_ID:C,MSVC>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>,/DVK_NO_PROTOTYPES,-DVK_NO_PROTOTYPES>)

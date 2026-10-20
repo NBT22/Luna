@@ -10,6 +10,7 @@
 #include <luna/lunaTypes.h>
 #include <vector>
 #include <vk_mem_alloc.h>
+#include <vulkan/utility/vk_safe_struct.hpp>
 #include <vulkan/vulkan_core.h>
 #include "helpers/Handle.hpp"
 
@@ -87,14 +88,6 @@ class Device
         bool isDestroyed_{true};
         VkPhysicalDevice physicalDevice_{};
         VkDevice logicalDevice_{};
-        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingPipelineFeatures_{};
-        VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures_{};
-        VkPhysicalDeviceSynchronization2Features synchronization2Features_{};
-        VkPhysicalDeviceVulkan14Features vulkan14Features_{};
-        VkPhysicalDeviceVulkan13Features vulkan13Features_{};
-        VkPhysicalDeviceVulkan12Features vulkan12Features_{};
-        VkPhysicalDeviceVulkan11Features vulkan11Features_{};
-        VkPhysicalDeviceFeatures2 features_{};
         VkPhysicalDeviceProperties properties_{};
         VkPhysicalDeviceMemoryProperties memoryProperties_{};
         VmaAllocator allocator_{};
@@ -203,144 +196,144 @@ inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice
 }
 inline bool Device::checkFeatureSupport_(const VkPhysicalDeviceFeatures2 &requiredFeatures) const
 {
-    const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures.features);
-    constexpr size_t featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
-    const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_.features);
-    for (size_t i = 0; i < featureCount; i++)
-    {
-        if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-        {
-            return false;
-        }
-    }
-
-    if (requiredFeatures.pNext != nullptr)
-    {
-        return checkFeatureSupport_(static_cast<const VkBool32 *>(requiredFeatures.pNext));
-    }
+    // const VkBool32 *requiredFeatureArray = reinterpret_cast<const VkBool32 *>(&requiredFeatures.features);
+    // constexpr size_t featureCount = sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32);
+    // const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(&features_.features);
+    // for (size_t i = 0; i < featureCount; i++)
+    // {
+    //     if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //     {
+    //         return false;
+    //     }
+    // }
+    //
+    // if (requiredFeatures.pNext != nullptr)
+    // {
+    //     return checkFeatureSupport_(static_cast<const VkBool32 *>(requiredFeatures.pNext));
+    // }
 
     return true;
 }
 inline bool Device::checkFeatureSupport_(const VkBool32 *requiredFeatures) const
 {
-    assert(requiredFeatures);
-    static_assert(alignof(void *) == alignof(VkPhysicalDeviceVulkan11Features) &&
-                  alignof(void *) == alignof(VkPhysicalDeviceVulkan12Features) &&
-                  alignof(void *) == alignof(VkPhysicalDeviceVulkan13Features) &&
-                  alignof(void *) == alignof(VkPhysicalDeviceVulkan14Features));
-    constexpr size_t featuresOffset = 2 * alignof(void *) / sizeof(VkBool32);
-    const VkBool32 *requiredFeatureArray = requiredFeatures + featuresOffset;
-    switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
-    {
-        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
-        {
-            constexpr size_t vulkan11FeatureCount = (sizeof(VkPhysicalDeviceVulkan11Features) - 16) / sizeof(VkBool32);
-            const VkBool32 *supportedFeatureArray = &vulkan11Features_.storageBuffer16BitAccess;
-            for (size_t i = 0; i < vulkan11FeatureCount; i++)
-            {
-                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        }
-        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
-        {
-            constexpr size_t vulkan12FeatureCount = (sizeof(VkPhysicalDeviceVulkan12Features) - 16) / sizeof(VkBool32);
-            const VkBool32 *supportedFeatureArray = &vulkan12Features_.samplerMirrorClampToEdge;
-            for (size_t i = 0; i < vulkan12FeatureCount; i++)
-            {
-                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        }
-        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES:
-        {
-            constexpr size_t vulkan13FeatureCount = (sizeof(VkPhysicalDeviceVulkan13Features) - 16) / sizeof(VkBool32);
-            const VkBool32 *supportedFeatureArray = &vulkan13Features_.robustImageAccess;
-            for (size_t i = 0; i < vulkan13FeatureCount; i++)
-            {
-                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        }
-        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES:
-        {
-            constexpr size_t vulkan14FeatureCount = (sizeof(VkPhysicalDeviceVulkan14Features) - 16) / sizeof(VkBool32);
-            const VkBool32 *supportedFeatureArray = &vulkan14Features_.globalPriorityQuery;
-            for (size_t i = 0; i < vulkan14FeatureCount; i++)
-            {
-                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        }
-        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR:
-        {
-            constexpr size_t rayTracingPipelineFeatureCount = (sizeof(VkPhysicalDeviceRayTracingPipelineFeaturesKHR) -
-                                                               16) /
-                                                              sizeof(VkBool32);
-            const VkBool32 *supportedFeatureArray = &rayTracingPipelineFeatures_.rayTracingPipeline;
-            for (size_t i = 0; i < rayTracingPipelineFeatureCount; i++)
-            {
-                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        }
-        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR:
-        {
-            constexpr size_t accelerationStructureFeatureCount =
-                    (sizeof(VkPhysicalDeviceAccelerationStructureFeaturesKHR) - 16) / sizeof(VkBool32);
-            const VkBool32 *supportedFeatureArray = &accelerationStructureFeatures_.accelerationStructure;
-            for (size_t i = 0; i < accelerationStructureFeatureCount; i++)
-            {
-                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        }
-        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES:
-        {
-            constexpr size_t synchronization2FeatureCount = (sizeof(VkPhysicalDeviceSynchronization2Features) - 16) /
-                                                            sizeof(VkBool32);
-            const VkBool32 *supportedFeatureArray = &synchronization2Features_.synchronization2;
-            for (size_t i = 0; i < synchronization2FeatureCount; i++)
-            {
-                if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
-                {
-                    return false;
-                }
-            }
-            break;
-        }
-        default:
-            [[maybe_unused]] const VkStructureType &structureType = static_cast<VkStructureType>(*requiredFeatures);
-            assert(structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES ||
-                   structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES ||
-                   structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES ||
-                   structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
-    }
-
-    constexpr size_t pNextOffset = alignof(void *) / sizeof(VkBool32);
-    const void *pNext = *reinterpret_cast<const void *const *>(requiredFeatures + pNextOffset);
-    if (pNext != nullptr)
-    {
-        return checkFeatureSupport_(static_cast<const VkBool32 *>(pNext));
-    }
+    // assert(requiredFeatures);
+    // static_assert(alignof(void *) == alignof(VkPhysicalDeviceVulkan11Features) &&
+    //               alignof(void *) == alignof(VkPhysicalDeviceVulkan12Features) &&
+    //               alignof(void *) == alignof(VkPhysicalDeviceVulkan13Features) &&
+    //               alignof(void *) == alignof(VkPhysicalDeviceVulkan14Features));
+    // constexpr size_t featuresOffset = 2 * alignof(void *) / sizeof(VkBool32);
+    // const VkBool32 *requiredFeatureArray = requiredFeatures + featuresOffset;
+    // switch (*reinterpret_cast<const VkStructureType *>(requiredFeatures))
+    // {
+    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
+    //     {
+    //         constexpr size_t vulkan11FeatureCount = (sizeof(VkPhysicalDeviceVulkan11Features) - 16) / sizeof(VkBool32);
+    //         const VkBool32 *supportedFeatureArray = &vulkan11Features_.storageBuffer16BitAccess;
+    //         for (size_t i = 0; i < vulkan11FeatureCount; i++)
+    //         {
+    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
+    //     {
+    //         constexpr size_t vulkan12FeatureCount = (sizeof(VkPhysicalDeviceVulkan12Features) - 16) / sizeof(VkBool32);
+    //         const VkBool32 *supportedFeatureArray = &vulkan12Features_.samplerMirrorClampToEdge;
+    //         for (size_t i = 0; i < vulkan12FeatureCount; i++)
+    //         {
+    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES:
+    //     {
+    //         constexpr size_t vulkan13FeatureCount = (sizeof(VkPhysicalDeviceVulkan13Features) - 16) / sizeof(VkBool32);
+    //         const VkBool32 *supportedFeatureArray = &vulkan13Features_.robustImageAccess;
+    //         for (size_t i = 0; i < vulkan13FeatureCount; i++)
+    //         {
+    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES:
+    //     {
+    //         constexpr size_t vulkan14FeatureCount = (sizeof(VkPhysicalDeviceVulkan14Features) - 16) / sizeof(VkBool32);
+    //         const VkBool32 *supportedFeatureArray = &vulkan14Features_.globalPriorityQuery;
+    //         for (size_t i = 0; i < vulkan14FeatureCount; i++)
+    //         {
+    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR:
+    //     {
+    //         constexpr size_t rayTracingPipelineFeatureCount = (sizeof(VkPhysicalDeviceRayTracingPipelineFeaturesKHR) -
+    //                                                            16) /
+    //                                                           sizeof(VkBool32);
+    //         const VkBool32 *supportedFeatureArray = &rayTracingPipelineFeatures_.rayTracingPipeline;
+    //         for (size_t i = 0; i < rayTracingPipelineFeatureCount; i++)
+    //         {
+    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR:
+    //     {
+    //         constexpr size_t accelerationStructureFeatureCount =
+    //                 (sizeof(VkPhysicalDeviceAccelerationStructureFeaturesKHR) - 16) / sizeof(VkBool32);
+    //         const VkBool32 *supportedFeatureArray = &accelerationStructureFeatures_.accelerationStructure;
+    //         for (size_t i = 0; i < accelerationStructureFeatureCount; i++)
+    //         {
+    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES:
+    //     {
+    //         constexpr size_t synchronization2FeatureCount = (sizeof(VkPhysicalDeviceSynchronization2Features) - 16) /
+    //                                                         sizeof(VkBool32);
+    //         const VkBool32 *supportedFeatureArray = &synchronization2Features_.synchronization2;
+    //         for (size_t i = 0; i < synchronization2FeatureCount; i++)
+    //         {
+    //             if (requiredFeatureArray[i] != 0 && supportedFeatureArray[i] == 0)
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         break;
+    //     }
+    //     default:
+    //         [[maybe_unused]] const VkStructureType &structureType = static_cast<VkStructureType>(*requiredFeatures);
+    //         assert(structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES ||
+    //                structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES ||
+    //                structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES ||
+    //                structureType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES);
+    // }
+    //
+    // constexpr size_t pNextOffset = alignof(void *) / sizeof(VkBool32);
+    // const void *pNext = *reinterpret_cast<const void *const *>(requiredFeatures + pNextOffset);
+    // if (pNext != nullptr)
+    // {
+    //     return checkFeatureSupport_(static_cast<const VkBool32 *>(pNext));
+    // }
     return true;
 }
 inline bool Device::checkUsability_(const VkPhysicalDevice device, const VkSurfaceKHR surface)
