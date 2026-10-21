@@ -110,7 +110,7 @@ VkResult BufferRegion::writeData(Device &device, CommandBuffer &commandBuffer, c
     {
         const LunaBufferMemoryBarrier preWriteBarrier = {
             .sourceStageMask = stageMask,
-            .sourceAccessMask = stageMask,
+            .sourceAccessMask = accessMask,
             .destinationStageMask = smallWrite ? VK_PIPELINE_STAGE_2_CLEAR_BIT : VK_PIPELINE_STAGE_2_COPY_BIT,
             .destinationAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
             .buffer = helpers::toHandle(this),
