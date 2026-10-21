@@ -271,6 +271,7 @@ typedef struct
 
 typedef struct
 {
+        const void *pNext;
         LunaDescriptorSet descriptorSet;
         const char *bindingName;
         uint32_t descriptorArrayElement;

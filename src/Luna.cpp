@@ -378,6 +378,19 @@ void lunaWriteDescriptorSets(const LunaDevice device,
                                 nullptr,
                                 descriptorWrite.texelBufferViews);
         }
+        if (descriptorWrite.pNext != nullptr)
+        {
+            writes.emplace_back(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                descriptorWrite.pNext,
+                                *descriptorSetIndex->set,
+                                binding.index,
+                                descriptorWrite.descriptorArrayElement,
+                                descriptorCount,
+                                binding.type,
+                                nullptr,
+                                nullptr,
+                                nullptr);
+        }
     }
     vkUpdateDescriptorSets(static_cast<VkDevice>(*luna::helpers::fromHandle<Device>(device)),
                            writes.size(),
