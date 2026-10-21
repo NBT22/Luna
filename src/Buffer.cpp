@@ -180,6 +180,10 @@ VkResult lunaResizeBuffer(const LunaDevice device, LunaBuffer *buffer, const VkD
     assert(device != LUNA_NULL_HANDLE);
     assert(buffer && *buffer != LUNA_NULL_HANDLE);
     const luna::BufferRegion &bufferRegion = *luna::helpers::fromHandle<luna::BufferRegion>(*buffer);
+    if (bufferRegion.size() == newSize)
+    {
+        return VK_SUCCESS;
+    }
     const LunaBufferCreationInfo creationInfo = {
         .size = newSize,
         .alignment = bufferRegion.alignment(),
