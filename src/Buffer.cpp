@@ -22,9 +22,13 @@
 
 namespace luna
 {
-Buffer::Buffer(const LunaMemoryType memoryType, const VmaAllocator &allocator, const VkDeviceSize size):
+Buffer::Buffer(const LunaMemoryType memoryType,
+               const VkBufferUsageFlags additionalUsageFlags,
+               const VmaAllocator &allocator,
+               const VkDeviceSize size):
     allocator_(allocator),
-    memoryType_(memoryType)
+    memoryType_(memoryType),
+    additionalUsageFlags_(additionalUsageFlags)
 {
     assert(size > 0 && size % (VkDeviceSize{32} * 1024 * 1024) == 0);
     const VkBufferCreateInfo bufferCreateInfo = {
@@ -37,9 +41,7 @@ Buffer::Buffer(const LunaMemoryType memoryType, const VmaAllocator &allocator, c
                  VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
                  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                  VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
-                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                 VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |
-                 VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+                 additionalUsageFlags,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
     VmaAllocationInfo allocationInfo;
@@ -182,6 +184,7 @@ VkResult lunaResizeBuffer(const LunaDevice device, LunaBuffer *buffer, const VkD
         .size = newSize,
         .alignment = bufferRegion.alignment(),
         .memoryType = bufferRegion.memoryType(),
+        .additionalUsageFlags = bufferRegion.additionalUsageFlags(),
     };
     luna::BufferRegion::destroy(bufferRegion);
     CHECK_RESULT_RETURN(luna::helpers::fromHandle<luna::Device>(device)->createBufferRegion(creationInfo, buffer));

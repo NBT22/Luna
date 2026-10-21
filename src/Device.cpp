@@ -134,7 +134,7 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     };
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
-    stagingBuffer_ = &bufferPools_.emplace_back(LUNA_MEMORY_TYPE_HOST_VISIBLE, &allocator_);
+    stagingBuffer_ = &bufferPools_.emplace_back(LUNA_MEMORY_TYPE_HOST_VISIBLE, 0, &allocator_);
 
     isDestroyed_ = false;
 }
@@ -331,7 +331,7 @@ VkResult Device::createBufferRegion(const LunaBufferCreationInfo &creationInfo, 
 {
     for (BufferPool &pool: bufferPools_)
     {
-        if (pool.memoryType() != creationInfo.memoryType)
+        if (!pool.compatible(creationInfo))
         {
             continue;
         }
@@ -343,7 +343,7 @@ VkResult Device::createBufferRegion(const LunaBufferCreationInfo &creationInfo, 
         return VK_SUCCESS;
     }
 
-    TRY_CATCH_RESULT(bufferPools_.emplace_back(creationInfo.memoryType, &allocator_));
+    TRY_CATCH_RESULT(bufferPools_.emplace_back(creationInfo.memoryType, creationInfo.additionalUsageFlags, &allocator_));
     const LunaBuffer lunaBuffer = bufferPools_.back().createRegion(creationInfo);
     if (outBuffer != nullptr)
     {

@@ -49,7 +49,10 @@ class Buffer
 
     public:
         Buffer() = default;
-        Buffer(LunaMemoryType memoryType, const VmaAllocator &allocator, VkDeviceSize size);
+        Buffer(LunaMemoryType memoryType,
+               VkBufferUsageFlags additionalUsageFlags,
+               const VmaAllocator &allocator,
+               VkDeviceSize size);
         Buffer(const Buffer &other) = delete;
         Buffer(Buffer &&other) noexcept = delete;
 
@@ -69,6 +72,7 @@ class Buffer
         void clearRegions();
 
         [[nodiscard]] LunaMemoryType memoryType() const;
+        [[nodiscard]] VkBufferUsageFlags additionalUsageFlags() const;
         [[nodiscard]] VmaVirtualBlock virtualBlock() const;
         [[nodiscard]] char *data() const;
 
@@ -77,6 +81,7 @@ class Buffer
         VkBuffer buffer_{};
         VmaAllocation allocation_{};
         LunaMemoryType memoryType_{};
+        VkBufferUsageFlags additionalUsageFlags_{};
         VmaVirtualBlock virtualBlock_{};
         void *data_{};
         std::list<BufferRegion> regions_{};
@@ -106,6 +111,7 @@ class BufferRegion
         [[nodiscard]] VkDeviceSize offset() const;
         [[nodiscard]] VkDeviceSize alignment() const;
         [[nodiscard]] LunaMemoryType memoryType() const;
+        [[nodiscard]] VkBufferUsageFlags additionalUsageFlags() const;
 
     private:
         Buffer *buffer_{};
@@ -120,18 +126,19 @@ class BufferPool
 
     public:
         BufferPool() = delete;
-        BufferPool(LunaMemoryType memoryType, const VmaAllocator *allocator);
+        BufferPool(LunaMemoryType memoryType, VkBufferUsageFlags additionalUsageFlags, const VmaAllocator *allocator);
 
         [[nodiscard]] LunaBuffer createRegion(const LunaBufferCreationInfo &creationInfo);
         void destroyRegion(const BufferRegion &targetRegion);
 
         void clearAllRegions();
 
-        [[nodiscard]] LunaMemoryType memoryType() const;
+        [[nodiscard]] bool compatible(const LunaBufferCreationInfo &creationInfo) const;
 
     private:
         const VmaAllocator *allocator_{};
         LunaMemoryType memoryType_{};
+        VkBufferUsageFlags additionalUsageFlags_{};
         std::list<Buffer> buffers_{};
 };
 } // namespace luna
@@ -209,6 +216,10 @@ inline LunaMemoryType Buffer::memoryType() const
 {
     return memoryType_;
 }
+inline VkBufferUsageFlags Buffer::additionalUsageFlags() const
+{
+    return additionalUsageFlags_;
+}
 inline VmaVirtualBlock Buffer::virtualBlock() const
 {
     return virtualBlock_;
@@ -274,11 +285,19 @@ inline LunaMemoryType BufferRegion::memoryType() const
     assert(buffer_ != nullptr); // Internal state check.
     return buffer_->memoryType();
 }
+inline VkBufferUsageFlags BufferRegion::additionalUsageFlags() const
+{
+    assert(buffer_ != nullptr); // Internal state check.
+    return buffer_->additionalUsageFlags();
+}
 
 
-inline BufferPool::BufferPool(const LunaMemoryType memoryType, const VmaAllocator *allocator):
+inline BufferPool::BufferPool(const LunaMemoryType memoryType,
+                              const VkBufferUsageFlags additionalUsageFlags,
+                              const VmaAllocator *allocator):
     allocator_(allocator),
-    memoryType_(memoryType)
+    memoryType_(memoryType),
+    additionalUsageFlags_(additionalUsageFlags)
 {}
 
 inline LunaBuffer BufferPool::createRegion(const LunaBufferCreationInfo &creationInfo)
@@ -293,6 +312,7 @@ inline LunaBuffer BufferPool::createRegion(const LunaBufferCreationInfo &creatio
     }
     assert(allocator_ != nullptr); // Internal state check.
     Buffer &buffer = buffers_.emplace_back(memoryType_,
+                                           additionalUsageFlags_,
                                            *allocator_,
                                            std::max((creationInfo.size + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE,
                                                     BLOCK_SIZE));
@@ -306,9 +326,9 @@ inline void BufferPool::clearAllRegions()
     buffers_.clear();
 }
 
-inline LunaMemoryType BufferPool::memoryType() const
+inline bool BufferPool::compatible(const LunaBufferCreationInfo &creationInfo) const
 {
-    return memoryType_;
+    return memoryType_ == creationInfo.memoryType && additionalUsageFlags_ == creationInfo.additionalUsageFlags;
 }
 } // namespace luna
 

@@ -510,6 +510,7 @@ typedef struct
         VkDeviceSize size;
         VkDeviceSize alignment;
         LunaMemoryType memoryType;
+        VkBufferUsageFlags additionalUsageFlags;
 } LunaBufferCreationInfo;
 
 typedef enum
