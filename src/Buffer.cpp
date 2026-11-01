@@ -138,8 +138,8 @@ VkResult BufferRegion::writeData(Device &device, CommandBuffer &commandBuffer, c
 
     if (!useSynchronizationType)
     {
-        stageMask = writeInfo.sourceStageMask;
-        accessMask = writeInfo.sourceAccessMask;
+        stageMask = writeInfo.destinationStageMask;
+        accessMask = writeInfo.destinationAccessMask;
     }
 
     const LunaBufferMemoryBarrier postWriteBarrier = {
