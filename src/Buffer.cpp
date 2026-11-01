@@ -101,6 +101,12 @@ VkResult BufferRegion::writeData(Device &device, CommandBuffer &commandBuffer, c
                 stageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
                 accessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
                 break;
+            case LUNA_BUFFER_SYNCHRONIZATION_TYPE_BUFFER_DEVICE_ADDRESS:
+                stageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+                            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT |
+                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+                accessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+                break;
             default:
                 break;
         }
