@@ -34,7 +34,9 @@ namespace detail
                                                                    sizeof(VkBaseInStructure));
     }
 
-    bool checkFeatureSupport(const VkBool32 *requiredFeatures, const VkBool32 *supportedFeatures, const uint32_t count)
+    inline bool checkFeatureSupport(const VkBool32 *requiredFeatures,
+                                    const VkBool32 *supportedFeatures,
+                                    const uint32_t count)
     {
         if (requiredFeatures == nullptr)
         {
@@ -57,9 +59,9 @@ namespace detail
     template<typename T>
     bool checkFeatureSupport(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
                              const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures) = delete;
-    template<>
-    bool checkFeatureSupport<VkPhysicalDeviceFeatures>(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
-                                                       const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
+    template<> inline bool checkFeatureSupport<
+            VkPhysicalDeviceFeatures>(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
+                                      const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
     {
         return checkFeatureSupport(reinterpret_cast<const VkBool32 *>(&requiredFeatures.features),
                                    reinterpret_cast<const VkBool32 *>(&supportedFeatures.features),
@@ -74,10 +76,10 @@ namespace detail
                                    detail::FEATURE_COUNT<T>);
     }
 
-    void getSupportedOptionalFeatures(const VkBool32 *optionalFeatures,
-                                      const VkBool32 *supportedFeatures,
-                                      VkBool32 *supportedOptionalFeatures,
-                                      const uint32_t count)
+    inline void getSupportedOptionalFeatures(const VkBool32 *optionalFeatures,
+                                             const VkBool32 *supportedFeatures,
+                                             VkBool32 *supportedOptionalFeatures,
+                                             const uint32_t count)
     {
         if (optionalFeatures == nullptr)
         {
@@ -101,7 +103,7 @@ namespace detail
     void getSupportedOptionalFeatures(const vku::safe_VkPhysicalDeviceFeatures2 &optionalFeatures,
                                       const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures,
                                       vku::safe_VkPhysicalDeviceFeatures2 &supportedOptionalFeatures) = delete;
-    template<> void getSupportedOptionalFeatures<
+    template<> inline void getSupportedOptionalFeatures<
             VkPhysicalDeviceFeatures>(const vku::safe_VkPhysicalDeviceFeatures2 &optionalFeatures,
                                       const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures,
                                       vku::safe_VkPhysicalDeviceFeatures2 &supportedOptionalFeatures)
