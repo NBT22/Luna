@@ -153,7 +153,7 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
         .pNext = &synchronization2Features,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(enabledExtensions_.size()),
+        .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
         .ppEnabledExtensionNames = extensions.data(),
         .pEnabledFeatures = &creationInfo.requiredFeatures.features,
     };
