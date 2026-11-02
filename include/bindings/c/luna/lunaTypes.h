@@ -66,24 +66,12 @@ typedef struct
         bool presentationSupport;
 } LunaQueueFamilyProperties;
 
-// TODO (0.3.0): Remove duplicate structures and prefer the `[...]2` structures
 typedef struct
 {
-        uint32_t extensionCount;
-        const char *const *extensionNames;
-        VkPhysicalDeviceFeatures requiredFeatures;
-        VkSurfaceKHR surface;
-
-        uint32_t requiredQueueFamiliesCount;
-        const LunaQueueFamilyProperties *requiredQueueFamilies;
-
-        const LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
-} LunaDeviceCreationInfo;
-
-typedef struct
-{
-        uint32_t extensionCount;
-        const char *const *extensionNames;
+        uint32_t requiredExtensionCount;
+        const char *const *requiredExtensionNames;
+        uint32_t optionalExtensionCount;
+        const char *const *optionalExtensionNames;
         VkPhysicalDeviceFeatures2 requiredFeatures;
         VkSurfaceKHR surface;
 
@@ -91,9 +79,7 @@ typedef struct
         const LunaQueueFamilyProperties *requiredQueueFamilies;
 
         const LunaPhysicalDevicePreferenceDefinition *physicalDevicePreferenceDefinition;
-
-        VmaAllocatorCreateFlags allocatorCreateFlags; // TODO (0.3.0): Replace this with a proper solution
-} LunaDeviceCreationInfo2;
+} LunaDeviceCreationInfo;
 
 typedef struct
 {

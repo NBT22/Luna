@@ -15,7 +15,6 @@ extern "C"
 #include <vulkan/vulkan_core.h>
 
 VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo, LunaDevice *device);
-VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo, LunaDevice *device);
 
 VkDevice lunaGetVkDevice(LunaDevice device);
 VkPhysicalDevice lunaGetPhysicalDevice(LunaDevice device);
@@ -28,6 +27,7 @@ void lunaGetPhysicalDeviceProperties2(LunaDevice device, VkPhysicalDevicePropert
 const LunaQueueFamilyProperties *lunaGetDeviceQueueFamilies(LunaDevice device);
 uint32_t lunaGetDeviceQueueFamilyIndex(LunaDevice device, const LunaQueueFamilyProperties *requiredProperties);
 VkQueue lunaGetDeviceQueue(LunaDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex);
+bool lunaDeviceIsExtensionEnabled(LunaDevice device, const char *extension);
 
 #ifdef __cplusplus
 }

@@ -17,13 +17,14 @@
 #include <vulkan/utility/vk_struct_helper.hpp>
 #include <vulkan/vulkan_core.h>
 #include "Device.hpp"
+#include "helpers/Features.hpp"
 #include "helpers/Handle.hpp"
 #include "Instance.hpp"
 #include "Luna.hpp"
 
 namespace luna
 {
-Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
+Device::Device(const LunaDeviceCreationInfo &creationInfo)
 {
     assert(isDestroyed_);
     uint32_t deviceCount = 0;
@@ -32,15 +33,64 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     {
         throw std::runtime_error("Failed to find any GPUs with Vulkan support!");
     }
+
+    std::vector<const char *> extensions{};
+    extensions.reserve(creationInfo.requiredExtensionCount + 1);
+    for (uint32_t i = 0; i < creationInfo.requiredExtensionCount; i++)
+    {
+        extensions.emplace_back(creationInfo.requiredExtensionNames[i]);
+    }
+    extensions.emplace_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+    std::vector<const char *> optionalExtensions{};
+    optionalExtensions.reserve(creationInfo.optionalExtensionCount);
+    for (uint32_t i = 0; i < creationInfo.optionalExtensionCount; i++)
+    {
+        optionalExtensions.emplace_back(creationInfo.optionalExtensionNames[i]);
+    }
+
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
     CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()));
     vku::safe_VkPhysicalDeviceFeatures2 supportedFeatures{&creationInfo.requiredFeatures};
     for (const VkPhysicalDevice physicalDevice: physicalDevices)
     {
+        uint32_t extensionPropertyCount{};
+        CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(physicalDevice,
+                                                                nullptr,
+                                                                &extensionPropertyCount,
+                                                                nullptr));
+        std::vector<VkExtensionProperties> extensionProperties(extensionPropertyCount);
+        CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(physicalDevice,
+                                                                nullptr,
+                                                                &extensionPropertyCount,
+                                                                extensionProperties.data()));
+
+        bool extensionsSupported = true;
+        for (std::string extension: extensions)
+        {
+            bool found = false;
+            for (const VkExtensionProperties &extensionProperty: extensionProperties)
+            {
+                if (extension == extensionProperty.extensionName)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                extensionsSupported = false;
+                break;
+            }
+        }
+        if (!extensionsSupported)
+        {
+            continue;
+        }
+
         vkGetPhysicalDeviceFeatures2(physicalDevice, supportedFeatures.ptr());
         // checkUsability can throw an error, but it will be caught by the function calling this constructor
-        if (!checkFeatureSupport_(vku::safe_VkPhysicalDeviceFeatures2{&creationInfo.requiredFeatures},
-                                  supportedFeatures) ||
+        if (!helpers::checkFeatureSupport(vku::safe_VkPhysicalDeviceFeatures2{&creationInfo.requiredFeatures},
+                                          supportedFeatures) ||
             !checkUsability_(physicalDevice, creationInfo.surface))
         {
             continue;
@@ -75,20 +125,35 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
         .synchronization2 = VK_TRUE,
     };
 
-    std::vector<const char *> extensions{};
-    extensions.reserve(creationInfo.extensionCount + 1);
-    for (uint32_t i = 0; i < creationInfo.extensionCount; i++)
+    uint32_t extensionPropertyCount{};
+    CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(physicalDevice_,
+                                                            nullptr,
+                                                            &extensionPropertyCount,
+                                                            nullptr));
+    std::vector<VkExtensionProperties> extensionProperties(extensionPropertyCount);
+    CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(physicalDevice_,
+                                                            nullptr,
+                                                            &extensionPropertyCount,
+                                                            extensionProperties.data()));
+
+    for (const char *extension: optionalExtensions)
     {
-        extensions.emplace_back(creationInfo.extensionNames[i]);
+        for (const VkExtensionProperties &extensionProperty: extensionProperties)
+        {
+            if (std::string{extension} == extensionProperty.extensionName)
+            {
+                extensions.emplace_back(extension);
+                break;
+            }
+        }
     }
-    extensions.emplace_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = &synchronization2Features,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+        .enabledExtensionCount = static_cast<uint32_t>(enabledExtensions_.size()),
         .ppEnabledExtensionNames = extensions.data(),
         .pEnabledFeatures = &creationInfo.requiredFeatures.features,
     };
@@ -135,6 +200,11 @@ Device::Device(const LunaDeviceCreationInfo2 &creationInfo)
     CHECK_RESULT_THROW(vmaCreateAllocator(&allocationCreateInfo, &allocator_));
 
     stagingBuffer_ = &bufferPools_.emplace_back(LUNA_MEMORY_TYPE_HOST_VISIBLE, 0, &allocator_);
+
+    for (const char *extension: extensions)
+    {
+        enabledExtensions_.insert(extension);
+    }
 
     isDestroyed_ = false;
 }
@@ -343,7 +413,9 @@ VkResult Device::createBufferRegion(const LunaBufferCreationInfo &creationInfo, 
         return VK_SUCCESS;
     }
 
-    TRY_CATCH_RESULT(bufferPools_.emplace_back(creationInfo.memoryType, creationInfo.additionalUsageFlags, &allocator_));
+    TRY_CATCH_RESULT(bufferPools_.emplace_back(creationInfo.memoryType,
+                                               creationInfo.additionalUsageFlags,
+                                               &allocator_));
     const LunaBuffer lunaBuffer = bufferPools_.back().createRegion(creationInfo);
     if (outBuffer != nullptr)
     {
@@ -528,30 +600,6 @@ VkResult lunaCreateDevice(const LunaDeviceCreationInfo *creationInfo, LunaDevice
     assert(creationInfo);
     assert(device);
 
-    const VkPhysicalDeviceFeatures2 requiredFeatures2 = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .features = creationInfo->requiredFeatures,
-    };
-    const LunaDeviceCreationInfo2 creationInfo2 = {
-        .extensionCount = creationInfo->extensionCount,
-        .extensionNames = creationInfo->extensionNames,
-        .requiredFeatures = requiredFeatures2,
-        .surface = creationInfo->surface,
-        .requiredQueueFamiliesCount = creationInfo->requiredQueueFamiliesCount,
-        .requiredQueueFamilies = creationInfo->requiredQueueFamilies,
-        .physicalDevicePreferenceDefinition = creationInfo->physicalDevicePreferenceDefinition,
-    };
-    TRY_CATCH_RESULT(luna::devices.emplace_back(creationInfo2));
-    luna::Device &deviceObject = luna::devices.back();
-    *device = luna::helpers::toHandle(deviceObject);
-    return VK_SUCCESS;
-}
-
-VkResult lunaCreateDevice2(const LunaDeviceCreationInfo2 *creationInfo, LunaDevice *device)
-{
-    assert(creationInfo);
-    assert(device);
-
     TRY_CATCH_RESULT(luna::devices.emplace_back(*creationInfo));
     luna::Device &deviceObject = luna::devices.back();
     *device = luna::helpers::toHandle(deviceObject);
@@ -605,6 +653,12 @@ VkQueue lunaGetDeviceQueue(const LunaDevice device, const uint32_t queueFamilyIn
     VkQueue queue = VK_NULL_HANDLE;
     vkGetDeviceQueue(lunaGetVkDevice(device), queueFamilyIndex, queueIndex, &queue);
     return queue;
+}
+
+bool lunaDeviceIsExtensionEnabled(const LunaDevice device, const char *extension)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    return luna::helpers::fromHandle<luna::Device>(device)->isExtensionEnabled(extension);
 }
 
 VkResult lunaCreateShaderModule(const LunaDevice device,

@@ -8,11 +8,13 @@
 #include <cstdint>
 #include <list>
 #include <luna/lunaTypes.h>
+#include <unordered_set>
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/utility/vk_safe_struct.hpp>
 #include <vulkan/utility/vk_struct_helper.hpp>
 #include <vulkan/vulkan_core.h>
+#include "helpers/Features.hpp"
 #include "helpers/Handle.hpp"
 
 namespace luna
@@ -28,7 +30,7 @@ class Device
 {
     public:
         Device() = delete;
-        explicit Device(const LunaDeviceCreationInfo2 &creationInfo);
+        explicit Device(const LunaDeviceCreationInfo &creationInfo);
 
         explicit operator const VkPhysicalDevice &() const;
         explicit operator const VkDevice &() const;
@@ -76,28 +78,20 @@ class Device
         [[nodiscard]] bool isDestroyed() const noexcept;
         [[nodiscard]] const LunaQueueFamilyProperties *queueFamilies() const noexcept;
         [[nodiscard]] VmaAllocator allocator() const noexcept;
+        [[nodiscard]] bool isExtensionEnabled(const char *extension) const;
 
     private:
         VkResult initQueueFamilies_(VkPhysicalDevice physicalDevice,
                                     VkSurfaceKHR surface,
                                     std::vector<float> &priorities,
                                     std::vector<VkDeviceQueueCreateInfo> &creationInfos);
-        [[nodiscard]] static bool checkFeatureSupport_(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
-                                                       const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures);
-        [[nodiscard]] static bool checkFeatureSupport_(const VkPhysicalDeviceFeatures *requiredFeatures,
-                                                       const VkPhysicalDeviceFeatures *supportedFeatures);
-        template<typename T> [[nodiscard]] static bool checkFeatureSupport_(const T *requiredFeatures,
-                                                                            const T *supportedFeatures,
-                                                                            uint32_t memberCount);
-        [[nodiscard]] static bool checkFeatureSupport_(const VkBool32 *required,
-                                                       const VkBool32 *supported,
-                                                       uint32_t memberCount);
         [[nodiscard]] bool checkUsability_(VkPhysicalDevice device, VkSurfaceKHR surface);
 
         bool isDestroyed_{true};
         VkPhysicalDevice physicalDevice_{};
         VkDevice logicalDevice_{};
         VkPhysicalDeviceProperties properties_{};
+        std::unordered_set<std::string> enabledExtensions_{};
         VkPhysicalDeviceMemoryProperties memoryProperties_{};
         VmaAllocator allocator_{};
         std::vector<LunaQueueFamilyProperties> queueFamilies_{};
@@ -170,6 +164,10 @@ inline VmaAllocator Device::allocator() const noexcept
 {
     return allocator_;
 }
+inline bool Device::isExtensionEnabled(const char *extension) const
+{
+    return enabledExtensions_.contains(extension);
+}
 
 inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice,
                                            const VkSurfaceKHR surface,
@@ -202,100 +200,6 @@ inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice
                                    nullptr);
     }
     return VK_SUCCESS;
-}
-inline bool Device::checkFeatureSupport_(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
-                                         const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
-{
-    if (!checkFeatureSupport_(&requiredFeatures.features, &supportedFeatures.features))
-    {
-        return false;
-    }
-    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan11Features>(requiredFeatures.ptr()),
-                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan11Features>(supportedFeatures.ptr()),
-                              12))
-    {
-        return false;
-    }
-    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan12Features>(requiredFeatures.ptr()),
-                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan12Features>(supportedFeatures.ptr()),
-                              47))
-    {
-        return false;
-    }
-    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan13Features>(requiredFeatures.ptr()),
-                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan13Features>(supportedFeatures.ptr()),
-                              15))
-    {
-        return false;
-    }
-    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceVulkan14Features>(requiredFeatures.ptr()),
-                              vku::FindStructInPNextChain<VkPhysicalDeviceVulkan14Features>(supportedFeatures.ptr()),
-                              21))
-    {
-        return false;
-    }
-    if (!checkFeatureSupport_(vku::FindStructInPNextChain<VkPhysicalDeviceRayQueryFeaturesKHR>(requiredFeatures.ptr()),
-                              vku::FindStructInPNextChain<VkPhysicalDeviceRayQueryFeaturesKHR>(supportedFeatures.ptr()),
-                              1))
-    {
-        return false;
-    }
-    if (!checkFeatureSupport_(
-                vku::FindStructInPNextChain<VkPhysicalDeviceRayTracingPipelineFeaturesKHR>(requiredFeatures.ptr()),
-                vku::FindStructInPNextChain<VkPhysicalDeviceRayTracingPipelineFeaturesKHR>(supportedFeatures.ptr()),
-                5))
-    {
-        return false;
-    }
-    if (!checkFeatureSupport_(
-                vku::FindStructInPNextChain<VkPhysicalDeviceAccelerationStructureFeaturesKHR>(requiredFeatures.ptr()),
-                vku::FindStructInPNextChain<VkPhysicalDeviceAccelerationStructureFeaturesKHR>(supportedFeatures.ptr()),
-                5))
-    {
-        return false;
-    }
-
-    return true;
-}
-template<typename T> bool Device::checkFeatureSupport_(const T *requiredFeatures,
-                                                       const T *supportedFeatures,
-                                                       const uint32_t memberCount)
-{
-    if (requiredFeatures == nullptr || supportedFeatures == nullptr)
-    {
-        assert(requiredFeatures == nullptr && supportedFeatures == nullptr); // Internal state check
-        return true;
-    }
-    return checkFeatureSupport_(reinterpret_cast<const VkBool32 *>(reinterpret_cast<const char *>(requiredFeatures) +
-                                                                   sizeof(VkBaseInStructure)),
-                                reinterpret_cast<const VkBool32 *>(reinterpret_cast<const char *>(supportedFeatures) +
-                                                                   sizeof(VkBaseInStructure)),
-                                memberCount);
-}
-inline bool Device::checkFeatureSupport_(const VkPhysicalDeviceFeatures *requiredFeatures,
-                                         const VkPhysicalDeviceFeatures *supportedFeatures)
-{
-    if (requiredFeatures == nullptr || supportedFeatures == nullptr)
-    {
-        assert(requiredFeatures == nullptr && supportedFeatures == nullptr); // Internal state check
-        return true;
-    }
-    return checkFeatureSupport_(reinterpret_cast<const VkBool32 *>(requiredFeatures),
-                                reinterpret_cast<const VkBool32 *>(supportedFeatures),
-                                sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
-}
-inline bool Device::checkFeatureSupport_(const VkBool32 *required,
-                                         const VkBool32 *supported,
-                                         const uint32_t memberCount)
-{
-    for (uint32_t i = 0; i < memberCount; i++)
-    {
-        if (required[i] != VK_FALSE && supported[i] == VK_FALSE)
-        {
-            return false;
-        }
-    }
-    return true;
 }
 inline bool Device::checkUsability_(const VkPhysicalDevice device, const VkSurfaceKHR surface)
 {

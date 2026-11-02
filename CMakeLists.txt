@@ -46,6 +46,7 @@ add_library(Luna STATIC
 
         include/internal/helpers/Handle.hpp
         include/internal/helpers/Pipeline.hpp
+        include/internal/helpers/Features.hpp
         include/internal/ComputePipeline.hpp
         include/internal/Buffer.hpp
         include/internal/CommandBuffer.hpp
@@ -75,6 +76,7 @@ add_library(Luna STATIC
 target_precompile_headers(Luna PRIVATE
         include/internal/helpers/Handle.hpp
         include/internal/helpers/Pipeline.hpp
+        include/internal/helpers/Features.hpp
         include/internal/ComputePipeline.hpp
         include/internal/Buffer.hpp
         include/internal/CommandBuffer.hpp
