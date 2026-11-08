@@ -13,39 +13,43 @@ namespace luna::helpers
 {
 namespace detail
 {
-    template<typename T> static inline constexpr uint32_t FEATURE_COUNT = 0;
-    template<> inline constexpr uint32_t FEATURE_COUNT<VkPhysicalDeviceVulkan11Features> = 12;
-    template<> inline constexpr uint32_t FEATURE_COUNT<VkPhysicalDeviceVulkan12Features> = 47;
-    template<> inline constexpr uint32_t FEATURE_COUNT<VkPhysicalDeviceVulkan13Features> = 15;
-    template<> inline constexpr uint32_t FEATURE_COUNT<VkPhysicalDeviceVulkan14Features> = 21;
-    template<> inline constexpr uint32_t FEATURE_COUNT<VkPhysicalDeviceRayQueryFeaturesKHR> = 1;
-    template<> inline constexpr uint32_t FEATURE_COUNT<VkPhysicalDeviceRayTracingPipelineFeaturesKHR> = 5;
-    template<> inline constexpr uint32_t FEATURE_COUNT<VkPhysicalDeviceAccelerationStructureFeaturesKHR> = 5;
-
-    template<typename T> requires(FEATURE_COUNT<T> != 0) static inline VkBool32 *boolPtr(T *ptr)
+    /// Gets the number of VkBool32 feature fields in the given structure type, or zero if it is an unknown type
+    static inline uint32_t featureCount(const VkStructureType structureType)
     {
-        return ptr == nullptr ? nullptr
-                              : reinterpret_cast<VkBool32 *>(reinterpret_cast<char *>(ptr) + sizeof(VkBaseInStructure));
-    }
-    template<typename T> requires(FEATURE_COUNT<T> != 0) static inline const VkBool32 *boolPtr(const T *ptr)
-    {
-        return ptr == nullptr ? nullptr
-                              : reinterpret_cast<const VkBool32 *>(reinterpret_cast<const char *>(ptr) +
-                                                                   sizeof(VkBaseInStructure));
-    }
-
-    inline bool checkFeatureSupport(const VkBool32 *requiredFeatures,
-                                    const VkBool32 *supportedFeatures,
-                                    const uint32_t count)
-    {
-        if (requiredFeatures == nullptr)
+        // NOLINTBEGIN(*-magic-numbers)
+        switch (structureType)
         {
-            return true;
+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES:
+                return 12;
+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
+                return 47;
+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES:
+                return 15;
+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES:
+                return 21;
+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR:
+                return 1;
+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR:
+            case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR:
+                return 5;
+            default:
+                return 0;
         }
-        if (supportedFeatures == nullptr)
+        // NOLINTEND(*-magic-numbers)
+    }
+
+
+    static inline bool checkFeatureSupport(const VkBool32 *requiredFeatures,
+                                           const VkBool32 *supportedFeatures,
+                                           const uint32_t count)
+    {
+        if (count == 0)
         {
+            // TODO: Somehow warn about unsupported struct usage
+            assert(count != 0 && "Use of unsupported feature struct!");
             return false;
         }
+        assert(requiredFeatures != nullptr && supportedFeatures != nullptr); // Internal state check
         for (uint32_t i = 0; i < count; i++)
         {
             if (requiredFeatures[i] != VK_FALSE && supportedFeatures[i] == VK_FALSE)
@@ -56,119 +60,105 @@ namespace detail
         return true;
     }
 
-    template<typename T>
-    bool checkFeatureSupport(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
-                             const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures) = delete;
-    template<> inline bool checkFeatureSupport<
-            VkPhysicalDeviceFeatures>(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
-                                      const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
+    static inline bool checkFeatureSupport(const VkBaseInStructure *requiredFeatures,
+                                           const VkBaseInStructure *supportedFeatures)
     {
-        return checkFeatureSupport(reinterpret_cast<const VkBool32 *>(&requiredFeatures.features),
-                                   reinterpret_cast<const VkBool32 *>(&supportedFeatures.features),
-                                   sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
-    }
-    template<typename T> requires(detail::FEATURE_COUNT<T> != 0)
-    bool checkFeatureSupport(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
-                             const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
-    {
-        return checkFeatureSupport(detail::boolPtr(vku::FindStructInPNextChain<T>(requiredFeatures.ptr())),
-                                   detail::boolPtr(vku::FindStructInPNextChain<T>(supportedFeatures.ptr())),
-                                   detail::FEATURE_COUNT<T>);
+        assert(requiredFeatures != nullptr &&
+               supportedFeatures != nullptr &&
+               requiredFeatures->sType == supportedFeatures->sType); // Internal state check
+        return checkFeatureSupport(reinterpret_cast<const VkBool32 *>(requiredFeatures + 1),
+                                   reinterpret_cast<const VkBool32 *>(supportedFeatures + 1),
+                                   featureCount(requiredFeatures->sType));
     }
 
-    inline void getSupportedOptionalFeatures(const VkBool32 *optionalFeatures,
-                                             const VkBool32 *supportedFeatures,
-                                             VkBool32 *supportedOptionalFeatures,
-                                             const uint32_t count)
+
+    static inline void getSupportedOptionalFeatures(const VkBool32 *optionalFeatures,
+                                                    const VkBool32 *supportedFeatures,
+                                                    VkBool32 *supportedOptionalFeatures,
+                                                    const uint32_t count)
     {
-        if (optionalFeatures == nullptr)
+        if (count == 0)
         {
+            // TODO: Somehow warn about unsupported struct usage
+            assert(count != 0 && "Use of unsupported feature struct!");
             return;
         }
+
+        assert(optionalFeatures != nullptr &&
+               supportedFeatures != nullptr &&
+               supportedOptionalFeatures != nullptr); // Internal state check
+
         for (uint32_t i = 0; i < count; i++)
         {
             if (supportedFeatures == nullptr)
             {
-                supportedOptionalFeatures[i] = 0;
+                supportedOptionalFeatures[i] = VK_FALSE;
             } else
             {
-                assert(supportedOptionalFeatures != nullptr); // Internal state check.
-                supportedOptionalFeatures[i] = optionalFeatures[i] != 0 && supportedFeatures[i] != 0 ? VK_TRUE
-                                                                                                     : VK_FALSE;
+                supportedOptionalFeatures[i] = (optionalFeatures[i] != VK_FALSE && supportedFeatures[i] != VK_FALSE)
+                                                       ? VK_TRUE
+                                                       : VK_FALSE;
             }
         }
     }
 
-    template<typename T>
-    void getSupportedOptionalFeatures(const vku::safe_VkPhysicalDeviceFeatures2 &optionalFeatures,
-                                      const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures,
-                                      vku::safe_VkPhysicalDeviceFeatures2 &supportedOptionalFeatures) = delete;
-    template<> inline void getSupportedOptionalFeatures<
-            VkPhysicalDeviceFeatures>(const vku::safe_VkPhysicalDeviceFeatures2 &optionalFeatures,
-                                      const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures,
-                                      vku::safe_VkPhysicalDeviceFeatures2 &supportedOptionalFeatures)
+    static inline void getSupportedOptionalFeatures(const VkBaseInStructure *optionalFeatures,
+                                                    const VkBaseInStructure *supportedFeatures,
+                                                    VkBaseOutStructure *supportedOptionalFeatures)
     {
-        getSupportedOptionalFeatures(reinterpret_cast<const VkBool32 *>(&optionalFeatures.features),
-                                     reinterpret_cast<const VkBool32 *>(&supportedFeatures.features),
-                                     reinterpret_cast<VkBool32 *>(&supportedOptionalFeatures.features),
-                                     sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
-    }
-    template<typename T> requires(FEATURE_COUNT<T> != 0)
-    void getSupportedOptionalFeatures(const vku::safe_VkPhysicalDeviceFeatures2 &optionalFeatures,
-                                      const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures,
-                                      vku::safe_VkPhysicalDeviceFeatures2 &supportedOptionalFeatures)
-    {
-        getSupportedOptionalFeatures(detail::boolPtr(vku::FindStructInPNextChain<T>(optionalFeatures.ptr())),
-                                     detail::boolPtr(vku::FindStructInPNextChain<T>(supportedFeatures.ptr())),
-                                     detail::boolPtr(vku::FindStructInPNextChain<T>(supportedOptionalFeatures.ptr())),
-                                     detail::FEATURE_COUNT<T>);
+        assert(optionalFeatures != nullptr &&
+               supportedFeatures != nullptr &&
+               supportedOptionalFeatures != nullptr); // Internal state check
+        assert(optionalFeatures->sType == supportedFeatures->sType &&
+               optionalFeatures->sType == supportedOptionalFeatures->sType); // Internal state check
+        getSupportedOptionalFeatures(reinterpret_cast<const VkBool32 *>(optionalFeatures + 1),
+                                     reinterpret_cast<const VkBool32 *>(supportedFeatures + 1),
+                                     reinterpret_cast<VkBool32 *>(supportedOptionalFeatures + 1),
+                                     featureCount(optionalFeatures->sType));
     }
 } // namespace detail
 
-template<typename... T>
 static inline bool checkFeatureSupport(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
                                        const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
 {
-    return (detail::checkFeatureSupport<T>(requiredFeatures, supportedFeatures) && ...);
-}
-static inline bool checkFeatureSupport(const vku::safe_VkPhysicalDeviceFeatures2 &requiredFeatures,
-                                       const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures)
-{
-    return checkFeatureSupport<VkPhysicalDeviceFeatures,
-                               VkPhysicalDeviceVulkan11Features,
-                               VkPhysicalDeviceVulkan12Features,
-                               VkPhysicalDeviceVulkan13Features,
-                               VkPhysicalDeviceVulkan14Features,
-                               VkPhysicalDeviceRayQueryFeaturesKHR,
-                               VkPhysicalDeviceRayTracingPipelineFeaturesKHR,
-                               VkPhysicalDeviceAccelerationStructureFeaturesKHR>(requiredFeatures, supportedFeatures);
+    bool allSupported = detail::checkFeatureSupport(reinterpret_cast<const VkBool32 *>(&requiredFeatures.features),
+                                                    reinterpret_cast<const VkBool32 *>(&supportedFeatures.features),
+                                                    sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
+    const VkBaseInStructure *required = static_cast<const VkBaseInStructure *>(requiredFeatures.pNext);
+    const VkBaseInStructure *supported = static_cast<const VkBaseInStructure *>(supportedFeatures.pNext);
+    while (allSupported && required != nullptr && supported != nullptr)
+    {
+        assert(required->sType == supported->sType); // Internal state check
+        allSupported &= detail::checkFeatureSupport(required, supported);
+        required = static_cast<const VkBaseInStructure *>(required->pNext);
+        supported = static_cast<const VkBaseInStructure *>(supported->pNext);
+    }
+    return allSupported && required == nullptr && supported == nullptr;
 }
 
-template<typename... T>
-static inline vku::safe_VkPhysicalDeviceFeatures2 getSupportedOptionalFeatures(const vku::safe_VkPhysicalDeviceFeatures2
-                                                                                       &optionalFeatures,
-                                                                               const vku::safe_VkPhysicalDeviceFeatures2
-                                                                                       &supportedFeatures)
+static inline void getSupportedOptionalFeatures(const vku::safe_VkPhysicalDeviceFeatures2 &optionalFeatures,
+                                                const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures,
+                                                vku::safe_VkPhysicalDeviceFeatures2 &supportedOptionalFeatures)
 {
-    vku::safe_VkPhysicalDeviceFeatures2 supportedOptionalFeatures{optionalFeatures};
-    (detail::getSupportedOptionalFeatures<T>(optionalFeatures, supportedFeatures, supportedOptionalFeatures), ...);
-    return supportedOptionalFeatures;
+    detail::getSupportedOptionalFeatures(reinterpret_cast<const VkBool32 *>(&optionalFeatures.features),
+                                         reinterpret_cast<const VkBool32 *>(&supportedFeatures.features),
+                                         reinterpret_cast<VkBool32 *>(&supportedOptionalFeatures.features),
+                                         sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
+    const VkBaseInStructure *optional = static_cast<const VkBaseInStructure *>(optionalFeatures.pNext);
+    const VkBaseInStructure *supported = static_cast<const VkBaseInStructure *>(supportedFeatures.pNext);
+    VkBaseOutStructure *supportedOptional = static_cast<VkBaseOutStructure *>(supportedOptionalFeatures.pNext);
+    while (optional != nullptr && supported != nullptr && supportedOptional != nullptr)
+    {
+        assert(optional->sType == supported->sType &&
+               optional->sType == supportedOptional->sType); // Internal state check
+        detail::getSupportedOptionalFeatures(optional, supported, supportedOptional);
+        optional = static_cast<const VkBaseInStructure *>(optional->pNext);
+        supported = static_cast<const VkBaseInStructure *>(supported->pNext);
+        supportedOptional = static_cast<VkBaseOutStructure *>(supportedOptional->pNext);
+    }
+    assert(optional == nullptr && supported == nullptr && supportedOptional == nullptr); // Internal state check
 }
-static inline vku::safe_VkPhysicalDeviceFeatures2 getSupportedOptionalFeatures(const vku::safe_VkPhysicalDeviceFeatures2
-                                                                                       &optionalFeatures,
-                                                                               const vku::safe_VkPhysicalDeviceFeatures2
-                                                                                       &supportedFeatures)
-{
-    return getSupportedOptionalFeatures<VkPhysicalDeviceFeatures,
-                                        VkPhysicalDeviceVulkan11Features,
-                                        VkPhysicalDeviceVulkan12Features,
-                                        VkPhysicalDeviceVulkan13Features,
-                                        VkPhysicalDeviceVulkan14Features,
-                                        VkPhysicalDeviceRayQueryFeaturesKHR,
-                                        VkPhysicalDeviceRayTracingPipelineFeaturesKHR,
-                                        VkPhysicalDeviceAccelerationStructureFeaturesKHR>(optionalFeatures,
-                                                                                          supportedFeatures);
-}
+
 
 // template<typename... T>
 // static inline vku::safe_VkPhysicalDeviceFeatures2 combineFeatures(const vku::safe_VkPhysicalDeviceFeatures2 &a,
