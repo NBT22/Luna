@@ -50,7 +50,7 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
 
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
     CHECK_RESULT_THROW(vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()));
-    vku::safe_VkPhysicalDeviceFeatures2 supportedFeatures{&creationInfo.requiredFeatures};
+    const vku::safe_VkPhysicalDeviceFeatures2 requiredFeatures{&creationInfo.requiredFeatures};
     for (const VkPhysicalDevice physicalDevice: physicalDevices)
     {
         uint32_t extensionPropertyCount{};
@@ -87,10 +87,10 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
             continue;
         }
 
+        vku::safe_VkPhysicalDeviceFeatures2 supportedFeatures{&creationInfo.requiredFeatures};
         vkGetPhysicalDeviceFeatures2(physicalDevice, supportedFeatures.ptr());
         // checkUsability can throw an error, but it will be caught by the function calling this constructor
-        if (!helpers::checkFeatureSupport(vku::safe_VkPhysicalDeviceFeatures2{&creationInfo.requiredFeatures},
-                                          supportedFeatures) ||
+        if (!helpers::checkFeatureSupport(requiredFeatures, supportedFeatures) ||
             !checkUsability_(physicalDevice, creationInfo.surface))
         {
             continue;
@@ -119,12 +119,6 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
         createInfo.pQueuePriorities = priorities.data();
     }
 
-    const VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
-        .pNext = creationInfo.requiredFeatures.pNext,
-        .synchronization2 = VK_TRUE,
-    };
-
     uint32_t extensionPropertyCount{};
     CHECK_RESULT_THROW(vkEnumerateDeviceExtensionProperties(physicalDevice_,
                                                             nullptr,
@@ -148,6 +142,26 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
         }
     }
 
+    vku::safe_VkPhysicalDeviceFeatures2 enabledFeatures;
+    if (creationInfo.optionalFeatures != nullptr)
+    {
+        const vku::safe_VkPhysicalDeviceFeatures2 optionalFeatures{creationInfo.optionalFeatures};
+        vku::safe_VkPhysicalDeviceFeatures2 supportedFeatures{creationInfo.optionalFeatures};
+        vkGetPhysicalDeviceFeatures2(physicalDevice_, supportedFeatures.ptr());
+        vku::safe_VkPhysicalDeviceFeatures2 supportedOptionalFeatures =
+                helpers::getSupportedOptionalFeatures(optionalFeatures, supportedFeatures);
+        enabledFeatures = helpers::combineFeatures(requiredFeatures, supportedOptionalFeatures);
+    } else
+    {
+        enabledFeatures = requiredFeatures;
+    }
+
+    const VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
+        .pNext = enabledFeatures.pNext,
+        .synchronization2 = VK_TRUE,
+    };
+
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = &synchronization2Features,
@@ -155,7 +169,7 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
         .pQueueCreateInfos = queueCreateInfos.data(),
         .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
         .ppEnabledExtensionNames = extensions.data(),
-        .pEnabledFeatures = &creationInfo.requiredFeatures.features,
+        .pEnabledFeatures = &enabledFeatures.features,
     };
     CHECK_RESULT_THROW(vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_));
     volkLoadDevice(logicalDevice_);

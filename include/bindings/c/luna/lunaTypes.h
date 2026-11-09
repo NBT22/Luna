@@ -73,6 +73,7 @@ typedef struct
         uint32_t optionalExtensionCount;
         const char *const *optionalExtensionNames;
         VkPhysicalDeviceFeatures2 requiredFeatures;
+        const VkPhysicalDeviceFeatures2 *optionalFeatures;
         VkSurfaceKHR surface;
 
         uint32_t requiredQueueFamiliesCount;
