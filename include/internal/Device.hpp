@@ -79,6 +79,7 @@ class Device
         [[nodiscard]] const LunaQueueFamilyProperties *queueFamilies() const noexcept;
         [[nodiscard]] VmaAllocator allocator() const noexcept;
         [[nodiscard]] bool isExtensionEnabled(const char *extension) const;
+        [[nodiscard]] bool getEnabledFeatures(VkPhysicalDeviceFeatures2 &features) const;
 
     private:
         VkResult initQueueFamilies_(VkPhysicalDevice physicalDevice,
@@ -92,6 +93,7 @@ class Device
         VkDevice logicalDevice_{};
         VkPhysicalDeviceProperties properties_{};
         std::unordered_set<std::string> enabledExtensions_{};
+        vku::safe_VkPhysicalDeviceFeatures2 enabledFeatures_{};
         VkPhysicalDeviceMemoryProperties memoryProperties_{};
         VmaAllocator allocator_{};
         std::vector<LunaQueueFamilyProperties> queueFamilies_{};
@@ -167,6 +169,10 @@ inline VmaAllocator Device::allocator() const noexcept
 inline bool Device::isExtensionEnabled(const char *extension) const
 {
     return enabledExtensions_.contains(extension);
+}
+inline bool Device::getEnabledFeatures(VkPhysicalDeviceFeatures2 &features) const
+{
+    return helpers::getSupportedFeatures(enabledFeatures_, features);
 }
 
 inline VkResult Device::initQueueFamilies_(const VkPhysicalDevice physicalDevice,

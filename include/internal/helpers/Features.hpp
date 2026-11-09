@@ -48,6 +48,8 @@ namespace detail
             case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES:
                 return 20;
             default:
+                // TODO: Somehow warn about unsupported struct usage
+                assert(false && "Use of unsupported feature struct!");
                 return 0;
         }
         // NOLINTEND(*-magic-numbers)
@@ -60,8 +62,6 @@ namespace detail
     {
         if (count == 0)
         {
-            // TODO: Somehow warn about unsupported struct usage
-            assert(count != 0 && "Use of unsupported feature struct!");
             return false;
         }
         assert(requiredFeatures != nullptr && supportedFeatures != nullptr); // Internal state check
@@ -92,13 +92,6 @@ namespace detail
                                                     VkBool32 *supportedOptionalFeatures,
                                                     const uint32_t count)
     {
-        if (count == 0)
-        {
-            // TODO: Somehow warn about unsupported struct usage
-            assert(count != 0 && "Use of unsupported feature struct!");
-            return;
-        }
-
         assert(optionalFeatures != nullptr &&
                supportedFeatures != nullptr &&
                supportedOptionalFeatures != nullptr); // Internal state check
@@ -207,6 +200,47 @@ static inline vku::safe_VkPhysicalDeviceFeatures2 getSupportedOptionalFeatures(c
     }
     assert(optional == nullptr && supported == nullptr && supportedOptional == nullptr); // Internal state check
     return supportedOptionalFeatures;
+}
+
+static inline bool getSupportedFeatures(const vku::safe_VkPhysicalDeviceFeatures2 &supportedFeatures,
+                                        VkPhysicalDeviceFeatures2 &features)
+{
+    bool allSupported = detail::checkFeatureSupport(reinterpret_cast<const VkBool32 *>(&features.features),
+                                                    reinterpret_cast<const VkBool32 *>(&supportedFeatures.features),
+                                                    sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
+    detail::getSupportedOptionalFeatures(reinterpret_cast<const VkBool32 *>(&features.features),
+                                         reinterpret_cast<const VkBool32 *>(&supportedFeatures.features),
+                                         reinterpret_cast<VkBool32 *>(&features.features),
+                                         sizeof(VkPhysicalDeviceFeatures) / sizeof(VkBool32));
+    for (VkBaseOutStructure *out = static_cast<VkBaseOutStructure *>(features.pNext); out != nullptr;
+         out = static_cast<VkBaseOutStructure *>(out->pNext))
+    {
+        VkBool32 *outFeatureArray = reinterpret_cast<VkBool32 *>(out + 1);
+        const VkBaseInStructure *supported = static_cast<const VkBaseInStructure *>(supportedFeatures.pNext);
+        while (supported != nullptr && supported->sType != out->sType)
+        {
+            supported = static_cast<const VkBaseInStructure *>(supported->pNext);
+        }
+        if (supported == nullptr)
+        {
+            allSupported = false;
+        }
+        const VkBool32 *supportedFeatureArray = reinterpret_cast<const VkBool32 *>(supported + 1);
+        for (uint32_t i = 0; i < detail::featureCount(out->sType); i++)
+        {
+            if (supported == nullptr)
+            {
+                outFeatureArray[i] = VK_FALSE;
+                continue;
+            }
+            if (allSupported && outFeatureArray[i] != VK_FALSE && supportedFeatureArray[i] == VK_FALSE)
+            {
+                allSupported = false;
+            }
+            outFeatureArray[i] = supportedFeatureArray[i] != VK_FALSE ? VK_TRUE : VK_FALSE;
+        }
+    }
+    return allSupported;
 }
 
 static inline vku::safe_VkPhysicalDeviceFeatures2 combineFeatures(const vku::safe_VkPhysicalDeviceFeatures2 &a,

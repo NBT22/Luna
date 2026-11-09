@@ -142,7 +142,6 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
         }
     }
 
-    vku::safe_VkPhysicalDeviceFeatures2 enabledFeatures;
     if (creationInfo.optionalFeatures != nullptr)
     {
         const vku::safe_VkPhysicalDeviceFeatures2 optionalFeatures{creationInfo.optionalFeatures};
@@ -150,26 +149,27 @@ Device::Device(const LunaDeviceCreationInfo &creationInfo)
         vkGetPhysicalDeviceFeatures2(physicalDevice_, supportedFeatures.ptr());
         vku::safe_VkPhysicalDeviceFeatures2 supportedOptionalFeatures =
                 helpers::getSupportedOptionalFeatures(optionalFeatures, supportedFeatures);
-        enabledFeatures = helpers::combineFeatures(requiredFeatures, supportedOptionalFeatures);
+        enabledFeatures_ = helpers::combineFeatures(requiredFeatures, supportedOptionalFeatures);
     } else
     {
-        enabledFeatures = requiredFeatures;
+        enabledFeatures_ = requiredFeatures;
     }
 
+    vku::RemoveFromPnext(enabledFeatures_, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR);
     const VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
-        .pNext = enabledFeatures.pNext,
         .synchronization2 = VK_TRUE,
     };
+    vku::AddToPnext(enabledFeatures_, synchronization2Features);
 
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &synchronization2Features,
+        .pNext = enabledFeatures_.pNext,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
         .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
         .ppEnabledExtensionNames = extensions.data(),
-        .pEnabledFeatures = &enabledFeatures.features,
+        .pEnabledFeatures = &enabledFeatures_.features,
     };
     CHECK_RESULT_THROW(vkCreateDevice(physicalDevice_, &createInfo, nullptr, &logicalDevice_));
     volkLoadDevice(logicalDevice_);
@@ -673,6 +673,14 @@ bool lunaDeviceIsExtensionEnabled(const LunaDevice device, const char *extension
 {
     assert(device != LUNA_NULL_HANDLE);
     return luna::helpers::fromHandle<luna::Device>(device)->isExtensionEnabled(extension);
+}
+
+bool lunaGetEnabledDeviceFeatures(const LunaDevice device, VkPhysicalDeviceFeatures2 *features)
+{
+    assert(device != LUNA_NULL_HANDLE);
+    assert(features != nullptr);
+
+    return luna::helpers::fromHandle<luna::Device>(device)->getEnabledFeatures(*features);
 }
 
 VkResult lunaCreateShaderModule(const LunaDevice device,

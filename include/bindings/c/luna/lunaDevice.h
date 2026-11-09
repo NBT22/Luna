@@ -28,6 +28,7 @@ const LunaQueueFamilyProperties *lunaGetDeviceQueueFamilies(LunaDevice device);
 uint32_t lunaGetDeviceQueueFamilyIndex(LunaDevice device, const LunaQueueFamilyProperties *requiredProperties);
 VkQueue lunaGetDeviceQueue(LunaDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex);
 bool lunaDeviceIsExtensionEnabled(LunaDevice device, const char *extension);
+bool lunaGetEnabledDeviceFeatures(LunaDevice device, VkPhysicalDeviceFeatures2 *features);
 
 #ifdef __cplusplus
 }
