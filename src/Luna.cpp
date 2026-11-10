@@ -4,6 +4,9 @@
 
 #define VMA_IMPLEMENTATION
 #define VOLK_IMPLEMENTATION
+#ifndef NDEBUG
+#define VMA_DEBUG_INITIALIZE_ALLOCATIONS 1 // NOLINT(*-macro-usage)
+#endif
 #include <vk_mem_alloc.h>
 #include <volk.h>
 #undef VMA_IMPLEMENTATION
